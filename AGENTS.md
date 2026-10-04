@@ -1,37 +1,37 @@
 # AGENTS.md
 
-Wails v2 desktop app (Go module and app name: `miapp`): Go backend + Svelte 5 / TypeScript / Vite frontend in `frontend/`. Scrapes animeflv. Comments and UI strings are in Spanish — match that.
+Aplicación de escritorio Wails v2 (módulo Go y nombre de la app: `miapp`): Backend en Go + Frontend en Svelte 5 / TypeScript / Vite en `frontend/`. Hace scraping de animeflv. Los comentarios y los textos de la interfaz están en español — mantén esa coherencia.
 
-## Commands
+## Comandos
 
-- `docker compose up` — main dev flow (Go/wails are **not on PATH** on this machine; the image has Go 1.25, Node 20, wails CLI). Runs `xvfb-run -a wails dev -browser=false -devserver 0.0.0.0:34115`; app UI in browser at http://localhost:34115, Vite at :5173.
-- Focused Go checks without starting the app: `docker compose run --rm app go build ./...` / `go vet ./...` / `go test -tags integration ./internal/scraper/ -v` (el test usa el sitio real — requiere red).
-- Frontend only, from `frontend/`: `npm install` (required first), `npm run dev`, `npm run build`, `npm run check` (svelte-check; the only typecheck). All were verified green.
-- No linters, no CI. Verificación = `gofmt -l .` (sin salida) + `go vet ./...` + `go test -race ./...` + `npm run check` (este último solo en tareas de frontend).
+- `docker compose up` — flujo principal de desarrollo (Go/wails **no están en el PATH** en esta máquina; la imagen tiene Go 1.25, Node 20, y la CLI de wails). Ejecuta `xvfb-run -a wails dev -browser=false -devserver 0.0.0.0:34115`; interfaz de la app en el navegador en http://localhost:34115, Vite en :5173.
+- Comprobaciones específicas de Go sin iniciar la app: `docker compose run --rm app go build ./...` / `go vet ./...` / `go test -tags integration ./internal/scraper/ -v` (el test usa el sitio real — requiere red).
+- Solo frontend, desde `frontend/`: `npm install` (requerido primero), `npm run dev`, `npm run build`, `npm run check` (svelte-check; la única comprobación de tipos). Todos fueron verificados y pasan correctamente.
+- Sin linters, sin CI. Verificación = `gofmt -l .` (sin salida) + `go vet ./...` + `go test -race ./...` + `npm run check` (este último solo en tareas de frontend).
 
-## Gotchas
+## Consideraciones importantes (Gotchas)
 
-- `wails dev` binds its dev server to `127.0.0.1` by default → unreachable through Docker port mapping (host curl gets connection refused while the container looks fine). The `-devserver 0.0.0.0:34115` flag in `docker-compose.yml` is required, not cosmetic; the flag needs `host:port` form.
-- In-browser dev must use **`localhost:34115`** (Wails dev server), not `:5173`. Vite's own server has no `window.go` bridge — calls fail with `Cannot read properties of undefined (reading 'main')`. `App.svelte` now guards this and shows a message pointing at :34115.
-- `frontend/wailsjs/**` is generated (DO NOT EDIT). It only regenerates when `wails dev`/`wails build` runs with compiling Go code. If `App.svelte` imports a function missing there, `npm run build`/`check` fail until bindings regenerate.
-- `main.go` embeds `frontend/dist` (`//go:embed all:frontend/dist`): `go build` needs `frontend/dist` to exist (gitignored; produce it with `npm run build`).
-- Vite is pinned: `0.0.0.0:5173`, `strictPort`, polling watch — deliberate, for Docker/Windows file watching. Don't remove.
-- Wails JSON-serializes with Go's `encoding/json`: model fields need lowercase `json:` tags or the frontend sees nothing (it reads `anime.cover_url`). Tags also drive the generated TS models.
-- `frontend/index.html` has `<meta name="referrer" content="no-referrer">`: animeflv.or.at returns **403 for cover images** when any Referer header is sent (hotlink protection). Don't remove the meta.
+- `wails dev` enlaza su servidor de desarrollo a `127.0.0.1` por defecto → inaccesible a través del mapeo de puertos de Docker (el `curl` del host obtiene conexión rechazada mientras el contenedor parece estar bien). La bandera `-devserver 0.0.0.0:34115` en `docker-compose.yml` es requerida, no cosmética; la bandera necesita el formato `host:puerto`.
+- El desarrollo en el navegador debe usar **`localhost:34115`** (servidor de desarrollo de Wails), no `:5173`. El servidor propio de Vite no tiene el puente `window.go` — las llamadas fallan con `Cannot read properties of undefined (reading 'main')`. `App.svelte` ahora protege esto y muestra un mensaje apuntando a :34115.
+- `frontend/wailsjs/**` es generado automáticamente (NO EDITAR). Solo se regenera cuando se ejecuta `wails dev`/`wails build` al compilar código Go. Si `App.svelte` importa una función que falta ahí, `npm run build`/`check` fallarán hasta que los bindings se regeneren.
+- `main.go` incrusta `frontend/dist` (`//go:embed all:frontend/dist`): `go build` necesita que `frontend/dist` exista (está en el .gitignore; prodúcelo con `npm run build`).
+- La configuración de Vite está fijada: `0.0.0.0:5173`, `strictPort`, y observación por polling (polling watch) — esto es deliberado, para la observación de archivos entre Docker y Windows. No lo elimines.
+- Wails serializa a JSON con `encoding/json` de Go: los campos de los modelos necesitan etiquetas `json:` en minúsculas o el frontend no verá nada (lee `anime.cover_url`). Las etiquetas también determinan la generación de los modelos de TS.
+- `frontend/index.html` tiene `<meta name="referrer" content="no-referrer">`: animeflv.or.at devuelve **403 para las imágenes de portada** cuando se envía cualquier cabecera Referer (protección contra hotlinking). No elimines esta etiqueta meta.
 
 ## Scraper
 
-- `internal/scraper/animeflv.go` targets **`https://animeflv.or.at`** — a WordPress site, not the classic animeflv.net (that domain is dead/moved; don't "fix" the URL back).
-  - Search URL: `/?s=<query>`; results in `.search-series-card` (`a.thumbnail-link`, `h2.entry-title`, `img.anime-image`).
-  - Old CSS selectors (`article.Anime`, `h3.Title`, `/browse?q=`) do NOT exist here.
-  - Site homepage lists episodes as `h2.Title`; series pages live at `/anime/<slug>/`; each series is also a WP category.
-  - Sends a browser User-Agent (Go's default may be blocked) and fails on non-200.
-- Smoke test: `internal/scraper/animeflv_test.go` queries "bleach" (known to exist); a site outage or domain change makes it fail — that's the point.
+- `internal/scraper/animeflv.go` apunta a **`https://animeflv.or.at`** — un sitio de WordPress, no al clásico animeflv.net (ese dominio está muerto/movido; no "arregles" la URL devolviéndola al original).
+  - URL de búsqueda: `/?s=<query>`; resultados en `.search-series-card` (`a.thumbnail-link`, `h2.entry-title`, `img.anime-image`).
+  - Los selectores CSS antiguos (`article.Anime`, `h3.Title`, `/browse?q=`) NO existen aquí.
+  - La página principal del sitio lista los episodios como `h2.Title`; las páginas de las series se encuentran en `/anime/<slug>/`; cada serie es también una categoría de WP.
+  - Envía un User-Agent de navegador (el predeterminado de Go puede ser bloqueado) y falla si el código HTTP no es 200.
+- Prueba de humo (Smoke test): `internal/scraper/animeflv_test.go` busca "bleach" (se sabe que existe); una caída del sitio o un cambio de dominio hará que falle — ese es el objetivo de la prueba.
 
-## Config
+## Configuración
 
-- `wails.json` drives frontend hooks: install/build/dev = `npm install` / `npm run build` / `npm run dev`, `serverUrl: auto`.
-- `.gitignore` excludes `build/bin`, `node_modules`, `frontend/dist`.
+- `wails.json` maneja los hooks del frontend: install/build/dev = `npm install` / `npm run build` / `npm run dev`, `serverUrl: auto`.
+- `.gitignore` excluye `build/bin`, `node_modules`, `frontend/dist`.
 
 ## Plan de trabajo por tareas
 
