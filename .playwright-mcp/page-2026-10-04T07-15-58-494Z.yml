@@ -1,0 +1,5 @@
+- main [ref=f6e3]:
+  - heading "Buscador de AnimeFLV" [level=2] [ref=f6e4]
+  - generic [ref=f6e5]:
+    - 'textbox "Ej: Death Note, Jujutsu Kaisen..." [ref=f6e6]'
+    - button "Buscar" [ref=f6e7] [cursor=pointer]

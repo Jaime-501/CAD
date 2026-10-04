@@ -1,0 +1,8 @@
+- main [ref=f2e3]:
+  - heading "Buscador de AnimeFLV" [level=2] [ref=f2e4]
+  - generic [ref=f2e5]:
+    - 'textbox "Ej: Death Note, Jujutsu Kaisen..." [active] [ref=f2e6]': bleach
+    - button "Buscar" [ref=f2e7] [cursor=pointer]
+  - generic [ref=f2e9] [cursor=pointer]:
+    - 'img "Bleach: Sennen Kessen-hen - Kashin-tan" [ref=f2e10]'
+    - paragraph [ref=f2e11]: "Bleach: Sennen Kessen-hen - Kashin-tan"

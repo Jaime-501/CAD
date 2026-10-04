@@ -1,0 +1,72 @@
+[      34ms] [LOG] Queueing: runtime:ready @ http://localhost:34115/wails/ipc.js:40
+[      42ms] [LOG] %c wails dev %c Connected to backend  background: #aa0000; color: #fff; border-radius: 3px 0px 0px 3px; padding: 1px; font-size: 0.7rem background: #009900; color: #fff; border-radius: 0px 3px 3px 0px; padding: 1px; font-size: 0.7rem @ http://localhost:34115/wails/ipc.js:0
+[      42ms] [LOG] sending queued message: runtime:ready @ http://localhost:34115/wails/ipc.js:40
+[      49ms] TypeError: Cannot read properties of null (reading 'nodes')
+    at Fe (http://localhost:34115/wails/ipc.js:32:26544)
+    at bn (http://localhost:34115/wails/ipc.js:32:27002)
+    at new In (http://localhost:34115/wails/ipc.js:41:87)
+    at http://localhost:34115/wails/ipc.js:41:367
+[    5933ms] [LOG] Resultados: [Object] @ http://localhost:34115/src/App.svelte:31
+[   92012ms] [LOG] Resultados: [Object] @ http://localhost:34115/src/App.svelte:31
+[  106339ms] [LOG] Resultados: [Object] @ http://localhost:34115/src/App.svelte:31
+[14634755ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:34115/@vite/client:864
+[14634757ms] [LOG] %c wails dev %c Disconnected from backend  background: #aa0000; color: #fff; border-radius: 3px 0px 0px 3px; padding: 1px; font-size: 0.7rem background: #009900; color: #fff; border-radius: 0px 3px 3px 0px; padding: 1px; font-size: 0.7rem @ http://localhost:34115/wails/ipc.js:0
+[14634763ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Connection closed before receiving a handshake response @ http://localhost:34115/wails/ipc.js:40
+[14635265ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Connection closed before receiving a handshake response @ http://localhost:34115/wails/ipc.js:40
+[14635766ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Connection closed before receiving a handshake response @ http://localhost:34115/wails/ipc.js:40
+[14636260ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14636790ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14637286ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14637782ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14638326ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14638980ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14640071ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14643626ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14645104ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14647634ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14652639ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14655976ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14660699ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14664285ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14669132ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14673909ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14675334ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14680719ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14682223ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14684947ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14687745ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14691751ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14694220ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14698425ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14700656ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14702678ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14706643ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14710823ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14715978ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14718476ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14721425ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14726086ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14730835ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14732463ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14734498ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14737322ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14741138ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14742886ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14745964ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14749772ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14754072ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14758925ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14764194ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14765548ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:34115/wails/ipc.js:40
+[14767817ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Connection closed before receiving a handshake response @ http://localhost:34115/wails/ipc.js:40
+[14769635ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Connection closed before receiving a handshake response @ http://localhost:34115/wails/ipc.js:40
+[14772504ms] [ERROR] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: Connection closed before receiving a handshake response @ http://localhost:34115/wails/ipc.js:40
+[14774565ms] [WARNING] WebSocket connection to 'ws://localhost:34115/wails/ipc' failed: WebSocket is closed before the connection is established. @ http://localhost:34115/wails/ipc.js:40
+[14774951ms] [LOG] Queueing: runtime:ready @ http://localhost:34115/wails/ipc.js:40
+[14775001ms] TypeError: Cannot read properties of null (reading 'nodes')
+    at Fe (http://localhost:34115/wails/ipc.js:32:26544)
+    at bn (http://localhost:34115/wails/ipc.js:32:27002)
+    at new In (http://localhost:34115/wails/ipc.js:41:87)
+    at http://localhost:34115/wails/ipc.js:41:367
+[14777370ms] [LOG] %c wails dev %c Connected to backend  background: #aa0000; color: #fff; border-radius: 3px 0px 0px 3px; padding: 1px; font-size: 0.7rem background: #009900; color: #fff; border-radius: 0px 3px 3px 0px; padding: 1px; font-size: 0.7rem @ http://localhost:34115/wails/ipc.js:0
+[14777370ms] [LOG] sending queued message: runtime:ready @ http://localhost:34115/wails/ipc.js:40

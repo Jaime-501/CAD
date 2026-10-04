@@ -1,0 +1,29 @@
+[      27ms] [LOG] Queueing: runtime:ready @ http://localhost:34115/wails/ipc.js:40
+[      31ms] [LOG] %c wails dev %c Connected to backend  background: #aa0000; color: #fff; border-radius: 3px 0px 0px 3px; padding: 1px; font-size: 0.7rem background: #009900; color: #fff; border-radius: 0px 3px 3px 0px; padding: 1px; font-size: 0.7rem @ http://localhost:34115/wails/ipc.js:0
+[      32ms] [LOG] sending queued message: runtime:ready @ http://localhost:34115/wails/ipc.js:40
+[      40ms] TypeError: Cannot read properties of null (reading 'nodes')
+    at Fe (http://localhost:34115/wails/ipc.js:32:26544)
+    at bn (http://localhost:34115/wails/ipc.js:32:27002)
+    at new In (http://localhost:34115/wails/ipc.js:41:87)
+    at http://localhost:34115/wails/ipc.js:41:367
+[    4130ms] [LOG] Resultados: [Object] @ http://localhost:34115/src/App.svelte?t=1791098150060:43
+[  527112ms] [LOG] Resultados: [Object] @ http://localhost:34115/src/App.svelte?t=1791098150060:43
+[  820436ms] [LOG] Resultados: null @ http://localhost:34115/src/App.svelte?t=1791098150060:43
+[  820437ms] TypeError: Cannot read properties of null (reading 'length')
+
+	in <unknown>
+	in App.svelte
+	in undefined
+
+    at http://localhost:34115/src/App.svelte?t=1791098150060:128:39
+    at http://localhost:34115/node_modules/.vite/deps/chunk-XKR4VJT4.js?v=d874aabb:808:5
+    at update_reaction (http://localhost:34115/node_modules/.vite/deps/chunk-FQBMW4L2.js?v=d874aabb:3489:18)
+    at update_effect (http://localhost:34115/node_modules/.vite/deps/chunk-FQBMW4L2.js?v=d874aabb:3641:21)
+    at #traverse (http://localhost:34115/node_modules/.vite/deps/chunk-FQBMW4L2.js?v=d874aabb:2260:11)
+    at #process (http://localhost:34115/node_modules/.vite/deps/chunk-FQBMW4L2.js?v=d874aabb:2164:25)
+    at _Batch.flush (http://localhost:34115/node_modules/.vite/deps/chunk-FQBMW4L2.js?v=d874aabb:2383:20)
+    at Array.<anonymous> (http://localhost:34115/node_modules/.vite/deps/chunk-FQBMW4L2.js?v=d874aabb:2563:19)
+    at run_all (http://localhost:34115/node_modules/.vite/deps/chunk-FQBMW4L2.js?v=d874aabb:42:11)
+    at run_micro_tasks (http://localhost:34115/node_modules/.vite/deps/chunk-FQBMW4L2.js?v=d874aabb:802:3)
+[  851548ms] [LOG] Resultados: [Object] @ http://localhost:34115/src/App.svelte?t=1791098150060:43
+[  854927ms] [LOG] Resultados: [Object] @ http://localhost:34115/src/App.svelte?t=1791098150060:43

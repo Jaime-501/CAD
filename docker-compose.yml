@@ -1,0 +1,26 @@
+# docker-compose.yml
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: wails_anime_app
+    ports:
+      - "34115:34115" # Puerto principal de Wails para el navegador
+      - "5173:5173"   # Puerto de Vite (necesario para el HMR)
+    volumes:
+      # Mapeamos tu código fuente local al contenedor
+      - .:/app
+      # Volúmenes para caché (evita que node_modules y pkg den problemas de permisos en WSL/Windows)
+      - go_pkg_data:/go/pkg
+      - node_modules_data:/app/frontend/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true # Fundamental para que Vite detecte cambios de archivos en Windows/Docker
+      - VITE_HOST=0.0.0.0
+    # Creamos la pantalla virtual fantasma y corremos Wails sin abrir navegador nativo
+    command: >
+      sh -c "xvfb-run -a wails dev -browser=false -devserver 0.0.0.0:34115"
+
+volumes:
+  go_pkg_data:
+  node_modules_data:
