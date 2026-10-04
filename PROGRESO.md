@@ -71,7 +71,7 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha y verificada
 
 | Estado | Tarea | Título | Depende de | Sesión sugerida |
 |---|---|---|---|---|
-| [ ] | T01 | Logging y observabilidad base | — | Sola |
+| [x] | T01 | Logging y observabilidad base | — | Sola |
 | [ ] | T02 | Infraestructura HTTP, errores y reintentos | T01 | Sola (pesada) |
 | [ ] | T03 | Modelos de dominio | — | Con T05 |
 | [ ] | T04 | Interfaz Provider y registro | T03 | Sola |
@@ -114,22 +114,33 @@ Paralelizables (si usas varias sesiones a la vez): T06/T09/T10 · T12–T15 entr
 - `func Get(ctx context.Context, d HTTPDoer, url string, opts ReqOptions) (*Response, error)`
 -->
 
-_(vacío)_
+### T01 — internal/logx
+
+- `func New(dev bool) *slog.Logger` — nivel `LevelDebug` si `dev` (texto en stderr), `LevelInfo` en producción (JSON en stderr); envuelve el handler con redacción y lo instala como default del paquete.
+- `func Redact(s string) string` — enmascara con `***`: cabeceras `Cookie`/`Set-Cookie`/`Authorization`/`Proxy-Authorization` (resto de la línea), pares JSON `"cookie"|"authorization"|"csrf_token"|"token"|...`, parámetros `?token=`/`?csrf=`/`?_token=`/... en URLs y claves sueltas `csrf=`, `_token=`, `token=`, `apikey=`, `sid=`. Case-insensitive; no toca el resto de la cadena (p. ej. `other=1` o `"nombre":"naruto"`).
+- `func NewHandler(h slog.Handler) slog.Handler` — `slog.Handler` envolvente que aplica `Redact` al mensaje y a cada atributo (message y atributos en `Handle`, `WithAttrs`, `WithGroup`).
+- `func SetDefault(l *slog.Logger)` — fija el logger que usa `Request`.
+- `func Request(provider, op, url string, status int, dur time.Duration, extractor string)` — log `http_request` con atributos `provider`, `op`, `url` (redactada por el handler), `status`, `dur`, `extractor`; nivel `Warn` si `status >= 400` o `0`, `Info` en caso contrario.
+- Tests: `internal/logx/logx_test.go` (6 tests, red de nada).
 
 ## Desviaciones del plan
 
 > Cualquier cambio respecto a `tareas_v4.md` (nombres, decisiones, archivos extra tocados con permiso).
 
-_(ninguna)_
+- T01: además de lo pedido en el entregable se exportan `NewHandler` y `SetDefault` (necesarios para envolver un handler propio y para que `Request` sea testeable); ambos dentro de `internal/logx/**`.
+- T01: el entregado `logx.Request(...)` toma el logger del default del paquete (fijado por `New`), ya que la firma pedida no lleva logger.
+- T01: salida del logger en `os.Stderr` (texto en dev, JSON en producción). No hay archivo de log todavía: si más adelante se quiere rotar a fichero, será decisión de otra tarea.
+- Sin archivos tocados fuera de `internal/logx/**`.
 
 ## Problemas pendientes / deuda técnica
 
 > Cosas que quedaron a medias, tests omitidos, TODOs que otra tarea debe resolver.
 
-_(ninguno)_
+- `app.go` todavía no llama a `logx.New(...)` ni usa `logx.Request` (tocar `app.go` está fuera del alcance de T01); la integración queda para T20.
+- `go test -race` y `gofmt` corrieron en el contenedor; el humano debe repetirlos por su cuenta según el protocolo.
 
 ## Bitácora
 
 | Fecha | Tarea | Modelo usado | Resultado | Notas |
 |---|---|---|---|---|
-| | | | | |
+| 2026-10-04 | T01 | opencode/mimo-v2.6-flash-free | OK | `gofmt -l .` sin salida, `go vet ./...` y `go test -race ./...` en verde (`internal/logx` 6 tests PASS) |
