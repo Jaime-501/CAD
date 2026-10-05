@@ -1,0 +1,179 @@
+<html>
+<head>
+<meta name="referrer" content="never"/><style>*{margin:0px;}</style>
+<!-- Script -->
+<script src="https://cdn.jkanime.net/assets/dplayer.js"></script>
+<!-- Estilos -->
+<style type="text/css">
+html,
+body {
+    width: 100%;
+    height: 100%;
+    margin: auto;
+    overflow: hidden;
+}
+
+canvas#cnv {
+    display: none;
+}
+
+.dplayer-icon.dplayer-camera-icon {
+    display: inline-block !important;
+}
+
+span.dplayer-bezel-icon.cplay {
+    opacity: 1;
+    color: #fff;
+    background: #f97a29;
+    height: 80px;
+    width: 80px;
+    margin: -41px 0 0 -41px;
+}
+
+.dplayer-mobile-play {
+    opacity: 0 !important;
+    height: 80px;
+    width: 80px;
+}
+
+span.dplayer-bezel-icon.cplay svg.splay {
+    position: relative;
+    left: 2px;
+}
+
+/*Modal*/
+#confirm_modal {position: absolute;width: 100%;color: #5A5A5A;padding: 10px;top:0;bottom: 0;margin: auto;z-index: 99;font-family: arial;}
+#modal-back {position: fixed;opacity: 0.8;z-index: 10;background: #000000;top: 0;left: 0;right: 0;bottom: 0;margin: auto;}
+
+
+div#modal-c {height: 100%;position: relative;z-index: 16;}
+#confirm_modal h3 {padding: 15px 0px;text-align: center;margin: 0;}
+
+#confirm_modal span {display: block;padding: 0px 19px;}
+
+div#buttons {position: absolute;right: 0;bottom: 0;padding: 0px 0px;margin-bottom: -35px;width: 100%;text-align: center;}
+
+div#buttons a{height: 100%;padding: 10px 43px;color: #000000;display: inline-block;background: #fff;border-radius: 5px;text-decoration: none;margin: 5px 5px;}
+
+.modal {
+    margin: auto;
+    width: 50%;
+    padding-top: 15%;
+    color: #fff;
+}
+</style>
+<script type="text/javascript">
+window.onload = function() {
+    document.getElementById('mse').style.height = window.innerHeight + 'px';
+}
+
+window.addEventListener('resize', function() {
+    document.getElementById('mse').style.height = window.innerHeight + 'px';
+});
+</script>
+<script>
+var times_modal = 0;
+function modal_confirm(titulo = false, msj = false, callback = false, callback_cancel = false) {
+    if(times_modal == 0) {
+        var modal = document.createElement("div");
+        modal.id = 'confirm_modal';
+        document.body.appendChild(modal);
+        var ModalData=document.getElementById("confirm_modal");
+        var boton='';
+        var boton='<a href="#" id="acp">Si,Por Favor</a>';
+        ModalData.innerHTML='<div id="modal-back"></div><div class="modal"><div id="modal-c"><h3>'+titulo+'</h3><span id="mc">'+msj+'</span><div id="buttons"><a id="mclose" href="#">No,Gracias</a>'+boton+'</div></div></div>';
+        document.querySelector(".modal").style.height=document.getElementById("mc").offsetHeight+100+'px';
+        document.getElementById('mclose').onclick=function(){ModalData.remove();callback_cancel();return false;};
+        document.getElementById('acp').onclick=function(){ModalData.remove();callback();return false;};
+    }
+    times_modal++;
+}
+</script>
+<link rel="stylesheet" href="https://cdn.jkanime.net/assets/DPlayer.min.css">
+</head>
+<body>
+
+<div id="mse"></div>
+
+<script>
+window.dp = new DPlayer({
+    container: document.getElementById('mse'),
+                        preload: 'auto', // metadata
+
+                        theme: '#f97a29',
+                        airplay: true,
+                        hotkey: true,
+
+                        video: {
+                            url: 'https://jkplayers.com/stream/jkmedia/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/1/2001:db8::1/',
+                            type: 'mp4'
+                        }
+});
+
+dp.on('durationchange', function () {
+
+    //Recordar minuto
+    var jkplayer = document.querySelector('.dplayer-video');
+    var actual_status = localStorage.getItem('remember_players');
+    var jkplayer_status = actual_status == null ? [] : JSON.parse(actual_status);
+
+    function update_jkstatus() {
+        setInterval(function(){
+            var new_time = {'time': jkplayer.currentTime, 'hash': window.location.search};
+            //Si no existe se crea
+            if (!jkplayer_status.find(o => o.hash === window.location.search)) {
+                if(jkplayer.currentTime > 5) {
+                    jkplayer_status.push(new_time);
+                    localStorage.setItem('remember_players', JSON.stringify(jkplayer_status));
+                }
+            } else {
+                //Si existe se actualiza
+                jkplayer_status[jkplayer_status.findIndex(o => o.hash === window.location.search)]['time'] = jkplayer.currentTime;
+                localStorage.setItem('remember_players', JSON.stringify(jkplayer_status));
+
+            }
+        }, 1000);
+
+    }
+
+    if(jkplayer_status.find(o => o.hash === window.location.search)) {
+        //Pregunta si quiere continuar
+        var player_newtime = jkplayer_status[jkplayer_status.findIndex(o => o.hash === window.location.search)]['time'];
+
+        var humantime = new Date(player_newtime * 1000).toISOString().substr(11, 8);
+        modal_confirm("Un momento!", "Parece que anteriormente estabas mirando este vídeo ¿Deseas continuar donde te quedaste? "+humantime, function() {
+            jkplayer.currentTime = player_newtime;
+            jkplayer.play();
+
+            update_jkstatus();
+        }, function() {
+            update_jkstatus();
+        });
+
+    } else {
+        //Si no hay info, crea o actualiz
+        update_jkstatus();
+    }
+
+
+});
+
+function addplaybutton() {
+    document.querySelector(".dplayer-bezel-icon").innerHTML = '<svg class="splay" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 16 32"><path d="M15.552 15.168q0.448 0.32 0.448 0.832 0 0.448-0.448 0.768l-13.696 8.512q-0.768 0.512-1.312 0.192t-0.544-1.28v-16.448q0-0.96 0.544-1.28t1.312 0.192z"></path></svg>';
+    document.querySelector(".dplayer-bezel-icon").className = "dplayer-bezel-icon cplay";
+}
+
+addplaybutton();
+
+dp.on('play', function() {
+    document.querySelector(".dplayer-bezel-icon").className = "dplayer-bezel-icon";
+});
+dp.on('playing', function() {
+    document.querySelector(".dplayer-bezel-icon").className = "dplayer-bezel-icon";
+});
+dp.on('pause', function() {
+    document.querySelector(".dplayer-bezel-icon").className = "dplayer-bezel-icon cplay";
+    document.querySelector(".dplayer-bezel-icon").innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 17 32"><path d="M14.080 4.8q2.88 0 2.88 2.048v18.24q0 2.112-2.88 2.112t-2.88-2.112v-18.24q0-2.048 2.88-2.048zM2.88 4.8q2.88 0 2.88 2.048v18.24q0 2.112-2.88 2.112t-2.88-2.112v-18.24q0-2.048 2.88-2.048z"></path></svg>';
+});
+
+</script>

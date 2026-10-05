@@ -1,0 +1,23 @@
+[     729ms] [LOG] https://login.jkanime.net @ https://cdn.jkdesa.com/assets3/js/main.js?v=2.0.204:774
+[     729ms] [LOG]  @ https://cdn.jkdesa.com/assets3/js/main.js?v=2.0.204:775
+[     736ms] [LOG] [] @ https://cdn.jkdesa.com/assets3/js/history.js?v=2.0.204:147
+[     736ms] [LOG] [] @ https://cdn.jkdesa.com/assets3/js/main.js?v=2.0.204:1261
+[     820ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ https://jkanime.net/bleach/1/:0
+[     820ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "new-password"): (More info: https://goo.gl/9p2vKq) %o @ https://jkanime.net/bleach/1/:0
+[     820ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "new-password"): (More info: https://goo.gl/9p2vKq) %o @ https://jkanime.net/bleach/1/:0
+[     960ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://login.jkanime.net/api/usuario:0
+[     961ms] [ERROR] Error en la primera llamada de api_usr: {readyState: 4, getResponseHeader: , getAllResponseHeaders: , setRequestHeader: , overrideMimeType: } @ https://cdn.jkdesa.com/assets3/js/main.js?v=2.0.204:904
+[    1037ms] [LOG] 
+ %c DPlayer v1.27.0 a0424ca %c https://dplayer.diygod.dev 
+
+ color: #fadfa3; background: #030307; padding:5px 0; background: #fadfa3; padding:5px 0; @ https://cdn.jkdesa.com/assets/dplayer-1.27.js?v=1.24:6546
+[    1311ms] [LOG] 
+ %c DPlayer v1.27.0 a0424ca %c https://dplayer.diygod.dev 
+
+ color: #fadfa3; background: #030307; padding:5px 0; background: #fadfa3; padding:5px 0; @ https://cdn.jkdesa.com/assets/dplayer-1.27.js?v=1.24:6546
+[    1325ms] [LOG] [input#saturate, input#brightness, input#contrast] @ https://cdn.jkdesa.com/assets/dplayer-1.27.js?v=1.24:2897
+[    1325ms] [LOG] null @ https://cdn.jkdesa.com/assets/filters-save.js?v=1791240877:14
+[    1489ms] ReferenceError: plausible is not defined
+    at HTMLDocument.<anonymous> (https://jkanime.net/jkplayer/um?e=UGhTY1A1T3l5emZDQTV4Z1ZzeTJvYnBoWGNNQ04rcFQ3RnRaWjAvWnMrYk1ab2dyU3hLc3dlaTg2ZC9SYjhiMzo6M3G0hQ1Hs0c5QlcWpKwzOw--&t=785b35c11478409629f56d9bcfbded29&op=NzM1NjQ=:478:9)
+[    6618ms] [WARNING] An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing. @ about:srcdoc:0
+[  388297ms] [WARNING] An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing. @ about:srcdoc:0

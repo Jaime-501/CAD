@@ -1,0 +1,326 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e4]:
+      - link [ref=e7] [cursor=pointer]:
+        - /url: https://jkanime.net
+        - img "Logo JkAnime" [ref=e8]
+      - generic [ref=e10]:
+        - generic [ref=e11]: 
+        - text: U 
+        - button "ﴙ" [ref=e13] [cursor=pointer]
+  - generic [ref=e18]:
+    - generic [ref=e19]:
+      - generic [ref=e20]:
+        - generic [ref=e22]:
+          - generic [ref=e23]:
+            - iframe [ref=e24]:
+              - generic [ref=f5e6]:
+                - text: Ajustes Send
+                - generic [ref=f5e7]:
+                  - button [ref=f5e8] [cursor=pointer]
+                  - generic [ref=f5e12] [cursor=pointer]:
+                    - button [ref=f5e13]
+                    - generic: 70%
+                  - generic [ref=f5e17]: 0:00 / 0:00
+                - generic [ref=f5e18]:
+                  - generic [ref=f5e19] [cursor=pointer]: Screenshot
+                  - text: AirPlay
+                  - generic [ref=f5e23] [cursor=pointer]: Enviar a chromecast
+                  - text: Send danmaku
+                  - generic [ref=f5e27]:
+                    - button "Ajustes" [ref=f5e28] [cursor=pointer]
+                    - generic:
+                      - generic:
+                        - generic: mejorar imagen
+                        - generic: Velocidad
+                        - generic: Repetir
+                  - generic [ref=f5e32]:
+                    - text: Web full screen
+                    - button "Pantalla completa" [ref=f5e33] [cursor=pointer]
+                - generic [ref=f5e37] [cursor=pointer]: 00:00
+            - generic [ref=e25] [cursor=pointer]
+          - iframe [ref=e27] [cursor=pointer]:
+            - generic [ref=f6e1] [cursor=pointer]
+        - generic [ref=e28]:
+          - heading "Episodio 1 Japones - Bleach" [level=1] [ref=e31]:
+            - text: Episodio 1
+            - generic [ref=e32]: Japones
+            - text: "- Bleach"
+          - generic [ref=e33]:
+            - generic [ref=e34] [cursor=pointer]: 
+            - generic [ref=e36] [cursor=pointer]: 
+            - generic [aria-hidden] [ref=e39] [cursor=pointer]: 
+            - generic [aria-hidden] [ref=e41] [cursor=pointer]: 
+            - generic [aria-hidden] [ref=e43] [cursor=pointer]: 
+            - generic [aria-hidden] [ref=e45] [cursor=pointer]: 
+            - generic [ref=e46] [cursor=pointer]: s
+            - generic [ref=e49] [cursor=pointer]:
+              - text: Japones Sub. Español
+              - list:
+                - listitem: Japones Sub. Español
+        - button "Reproductor:Desu " [ref=e50] [cursor=pointer]:
+          - text: Reproductor:Desu
+          - generic [ref=e51]: 
+      - generic [ref=e52]:
+        - generic [ref=e53]:
+          - generic [ref=e54]:
+            - generic [ref=e55] [cursor=pointer]:
+              - text: Ep 1 - 16
+              - list:
+                - listitem: Ep 1 - 16
+                - listitem: Ep 17 - 32
+                - listitem: Ep 33 - 48
+                - listitem: Ep 49 - 64
+                - listitem: Ep 65 - 80
+                - listitem: Ep 81 - 96
+                - listitem: Ep 97 - 112
+                - listitem: Ep 113 - 128
+                - listitem: Ep 129 - 144
+                - listitem: Ep 145 - 160
+                - listitem: Ep 161 - 176
+                - listitem: Ep 177 - 192
+                - listitem: Ep 193 - 208
+                - listitem: Ep 209 - 224
+                - listitem: Ep 225 - 240
+                - listitem: Ep 241 - 256
+                - listitem: Ep 257 - 272
+                - listitem: Ep 273 - 288
+                - listitem: Ep 289 - 304
+                - listitem: Ep 305 - 320
+                - listitem: Ep 321 - 336
+                - listitem: Ep 337 - 352
+                - listitem: Ep 353 - 366
+            - generic [ref=e56] [cursor=pointer]: 
+            - spinbutton "Filtrar episodio..." [ref=e58]
+            - generic [ref=e59] [cursor=pointer]: 
+          - generic [ref=e61]:
+            - list [ref=e62]:
+              - listitem:
+                - link "Bleach - 1 Episodio 1 Bleach 2026-06-01":
+                  - /url: https://jkanime.net/bleach/1/
+                  - generic:
+                    - img "Bleach - 1"
+                  - heading "Episodio 1" [level=5]
+                  - generic: Bleach
+                  - time: 2026-06-01
+              - listitem [ref=e63]:
+                - link "Bleach - 2 Episodio 2 Bleach 2026-06-01" [ref=e64] [cursor=pointer]:
+                  - /url: https://jkanime.net/bleach/2/
+                  - img "Bleach - 2" [ref=e66]
+                  - heading "Episodio 2" [level=5] [ref=e67]
+                  - generic [ref=e68]: Bleach
+                  - time [ref=e69]: 2026-06-01
+              - listitem [ref=e70]:
+                - link "Bleach - 3 Episodio 3 Bleach 2026-06-01" [ref=e71] [cursor=pointer]:
+                  - /url: https://jkanime.net/bleach/3/
+                  - img "Bleach - 3" [ref=e73]
+                  - heading "Episodio 3" [level=5] [ref=e74]
+                  - generic [ref=e75]: Bleach
+                  - time [ref=e76]: 2026-06-01
+              - listitem [ref=e77]:
+                - link "Bleach - 4 Episodio 4 Bleach 2026-06-01" [ref=e78] [cursor=pointer]:
+                  - /url: https://jkanime.net/bleach/4/
+                  - img "Bleach - 4" [ref=e80]
+                  - heading "Episodio 4" [level=5] [ref=e81]
+                  - generic [ref=e82]: Bleach
+                  - time [ref=e83]: 2026-06-01
+              - listitem [ref=e84]:
+                - link "Bleach - 5 Episodio 5 Bleach 2026-06-01" [ref=e85] [cursor=pointer]:
+                  - /url: https://jkanime.net/bleach/5/
+                  - img "Bleach - 5" [ref=e87]
+                  - heading "Episodio 5" [level=5] [ref=e88]
+                  - generic [ref=e89]: Bleach
+                  - time [ref=e90]: 2026-06-01
+              - listitem [ref=e91]:
+                - link "Bleach - 6 Episodio 6 Bleach 2026-06-01" [ref=e92] [cursor=pointer]:
+                  - /url: https://jkanime.net/bleach/6/
+                  - img "Bleach - 6" [ref=e94]
+                  - heading "Episodio 6" [level=5] [ref=e95]
+                  - generic [ref=e96]: Bleach
+                  - time [ref=e97]: 2026-06-01
+              - listitem [ref=e98]:
+                - link "Bleach - 7 Episodio 7 Bleach 2026-06-01" [ref=e99] [cursor=pointer]:
+                  - /url: https://jkanime.net/bleach/7/
+                  - img "Bleach - 7" [ref=e101]
+                  - heading "Episodio 7" [level=5] [ref=e102]
+                  - generic [ref=e103]: Bleach
+                  - time [ref=e104]: 2026-06-01
+              - listitem [ref=e105]:
+                - link "Bleach - 8 Episodio 8 Bleach 2026-06-01" [ref=e106] [cursor=pointer]:
+                  - /url: https://jkanime.net/bleach/8/
+                  - img "Bleach - 8" [ref=e108]
+                  - heading "Episodio 8" [level=5] [ref=e109]
+                  - generic [ref=e110]: Bleach
+                  - time [ref=e111]: 2026-06-01
+              - listitem [ref=e112]:
+                - link "Bleach - 9 Episodio 9 Bleach 2026-06-01" [ref=e113] [cursor=pointer]:
+                  - /url: https://jkanime.net/bleach/9/
+                  - img "Bleach - 9" [ref=e115]
+                  - heading "Episodio 9" [level=5] [ref=e116]
+                  - generic [ref=e117]: Bleach
+                  - time [ref=e118]: 2026-06-01
+              - listitem [ref=e119]:
+                - link "Bleach - 10 Episodio 10 Bleach 2026-06-01" [ref=e120] [cursor=pointer]:
+                  - /url: https://jkanime.net/bleach/10/
+                  - img "Bleach - 10" [ref=e122]
+                  - heading "Episodio 10" [level=5] [ref=e123]
+                  - generic [ref=e124]: Bleach
+                  - time [ref=e125]: 2026-06-01
+              - listitem [ref=e126]:
+                - link "Bleach - 11 Episodio 11 Bleach 2026-06-01" [ref=e127] [cursor=pointer]:
+                  - /url: https://jkanime.net/bleach/11/
+                  - img "Bleach - 11" [ref=e129]
+                  - heading "Episodio 11" [level=5] [ref=e130]
+                  - generic [ref=e131]: Bleach
+                  - time [ref=e132]: 2026-06-01
+              - listitem [ref=e133]:
+                - link "Bleach - 12 Episodio 12 Bleach 2026-06-01" [ref=e134] [cursor=pointer]:
+                  - /url: https://jkanime.net/bleach/12/
+                  - img "Bleach - 12" [ref=e136]
+                  - heading "Episodio 12" [level=5] [ref=e137]
+                  - generic [ref=e138]: Bleach
+                  - time [ref=e139]: 2026-06-01
+              - listitem [ref=e140]:
+                - link "Bleach - 13 Episodio 13 Bleach 2026-06-01" [ref=e141] [cursor=pointer]:
+                  - /url: https://jkanime.net/bleach/13/
+                  - img "Bleach - 13" [ref=e143]
+                  - heading "Episodio 13" [level=5] [ref=e144]
+                  - generic [ref=e145]: Bleach
+                  - time [ref=e146]: 2026-06-01
+              - listitem [ref=e147]:
+                - link "Bleach - 14 Episodio 14 Bleach 2026-06-01" [ref=e148] [cursor=pointer]:
+                  - /url: https://jkanime.net/bleach/14/
+                  - img "Bleach - 14" [ref=e150]
+                  - heading "Episodio 14" [level=5] [ref=e151]
+                  - generic [ref=e152]: Bleach
+                  - time [ref=e153]: 2026-06-01
+              - listitem [ref=e154]:
+                - link "Bleach - 15 Episodio 15 Bleach 2026-06-01" [ref=e155] [cursor=pointer]:
+                  - /url: https://jkanime.net/bleach/15/
+                  - img "Bleach - 15" [ref=e157]
+                  - heading "Episodio 15" [level=5] [ref=e158]
+                  - generic [ref=e159]: Bleach
+                  - time [ref=e160]: 2026-06-01
+              - listitem [ref=e161]:
+                - link "Bleach - 16 Episodio 16 Bleach 2026-06-01" [ref=e162] [cursor=pointer]:
+                  - /url: https://jkanime.net/bleach/16/
+                  - img "Bleach - 16" [ref=e164]
+                  - heading "Episodio 16" [level=5] [ref=e165]
+                  - generic [ref=e166]: Bleach
+                  - time [ref=e167]: 2026-06-01
+            - button "Ver más" [ref=e169] [cursor=pointer]
+          - generic [ref=e170]:
+            - link "a Ver todos los episodios" [ref=e171] [cursor=pointer]:
+              - /url: https://jkanime.net/bleach/
+              - generic [ref=e172]:
+                - generic [ref=e173]: a
+                - text: Ver todos los episodios
+            - link "Siguiente " [ref=e175] [cursor=pointer]:
+              - /url: https://jkanime.net/bleach/2/
+              - generic [ref=e176]:
+                - text: Siguiente
+                - generic [ref=e177]: 
+        - generic [ref=e179]:
+          - link [ref=e181] [cursor=pointer]:
+            - /url: https://jkanime.net/bleach//
+            - img "Bleach" [ref=e182]
+          - generic [ref=e183]:
+            - link "Bleach" [ref=e184] [cursor=pointer]:
+              - /url: https://jkanime.net/bleach/
+            - generic [ref=e185]: 366 episodios
+            - paragraph [ref=e186]: "Kurosaki Ichigo es un estudiante de instituto de 15 años, que tiene una peculiaridad: es capaz de ver, oír y hablar con fantasmas. Pero no sabe hasta dónde puede abarcar la clasificación de espíritus, ni lo que conlleva el saberlo. Un buen día, una extraña chica de pequeña estatura que viste ropas negras de samurai ent..."
+        - generic [ref=e187]:
+          - heading "Animes similares" [level=3] [ref=e188]
+          - heading "Yu Yu Hakusho Yu Yu Hakusho Concluido Serie  Sabado, 10 de Octubre de 1992 Naruto Shippuden Naruto Shippuden Concluido Serie  Jueves, 15 de Febrero de 2007 Naruto Naruto Concluido Serie  Jueves, 03 de Octubre de 2002" [level=3] [ref=e189]:
+            - generic [ref=e190]:
+              - generic [ref=e191]:
+                - link [ref=e193] [cursor=pointer]:
+                  - /url: https://jkanime.net/yu-yu-hakusho/
+                  - img "Yu Yu Hakusho" [ref=e194]
+                - generic [ref=e195]:
+                  - heading [level=5] [ref=e196]:
+                    - link "Yu Yu Hakusho" [ref=e197] [cursor=pointer]:
+                      - /url: https://jkanime.net/yu-yu-hakusho/
+                  - generic [ref=e198]:
+                    - paragraph [ref=e199]: Concluido
+                    - paragraph [ref=e200]: Serie
+                  - paragraph [ref=e201]:
+                    - generic [ref=e202]: 
+                    - text: Sabado, 10 de Octubre de 1992
+              - generic [ref=e203]:
+                - link [ref=e205] [cursor=pointer]:
+                  - /url: https://jkanime.net/naruto-shippuden/
+                  - img "Naruto Shippuden" [ref=e206]
+                - generic [ref=e207]:
+                  - heading [level=5] [ref=e208]:
+                    - link "Naruto Shippuden" [ref=e209] [cursor=pointer]:
+                      - /url: https://jkanime.net/naruto-shippuden/
+                  - generic [ref=e210]:
+                    - paragraph [ref=e211]: Concluido
+                    - paragraph [ref=e212]: Serie
+                  - paragraph [ref=e213]:
+                    - generic [ref=e214]: 
+                    - text: Jueves, 15 de Febrero de 2007
+              - generic [ref=e215]:
+                - link [ref=e217] [cursor=pointer]:
+                  - /url: https://jkanime.net/naruto/
+                  - img "Naruto" [ref=e218]
+                - generic [ref=e219]:
+                  - heading [level=5] [ref=e220]:
+                    - link "Naruto" [ref=e221] [cursor=pointer]:
+                      - /url: https://jkanime.net/naruto/
+                  - generic [ref=e222]:
+                    - paragraph [ref=e223]: Concluido
+                    - paragraph [ref=e224]: Serie
+                  - paragraph [ref=e225]:
+                    - generic [ref=e226]: 
+                    - text: Jueves, 03 de Octubre de 2002
+    - heading "Comentarios" [level=5] [ref=e230]
+  - text: U
+  - navigation [ref=e237]:
+    - generic [ref=e238]:
+      - link " Inicio" [ref=e239] [cursor=pointer]:
+        - /url: https://jkanime.net
+        - generic [ref=e240]:
+          - generic [ref=e241]: 
+          - text: Inicio
+      - link " Directorio" [ref=e242] [cursor=pointer]:
+        - /url: https://jkanime.net/directorio
+        - generic [ref=e243]:
+          - generic [ref=e244]: 
+          - text: Directorio
+      - link "ﴮ Horario" [ref=e245] [cursor=pointer]:
+        - /url: https://jkanime.net/horario
+        - generic [ref=e246]:
+          - generic [ref=e247]: ﴮ
+          - text: Horario
+      - link " Comunidad" [ref=e248] [cursor=pointer]:
+        - /url: https://jkanime.net/comunidad
+        - generic [ref=e249]:
+          - generic [ref=e250]: 
+          - text: Comunidad
+      - link " Buscar" [ref=e251] [cursor=pointer]:
+        - /url: "#"
+        - generic [ref=e252]:
+          - generic [ref=e253]: 
+          - text: Buscar
+      - link " Más" [ref=e254] [cursor=pointer]:
+        - /url: "#"
+        - generic [ref=e255]:
+          - generic [ref=e256]: 
+          - text: Más
+    - text:     
+  - text:   ﴚ     狼
+  - insertion
+  - insertion:
+    - insertion
+  - contentinfo [ref=e257]:
+    - link "2" [ref=e259] [cursor=pointer]:
+      - /url: "#"
+    - list [ref=e265]:
+      - listitem [ref=e266]:
+        - link "Inicio" [ref=e267] [cursor=pointer]:
+          - /url: https://jkanime.net
+      - listitem [ref=e268]:
+        - link "Pedir un anime" [ref=e269] [cursor=pointer]:
+          - /url: https://jkanime.net/pedidos
