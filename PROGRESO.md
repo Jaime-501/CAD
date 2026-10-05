@@ -76,7 +76,7 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha y verificada
 | [x] | T03 | Modelos de dominio | — | Con T05 |
 | [x] | T04 | Interfaz Provider y registro | T03 | Sola |
 | [x] | T05 | Referencia de episodio y películas | T03 | Con T03 |
-| [ ] | T06 | JKAnime — excepciones | T02 | Sola |
+| [x] | T06 | JKAnime — excepciones | T02 | Sola |
 | [ ] | T07 | JKAnime — búsqueda | T02–T06 | Sola |
 | [ ] | T08 | JKAnime — detalle y metadatos | T07 | Sola |
 | [ ] | T09 | JKAnime — episodios AJAX con streaming | T08 | Sola (pesada) |
@@ -172,6 +172,16 @@ Paralelizables (si usas varias sesiones a la vez): T06/T09/T10 · T12–T15 entr
 - `type Registry struct { … }` + `func NewRegistry() *Registry`, `func (r *Registry) Register(p Provider) error`, `func (r *Registry) Get(name string) (Provider, bool)`, `func (r *Registry) All() []Provider`. `sync.RWMutex`, valor cero utilizable (mapa perezoso), duplicado ⇒ reemplazo (gana el último), `All()` devuelve una copia ordenada por nombre.
 - Tests: `internal/scraper/registry_test.go` (7 tests, red de nada, corren con `-race`): `fakeProvider` (falso con `Provider` + `EpisodeStreamer`), Get/Register, duplicados, registros inválidos, valor cero, orden y snapshot de `All()`, concurrencia (50 goroutines) y `ErrNoDetails`.
 
+### T06 — internal/scraper/jkanime
+
+- `const DefaultExceptionsURL = "https://raw.githubusercontent.com/Zhuchii/ani-es/refs/heads/main/excepciones.json"` — mapa remoto real (JSON plano `string→string`).
+- Internos: `const exceptionsTimeout = 5 * time.Second` (deadline de la descarga vía `context.WithTimeout` sobre el ctx del llamador), `const maxExceptionsBytes = 1 << 20` (1 MB; se lee `max+1` bytes y si se supera se descarta entera sin parsear).
+- `type ResolvedAnimeURL struct { URL string; UsedException bool }` — tags `url`, `used_exception`.
+- `type ExceptionResolver struct { URL string; Doer httpx.HTTPDoer; … }` — `URL` es el campo configurable (vacío → `DefaultExceptionsURL`); campos no exportados `mu sync.Mutex`, `loaded bool`, `entries map[string]string` (caché en memoria). Valor cero utilizable: con `Doer` nil no se toca la red (`httpx.Get` devuelve `ErrNilDoer`) y se sigue sin excepciones.
+- `func (r *ExceptionResolver) Resolve(ctx context.Context, slug string) ResolvedAnimeURL` — nunca devuelve error. Coincidencia **exacta** con el mapa tras normalizar de igual forma claves y slug (`TrimSpace` + minúsculas + sin barra final); si hay entrada → valor del mapa con `UsedException=true`, si no → slug tal cual. Sin reglas de truncado.
+- Internas: `load` (descarga bajo el mutex: un solo Resolve dispara la petición), `fetch` (httpx.Get con `Provider: "jkanime"`, `Operation: "exceptions"`; límite de tamaño; aviso con `slog.Warn` si falla), `parseExceptions` (validación de esquema), `normalizeExceptionKey`, `isHTTPURL`.
+- Tests: `internal/scraper/jkanime/exceptions_test.go` (11 tests / 24 con subtests, red de nada, corren con `-race`; `TestMain` instala logger descartable para `logx.Request` y `slog`). Fixture real: `internal/scraper/jkanime/testdata/excepciones.json` (solo lectura).
+
 ## Desviaciones del plan
 
 > Cualquier cambio respecto a `tareas_v4.md` (nombres, decisiones, archivos extra tocados con permiso).
@@ -206,6 +216,13 @@ Paralelizables (si usas varias sesiones a la vez): T06/T09/T10 · T12–T15 entr
 - T04: los asserts `var _ Provider`/`var _ EpisodeStreamer` están solo sobre el **fake de tests**; el de `JkAnime` queda para T07, como pide la tarea.
 - T04: **`AnimeFLV` todavía no cumple `Provider`**: su `Search(query string)` no lleva `ctx` y `GetAnimeDetails(id)` devuelve `models.Anime` en lugar de `models.AnimeDetail`. `internal/scraper/animeflv.go` está fuera de "Puedes tocar" en T04, así que no se tocó; **T18 deberá adaptarlo**.
 - Sin archivos tocados fuera de `internal/scraper/provider.go`, `internal/scraper/registry.go` y `internal/scraper/registry_test.go` (ni `animeflv.go`, ni su test con tag `integration`, ni `app.go`, ni `frontend/**`, ni `internal/models/**`).
+- T06: la descarga del mapa ocurre **bajo el mutex** del resolver (`load`): varios `Resolve` concurrentes solo disparan una petición y, mientras dura (máx. `exceptionsTimeout`), los demás esperan.
+- T06: el mapa descargado se cachea durante toda la ejecución; **un fallo no se cachea**, el siguiente `Resolve` reintenta la descarga (auto-recuperación tras un corte transitorio).
+- T06: normalización idéntica para claves del mapa y slug de entrada (`TrimSpace` + minúsculas + sin barra final) con coincidencia **exacta**; el valor se devuelve tal cual del JSON. No se deduce ninguna regla de truncado del slug.
+- T06: validación de esquema: se descartan las entradas cuya clave quede vacía o cuya clave/valor no sea URL absoluta http/https con host; un cuerpo que no sea un objeto JSON `string→string` (incluido `null`) se trata como JSON inválido y no se cachea.
+- T06: `Resolve` no devuelve error (firma de la tarea): el fallo se expresa como `UsedException=false` + slug tal cual, con aviso `slog.Warn` (logx no exporta su logger; el error HTTP ya queda registrado por `logx.Request` dentro de `httpx.Get`).
+- T06: `ResolvedAnimeURL` lleva tags `json` snake_case por convención del proyecto, aunque hoy no cruza a Wails (T20/T23 decidirán si se expone).
+- Sin archivos tocados fuera de `internal/scraper/jkanime/exceptions.go` e `internal/scraper/jkanime/exceptions_test.go` (el fixture `testdata/excepciones.json` solo se leyó).
 
 ## Problemas pendientes / deuda técnica
 
@@ -213,7 +230,7 @@ Paralelizables (si usas varias sesiones a la vez): T06/T09/T10 · T12–T15 entr
 
 - `app.go` todavía no llama a `logx.New(...)` ni usa `logx.Request` (tocar `app.go` está fuera del alcance de T01); la integración queda para T20.
 - `go test -race` y `gofmt` corrieron en el contenedor; el humano debe repetirlos por su cuenta según el protocolo.
-- `internal/httpx` todavía no lo usa nadie: `internal/scraper/animeflv.go` sigue con su propio `http.Get`; migrarlo es trabajo de T18 (y de T06/T07/T10 con JKAnime).
+- `internal/httpx` ya lo consume `internal/scraper/jkanime/exceptions.go` (T06); `internal/scraper/animeflv.go` sigue con su propio `http.Get`, migrarlo es trabajo de T18 (y de T07/T10 con JKAnime).
 - El transporte por defecto no añade cabeceras `Accept`/`Accept-Language`; si JKAnime las exige se añaden en su tarea vía `ReqOptions.Header`.
 - `Retry-After` se respeta sin tope (un 429 con `Retry-After: 3600` esperaría una hora); lo corta el `ctx`. Si hay que limitarlo, decidirlo en la tarea que lo necesite.
 - Un 419 queda reintentable a propósito: el reintento solo sirve si el `fn` de `Retry` refresca la sesión antes (detalle para T09).
@@ -223,6 +240,10 @@ Paralelizables (si usas varias sesiones a la vez): T06/T09/T10 · T12–T15 entr
 - T04: nadie registra providers todavía: el `Registry` se monta en T20 (`jkanime` + `animeflv`).
 - T04: `AnimeFLV` no cumple `Provider` (ver desviaciones); `app.go` sigue llamando a su `Search(query)` actual, sin `ctx`.
 - T04: `SourceOpts.NoCache` no lo consume nadie todavía: lo leerán T17/T27.
+- T06: `ExceptionResolver` todavía no lo usa nadie fuera de sus tests; lo monta T07 (y quizá T20, si precarga el mapa al arrancar).
+- T06: un fallo de descarga se reintenta en cada `Resolve` (sin negativo-cache): durante un corte remoto cada llamada puede tardar hasta `exceptionsTimeout`, serializadas por el mutex. Si molesta, añadir negativo-cache con TTL en la tarea que lo necesite.
+- T06: el aviso `slog.Warn` va al logger por defecto de `slog`, no al de `logx`; para unificar formato y redacción, T20/T29 puede instalar `slog.SetDefault(logx.New(dev))`.
+- T06: el paquete `jkanime` ya define `TestMain` (en `exceptions_test.go`): **T07+ no debe definir otro** en el mismo paquete.
 
 ## Bitácora
 
@@ -233,3 +254,4 @@ Paralelizables (si usas varias sesiones a la vez): T06/T09/T10 · T12–T15 entr
 | 2026-10-04 | T03 | opencode/mimo-v2.6-flash-free | OK | `gofmt -l .` sin salida, `go vet ./...` limpio, `go test ./...` en verde (`internal/models` 8 tests PASS); solo se tocaron `internal/models/models.go` y `models_test.go` |
 | 2026-10-04 | T05 | opencode/mimo-v2.6-flash-free | OK | `gofmt -l .` sin salida, `go vet ./...` limpio, `go test ./...` en verde (`internal/models` 5 tests/37 subtests PASS); solo se crearon `internal/models/ids.go` e `ids_test.go` |
 | 2026-10-04 | T04 | opencode/mimo-v2.6-flash-free | OK | `gofmt -l .` sin salida, `go vet ./...` limpio, `go test -race ./...` en verde (`internal/scraper` 7 tests PASS con `-race`); solo se crearon `internal/scraper/provider.go`, `registry.go` y `registry_test.go` |
+| 2026-10-04 | T06 | opencode/mimo-v2.6-flash-free | OK | `gofmt -l .` sin salida, `go vet ./...` limpio, `go test -race ./...` en verde (`internal/scraper/jkanime` 11 tests/24 con subtests PASS con `-race`); solo se crearon `internal/scraper/jkanime/exceptions.go` y `exceptions_test.go` |
