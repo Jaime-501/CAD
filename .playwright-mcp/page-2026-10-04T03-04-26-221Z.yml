@@ -1,8 +1,0 @@
-- main [ref=e3]:
-  - heading "Buscador de AnimeFLV" [level=2] [ref=e4]
-  - generic [ref=e5]:
-    - 'textbox "Ej: Death Note, Jujutsu Kaisen..." [active] [ref=e6]': bleach
-    - button "Buscar" [ref=e7] [cursor=pointer]
-  - generic [ref=e9] [cursor=pointer]:
-    - 'img "Bleach: Sennen Kessen-hen - Kashin-tan" [ref=e10]'
-    - paragraph [ref=e11]: "Bleach: Sennen Kessen-hen - Kashin-tan"

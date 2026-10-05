@@ -1,6 +1,0 @@
-- main [ref=f6e3]:
-  - heading "Buscador de AnimeFLV" [level=2] [ref=f6e4]
-  - generic [ref=f6e5]:
-    - 'textbox "Ej: Death Note, Jujutsu Kaisen..." [active] [ref=f6e6]': bleach
-    - button "Buscar" [ref=f6e7] [cursor=pointer]
-  - paragraph [ref=f6e8]: Sin conexión con Go. Abre la app en http://localhost:34115 — el puerto 5173 (Vite) no tiene el puente de Wails.

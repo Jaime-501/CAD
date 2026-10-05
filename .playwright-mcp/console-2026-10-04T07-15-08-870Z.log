@@ -1,8 +1,0 @@
-[      40ms] [LOG] Queueing: runtime:ready @ http://localhost:34115/wails/ipc.js:40
-[      42ms] [LOG] %c wails dev %c Connected to backend  background: #aa0000; color: #fff; border-radius: 3px 0px 0px 3px; padding: 1px; font-size: 0.7rem background: #009900; color: #fff; border-radius: 0px 3px 3px 0px; padding: 1px; font-size: 0.7rem @ http://localhost:34115/wails/ipc.js:0
-[      43ms] [LOG] sending queued message: runtime:ready @ http://localhost:34115/wails/ipc.js:40
-[      56ms] TypeError: Cannot read properties of null (reading 'nodes')
-    at Fe (http://localhost:34115/wails/ipc.js:32:26544)
-    at bn (http://localhost:34115/wails/ipc.js:32:27002)
-    at new In (http://localhost:34115/wails/ipc.js:41:87)
-    at http://localhost:34115/wails/ipc.js:41:367
