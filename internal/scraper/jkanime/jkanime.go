@@ -22,8 +22,8 @@ const (
 )
 
 // ErrNotImplemented marcan los métodos de Provider que todavía no tienen
-// implementación: los sustituyen T08 (detalle), T09/T10 (episodios) y
-// T17/T20 (fuentes de vídeo). Se comprueba con errors.Is.
+// implementación: lo queda en GetVideoSources hasta T17/T20 (fuentes de
+// vídeo). Se comprueba con errors.Is.
 var ErrNotImplemented = errors.New("jkanime: operación no implementada todavía")
 
 // JkAnime implementa scraper.Provider sobre jkanime.net. Sus dependencias se
@@ -59,9 +59,11 @@ func New(doer httpx.HTTPDoer, baseURL string, resolver *ExceptionResolver) *JkAn
 // Name identifica al proveedor ante el Registry.
 func (j *JkAnime) Name() string { return providerName }
 
-// GetAnimeDetails se implementa en T08.
+// GetAnimeDetails delega en el flujo de episodios de T09 (episodes.go): el
+// detalle de la página de serie más TODOS los episodios del AJAX, sin emitir
+// lotes.
 func (j *JkAnime) GetAnimeDetails(ctx context.Context, id string) (models.AnimeDetail, []models.Episode, error) {
-	return models.AnimeDetail{}, nil, ErrNotImplemented
+	return j.getAnimeDetails(ctx, id)
 }
 
 // GetVideoSources se implementa en T17/T20, cuando existan los extractores.

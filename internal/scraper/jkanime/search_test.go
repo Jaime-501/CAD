@@ -240,11 +240,7 @@ func TestMetodosNoImplementados(t *testing.T) {
 		t.Errorf("Name() = %q, quería %q", j.Name(), providerName)
 	}
 
-	_, _, err := j.GetAnimeDetails(context.Background(), "bleach")
-	if !errors.Is(err, ErrNotImplemented) {
-		t.Errorf("GetAnimeDetails err = %v, quería ErrNotImplemented", err)
-	}
-	_, err = j.GetVideoSources(context.Background(), "jkanime:bleach:episode:1", scraper.SourceOpts{})
+	_, err := j.GetVideoSources(context.Background(), "jkanime:bleach:episode:1", scraper.SourceOpts{})
 	if !errors.Is(err, ErrNotImplemented) {
 		t.Errorf("GetVideoSources err = %v, quería ErrNotImplemented", err)
 	}
