@@ -44,3 +44,4 @@ Aplicación de escritorio Wails v2 (módulo Go y nombre de la app: `miapp`): Bac
 - Los modelos nuevos usan tags `json` en minúsculas y snake_case (como `cover_url`).
 - Mantén el `<meta name="referrer" content="no-referrer">`: el Referer que exigen los servidores de vídeo se inyecta en el proxy local (T19), no en el navegador.
 - El host es Windows 11 con PowerShell: no uses `grep`, `head` ni `sed` en el host. Usa `curl.exe` (no `curl`), `Select-String` y `Select-Object -First N`, o ejecuta dentro del contenedor con `docker compose run --rm app sh -c "..."`.
+- Los smoke tests con red van en un archivo aparte `*_integration_test.go` (mismo paquete, con `//go:build integration`). Está permitido crearlo aunque no figure en "Puedes tocar".

@@ -26,9 +26,9 @@ desviaciones, pendientes) y detente. No empieces la siguiente tarea.
 Antes de las tareas que parsean HTML/JSON real debe existir un **fixture real y sanitizado** (sin cookies ni tokens) en el `testdata/` correspondiente. Un fixture es la respuesta **cruda** del servidor guardada en un archivo, para que los tests corran sin red. Lo puede capturar el humano a mano o el agente con el MCP de Playwright (ver "Captura con Playwright MCP" más abajo). Si no existe el fixture de la tarea, el agente se detiene y lo pide: **no inventa HTML ni selectores**.
 
 - [x] Página de búsqueda de JKAnime → T07
-- [ ] Página de detalle de un anime → T08
+- [x] Página de detalle de un anime → T08
 - [ ] Respuesta JSON de `/ajax/episodes/<id>/<página>` (al menos 2 páginas) → T09
-- [ ] Página de un episodio → T10
+- [x] Página de un episodio → T10
 - [ ] Respuestas del player `jkplayer/um?...` (con y sin `.vtt`) → T12
 - [ ] Respuesta de `jk.php` → T13
 - [ ] Página con `var servers` → T14
@@ -78,9 +78,9 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha y verificada
 | [x] | T05 | Referencia de episodio y películas | T03 | Con T03 |
 | [x] | T06 | JKAnime — excepciones | T02 | Sola |
 | [x] | T07 | JKAnime — búsqueda | T02–T06 | Sola |
-| [ ] | T08 | JKAnime — detalle y metadatos | T07 | Sola |
+| [x] | T08 | JKAnime — detalle y metadatos | T07 | Sola |
 | [ ] | T09 | JKAnime — episodios AJAX con streaming | T08 | Sola (pesada) |
-| [ ] | T10 | JKAnime — fetch de página de episodio | T02 | Sola |
+| [x] | T10 | JKAnime — fetch de página de episodio | T02 | Sola |
 | [ ] | T11 | Arquitectura de extractores | T03, T10 | Sola |
 | [ ] | T12 | Extractor JKPlayer (softsubs) | T11 | Agrupable T12–T15 |
 | [ ] | T13 | Extractor JKPHP | T11 | Agrupable T12–T15 |
@@ -195,6 +195,32 @@ Paralelizables (si usas varias sesiones a la vez): T06/T09/T10 · T12–T15 entr
 - Internos: `searchPath = "/buscar/"`, `maxSearchBytes`, `siteURL()`, `resolver()`, `parseSearch`, `absoluta`, `slugFromURL`.
 - Tests: `search_test.go` (9 tests / 12 con subtests, red de nada, corren con `-race`; **reutiliza** los helpers de `exceptions_test.go` y no define otro `TestMain`) + `search_integration_test.go` (`//go:build integration`, smoke contra el sitio real). Fixtures reales (solo lectura): `testdata/search.html` (búsqueda "bleach": 10 resultados) y `testdata/search_empty.html` (búsqueda sin resultados: 0 items).
 
+### T08 — internal/scraper/jkanime
+
+- `const maxDetailBytes = 10 << 20` — límite de la página de detalle (10 MB); un cuerpo mayor se rechaza sin parsearlo (ídem `maxSearchBytes` de T07).
+- `const tipoSerie = "series"`, `tipoPelicula = "movie"`, `tipoOVA = "ova"`, `tipoEspecial = "special"`, `tipoDesconocido = "unknown"` — valores normalizados de `models.AnimeDetail.Type` (sin exportar; la frontend compara contra esos strings).
+- `var errSlugVacio = errors.New("jkanime: el id del anime no contiene slug")` — causa sentinela (`errors.Is`); un slug vacío/`"/"` no hace ninguna petición.
+- `type detailMeta struct { NumericID, CSRFToken string }` — **estructura interna**: id numérico del sitio (atributo `data-anime`, p. ej. `278`) y meta `csrf-token`. No se exponen en `models` (regla 10: nunca en logs); los usa T09.
+- `func (j *JkAnime) fetchDetail(ctx context.Context, slug string) (models.AnimeDetail, detailMeta, error)` — `GET <base>/<slug>/` con `httpx.Get` (`Provider: "jkanime"`, `Operation: "detail"`, UA por defecto), cuerpo limitado a `maxDetailBytes`; los fallos HTTP llegan como `*httpx.ScraperError` (404/403/challenge/5xx).
+- Internos: `parseDetail`, `camposAnimeData`, `etiquetaDe`, `textoSinEtiqueta`, `generosDeCampo`, `enteroDeCampo`, `textoPrimero`, `portada`, `idNumerico`, `csrfToken`, `normalizarTipo`, `minusculasSinAcentos`, `acentosReemplazados`.
+- Selectores reales (fixtures `detail.html` / `detail_movie.html`): título `.anime_info h3`, sinopsis `.anime_info p.scroll`, portada `.anime_pic img[src]` con fallback a `meta[property="og:image"]`, ficha `.anime_data li` indexada por el texto de su primer `<span>` (`tipo`, `generos`, `episodios`, `estado` — la ficha aparece en la versión pc y en la móvil, **gana la primera**), id numérico `#guardar-anime[data-anime]` (solo si son dígitos), CSRF `meta[name="csrf-token"]` leído con `EqualFold`.
+- `normalizarTipo(raw string) string` — minúsculas y sin acentos; primero coincidencia exacta (`serie|series|tv…`, `pelicula|movie|film`, `ova`, `especial|special`) y después por contenido; vacío o no reconocido → `unknown`.
+- Tolerancia: una página sin ficha, sin portada o sin CSRF **no** es error; los campos faltantes quedan en cero (`Type=unknown`, `TotalEpisodes=0`) y `Genres` sale siempre no-nil (JSON `[]`).
+- Tests: `detail_test.go` (7 tests / 11 con subtests, red de nada, corren con `-race`; reutiliza los helpers de `exceptions_test.go` y `servidorHTML` de `search_test.go`, sin otro `TestMain`) + `detail_integration_test.go` (`//go:build integration`, tolerante a cambios de contenido: no fija episodios, géneros ni sinopsis). Fixtures reales: `testdata/detail.html` (serie "bleach") y `testdata/detail_movie.html` (película "Bleach: The DiamondDust Rebellion").
+
+### T10 — internal/scraper/jkanime
+
+- `type EpisodePage struct { URL string; HTML string; Headers http.Header }` — página cruda del episodio separada de la extracción: `URL` es la **final** (tras las redirecciones del sitio), `HTML` el cuerpo tal cual lo devolvió el servidor y `Headers` las cabeceras de esa respuesta **sin `Set-Cookie`**. Es tipo interno del paquete (no está en `models`).
+- `func (j *JkAnime) fetchEpisodePage(ctx context.Context, episodeID string) (EpisodePage, error)` — parsea el id con `models.ParseEpisodeID`, exige proveedor `jkanime`, y hace `GET` con `httpx.Get` (`Provider: "jkanime"`, `Operation: "episode_page"`, `Referer` = página de la serie, UA por defecto); cuerpo limitado a `maxEpisodePageBytes = 10 << 20`. **No** extrae fuentes.
+- Internos: `rutaEpisodio(slug, kind, number)`, `finalURL(resp, pedida)`, `cabecerasDePagina(h)`; const `rutaPelicula = "pelicula"`.
+- Errores: los devuelve `httpx` sin tocar (`ErrNotFound` 404, `ErrForbidden` 403, `ErrTooManyRequests` 429 con `RetryAfter()`, `ErrServerError` 5xx y `ErrCloudflareChallenge` con cualquier status); un id inválido (malformado, tipo desconocido, número 0/`01` o proveedor ajeno) devuelve error del paquete **sin tocar la red**.
+- Mapeo id → URL, **verificado en vivo con `curl.exe`**:
+  - `jkanime:<slug>:episode:<n>` → `GET <base>/<slug>/<n>/` (200; fuera de rango → 404, p. ej. `/bleach/367/` y `/bleach/99999/`; sin barra final también responde 200, sin redirección).
+  - `jkanime:<slug>:special:<n>` → `GET <base>/<slug>/<n>/` (el sitio responde 302 → `/<slug>/especial/`, que da 200; `/<slug>/2/` → 404).
+  - `jkanime:<slug>:movie` → `GET <base>/<slug>/pelicula/` (200 en 3 películas distintas; `/<slug>/1/` → 302 → esa misma URL).
+  - El `Referer` no es obligatorio en esta página (200 con referer de la serie, con referer ajeno y sin él); aun así se envía el de la serie.
+- Tests: `episode_page_test.go` (6 tests / 24 con subtests, red de nada, corren con `-race`; reutiliza `fixtureDetalle` de T08 y `servidorHTML`/`doerGrabador`, sin otro `TestMain`): fixture 200 (ruta, `Referer`, UA y cabeceras, con `Set-Cookie` presente en la respuesta y ausente en `Headers`), tabla de rutas por id (episodio/especial/película), 404/403/429 (+`Retry-After: 7`)/500/challenge, ids inválidos sin red, redirección 302 y cuerpo > 10 MB. Fixture real: `testdata/episode_page.html` (episodio 1 de bleach, 61 KB).
+
 ## Desviaciones del plan
 
 > Cualquier cambio respecto a `tareas_v4.md` (nombres, decisiones, archivos extra tocados con permiso).
@@ -242,6 +268,20 @@ Paralelizables (si usas varias sesiones a la vez): T06/T09/T10 · T12–T15 entr
 - T07: `Search` devuelve un slice **no nil** (JSON `[]`, no `null`) tanto en vacío como en sin resultados, pensando en la UI; con query vacía o en blanco no hace petición.
 - T07: `Anime.ID` queda como **slug del href ya pasado por el resolver** (p. ej. `bleach`): T08 reconstruye `<base>/<slug>/` para el detalle; volver a resolverla no tiene efecto (el mapa se consulta por la URL completa y la clave rota ya no aparece).
 - Sin archivos tocados fuera de `internal/scraper/jkanime/jkanime.go`, `search.go`, `search_test.go`, `search_integration_test.go` y `testdata/` (ni `exceptions.go`, ni `app.go`, ni `frontend/**`).
+- T08: fixtures capturados con `curl.exe` directo a `testdata/` (HTTP 200, **sin challenge de Cloudflare**): `detail.html` (71 KB, serie "bleach") y `detail_movie.html` (68 KB, película "Bleach: The DiamondDust Rebellion", creada además para probar la normalización de tipo). Sin recortar; solo se sanitizó el `<meta name="csrf-token">` a `TOKEN_DE_PRUEBA` (el resto no traía cookies ni datos de sesión).
+- T08: verificado con grep sobre el HTML crudo de ambos fixtures: id numérico `data-anime="278"`/`"504"`, CSRF en `<meta name="csrf-token">`, total de episodios `<li><span>Episodios:</span> 366</li>`/`1` y géneros en `<li><span>Generos:</span> <a …>…</a></li>`.
+- T08: el tipo sí existe en el HTML (`<li rel="tipo"><span>Tipo:</span> Serie|Pelicula</li>`); `normalizarTipo` traduce a `series|movie|ova|special|unknown` y tolera acentos y variantes.
+- T08: **`GetAnimeDetails` sigue devolviendo `ErrNotImplemented`**: su definición está en `jkanime.go` y `search_test.go::TestMetodosNoImplementados` exige ese error; ninguno de los dos figura en "Puedes tocar" de T08, así que **no se tocó**. Cablear `fetchDetail` al `Provider` exige modificar ambos → reportado como pendiente (ver "Problemas pendientes").
+- T08: `errSlugVacio` es un error sentinela propio del paquete (el plan no fijaba qué devolver con slug vacío; decisión: no petición).
+- T08: se creó además `detail_integration_test.go` con `//go:build integration` (permitido por `AGENTS.md`; `detail_test.go` debe seguir corriendo sin red en la puerta de calidad).
+- Sin archivos tocados fuera de `internal/scraper/jkanime/detail.go`, `detail_test.go`, `detail_integration_test.go` y `testdata/` (ni `jkanime.go`, ni `search.go`/`search_test.go`, ni `exceptions.go`, ni `app.go`, ni `frontend/**`).
+- T10: fixture capturado con `curl.exe` directo a `testdata/` (HTTP 200, **sin challenge de Cloudflare**): `episode_page.html` (61 KB, episodio 1 de bleach). Sin recortar; solo se sanitizó el `<meta name="csrf-token">` a `TOKEN_DE_PRUEBA`. Los tokens `t=…` de los iframes `jkplayer` y los `remote` de `var servers` **no** se tocaron: no son datos de sesión (la página se pidió sin cookies) y T12–T14 necesitan su forma real para parsearlos; las cookies de sesión (`jkanime-session`, `XSRF-TOKEN`) solo aparecen en las cabeceras `Set-Cookie`, nunca en el cuerpo.
+- T10: `EpisodePage.Headers` copia las cabeceras de la respuesta final **menos `Set-Cookie`**: la sesión vive en el cookiejar del doer inyectado y no debe viajar en structs ni llegar a logs (regla 10).
+- T10: `Referer` = `<base>/<slug>/` (la página de la serie, de donde navega el usuario). En vivo el sitio devuelve 200 con ese referer, con uno ajeno y sin él; se envía el de la serie por coherencia con "conservar Referer".
+- T10: además del mapeo `episode:<n>` que pedía la tarea se resolvieron `movie` → `/<slug>/pelicula/` y `special:<n>` → `/<slug>/<n>/` (con el 302 del sitio hacia `/especial/`), porque `models.ParseEpisodeID` devuelve los tres kinds y T09/T17 pasarán ids de película; las tres rutas están verificadas en vivo.
+- T10: la URL que devuelve `EpisodePage.URL` es la **final** tras seguir redirecciones (`resp.Request.URL`), no la pedida.
+- T10: **no** se creó `episode_page_integration_test.go`: T10 no pide smoke de red (su comprobación es fixture + `httptest`); la verificación en vivo de las rutas se hizo con `curl.exe` y queda arriba.
+- Sin archivos tocados fuera de `internal/scraper/jkanime/episode_page.go`, `episode_page_test.go` y `testdata/` (ni `jkanime.go`, ni `detail.go`/`detail_test.go`, ni `app.go`, ni `frontend/**`).
 
 ## Problemas pendientes / deuda técnica
 
@@ -268,6 +308,13 @@ Paralelizables (si usas varias sesiones a la vez): T06/T09/T10 · T12–T15 entr
 - T07: con el resolver por defecto (`New(..., nil)`), la primera búsqueda descarga el mapa de excepciones de GitHub (máx. 5 s, cacheado en memoria); T20 puede inyectar un `ExceptionResolver` compartido o precargarlo al arrancar.
 - T07: no se envían cabeceras `Accept`/`Accept-Language` y el sitio respondió igual (verificado en el smoke); si JKAnime las exige, añadirlas vía `ReqOptions.Header`.
 - T07: las páginas de búsqueda capturadas (`bleach`, `naruto shippuden`) no traen paginación; si aparece, tratarla en la tarea que la necesite.
+- T08: **pendiente de cablear (reportado):** `fetchDetail` existe pero `Provider.GetAnimeDetails` (`jkanime.go`) aún devuelve `ErrNotImplemented`. Para activarlo hay que tocar `jkanime.go` (fuera de "Puedes tocar" en T08) y `search_test.go::TestMetodosNoImplementados` (tampoco en la lista), que hoy verifica ese error. La tarea que toque ambos (probablemente T09, que ya depende de T08) debe hacer el cableado y borrar esa rama de `ErrNotImplemented`.
+- T08: `detailMeta` todavía no lo consume nadie fuera de sus tests; lo usa T09 (`/ajax/episodes/<NumericID>/<página>` con `_token: <CSRFToken>`).
+- T08: `fetchDetail` no lista episodios (solo metadatos): la página de detalle los pinta el JS vía AJAX, así que `GetAnimeDetails` quedará incompleto hasta T09.
+- T08: el tipo se toma de `li[rel="tipo"]`; si una página no trae esa etiqueta, `Type` queda en `unknown` (no se infiere de `Episodios: 1`).
+- T10: `fetchEpisodePage` todavía no lo llama nadie fuera de sus tests: `Provider.GetVideoSources` sigue en `ErrNotImplemented` (T11/T17) y T09 seguirá siendo quien encadene detalle → episodios.
+- T10: `EpisodePage` no se serializa a Wails hoy (tipo interno); si T20/T27 la exponen, recordar que `Headers` es `http.Header` (mapa `string → []string`).
+- T10: la sesión depende de que el doer inyectado lleve cookiejar (`httpx.NewClient` lo pone). Sin jar, los POST con `_token` de T09 recibirán 419 (`ErrSessionExpired`, reintentable a propósito según T02).
 
 ## Bitácora
 
@@ -280,3 +327,5 @@ Paralelizables (si usas varias sesiones a la vez): T06/T09/T10 · T12–T15 entr
 | 2026-10-04 | T04 | opencode/mimo-v2.6-flash-free | OK | `gofmt -l .` sin salida, `go vet ./...` limpio, `go test -race ./...` en verde (`internal/scraper` 7 tests PASS con `-race`); solo se crearon `internal/scraper/provider.go`, `registry.go` y `registry_test.go` |
 | 2026-10-04 | T06 | opencode/mimo-v2.6-flash-free | OK | `gofmt -l .` sin salida, `go vet ./...` limpio, `go test -race ./...` en verde (`internal/scraper/jkanime` 11 tests/24 con subtests PASS con `-race`); solo se crearon `internal/scraper/jkanime/exceptions.go` y `exceptions_test.go` |
 | 2026-10-04 | T07 | opencode/mimo-v2.6-flash-free | OK | `gofmt -l .` sin salida, `go vet ./...` (+ `-tags integration`) limpio, `go test -race ./...` en verde (paquete `jkanime`: 20 tests top-level PASS con `-race` = 11 de T06 + 9 de T07); smoke `go test -tags integration ./internal/scraper/jkanime/ -run RedReal -v` PASS con 10 resultados reales. Fixtures `search.html` y `search_empty.html` capturados con `curl.exe` (HTTP 200, sin challenge), ruta `/buscar/<query>` verificada en vivo; solo se tocaron `jkanime.go`, `search.go`, `search_test.go`, `search_integration_test.go` y `testdata/` |
+| 2026-10-05 | T08 | opencode/mimo-v2.6-flash-free | OK | `gofmt -l .` sin salida, `go vet ./...` (+ `-tags integration`) limpio, `go test -race ./...` en verde (paquete `jkanime`: 27 tests top-level PASS con `-race` = 11 T06 + 9 T07 + 7 T08). Smoke `go test -tags integration ./internal/scraper/jkanime/ -run RedReal -v` PASS: `bleach` → Type=series, 366 episodios, NumericID=278; `bleach-the-diamonddust-rebellion` → Type=movie, 1 episodio, NumericID=504, CSRF de 40 chars. Fixtures `detail.html` y `detail_movie.html` capturados con `curl.exe` (HTTP 200, sin challenge); solo se tocaron `detail.go`, `detail_test.go`, `detail_integration_test.go` y `testdata/` |
+| 2026-10-05 | T10 | opencode/mimo-v2.6-flash-free | OK | `gofmt -l .` sin salida, `go vet ./...` (+ `-tags integration`) limpio, `go test -race ./...` en verde (paquete `jkanime`: 33 tests top-level PASS con `-race` = 27 + 6 de T10). Rutas verificadas en vivo con `curl.exe`: `/bleach/1/` → 200 (61 KB), `/bleach/367/` → 404, `/bleach/<n>/` → 200, película `/slug/pelicula/` → 200 (y `/slug/1/` → 302 hacia ella), especial `/slug/especial/` → 200 (y `/slug/1/` → 302). Fixture `episode_page.html` capturado con `curl.exe` (HTTP 200, sin challenge); solo se tocaron `episode_page.go`, `episode_page_test.go` y `testdata/` |
