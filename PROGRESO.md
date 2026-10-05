@@ -25,7 +25,7 @@ desviaciones, pendientes) y detente. No empieces la siguiente tarea.
 
 Antes de las tareas que parsean HTML/JSON real debe existir un **fixture real y sanitizado** (sin cookies ni tokens) en el `testdata/` correspondiente. Un fixture es la respuesta **cruda** del servidor guardada en un archivo, para que los tests corran sin red. Lo puede capturar el humano a mano o el agente con el MCP de Playwright (ver "Captura con Playwright MCP" más abajo). Si no existe el fixture de la tarea, el agente se detiene y lo pide: **no inventa HTML ni selectores**.
 
-- [ ] Página de búsqueda de JKAnime → T07
+- [x] Página de búsqueda de JKAnime → T07
 - [ ] Página de detalle de un anime → T08
 - [ ] Respuesta JSON de `/ajax/episodes/<id>/<página>` (al menos 2 páginas) → T09
 - [ ] Página de un episodio → T10
@@ -77,7 +77,7 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha y verificada
 | [x] | T04 | Interfaz Provider y registro | T03 | Sola |
 | [x] | T05 | Referencia de episodio y películas | T03 | Con T03 |
 | [x] | T06 | JKAnime — excepciones | T02 | Sola |
-| [ ] | T07 | JKAnime — búsqueda | T02–T06 | Sola |
+| [x] | T07 | JKAnime — búsqueda | T02–T06 | Sola |
 | [ ] | T08 | JKAnime — detalle y metadatos | T07 | Sola |
 | [ ] | T09 | JKAnime — episodios AJAX con streaming | T08 | Sola (pesada) |
 | [ ] | T10 | JKAnime — fetch de página de episodio | T02 | Sola |
@@ -182,6 +182,19 @@ Paralelizables (si usas varias sesiones a la vez): T06/T09/T10 · T12–T15 entr
 - Internas: `load` (descarga bajo el mutex: un solo Resolve dispara la petición), `fetch` (httpx.Get con `Provider: "jkanime"`, `Operation: "exceptions"`; límite de tamaño; aviso con `slog.Warn` si falla), `parseExceptions` (validación de esquema), `normalizeExceptionKey`, `isHTTPURL`.
 - Tests: `internal/scraper/jkanime/exceptions_test.go` (11 tests / 24 con subtests, red de nada, corren con `-race`; `TestMain` instala logger descartable para `logx.Request` y `slog`). Fixture real: `internal/scraper/jkanime/testdata/excepciones.json` (solo lectura).
 
+### T07 — internal/scraper/jkanime
+
+- `const DefaultBaseURL = "https://jkanime.net"` — la usa `New` con baseURL vacía y el valor cero de `JkAnime`. Interno `const providerName = "jkanime"` (valor de `Name()` y de `models.Anime.Provider`).
+- `var ErrNotImplemented = errors.New("jkanime: operación no implementada todavía")` — causa sentinela (`errors.Is`) para los métodos de `Provider` sin implementar; la eliminan T08 (detalle), T09/T10 (episodios) y T17/T20 (fuentes).
+- `type JkAnime struct { BaseURL string; Doer httpx.HTTPDoer; Resolver *ExceptionResolver }` — campos exportados e inyectables; valor cero utilizable (`siteURL()` → `DefaultBaseURL`, `resolver()` → `ExceptionResolver` con el mismo doer, sin doer → `ErrNilDoer` sin red).
+- `var _ scraper.Provider = (*JkAnime)(nil)` — assert en `jkanime.go`.
+- `func New(doer httpx.HTTPDoer, baseURL string, resolver *ExceptionResolver) *JkAnime` — normaliza la base (sin espacios ni barra final; vacía → `DefaultBaseURL`) y, si el resolver viene nil, crea `&ExceptionResolver{Doer: doer}`.
+- `func (j *JkAnime) Name() string` → `"jkanime"`.
+- `func (j *JkAnime) Search(ctx context.Context, query string) ([]models.Anime, error)` — `GET <base>/buscar/<url.PathEscape(query)>` con `httpx.Get` (`Provider: "jkanime"`, `Operation: "search"`, UA por defecto); cuerpo limitado a `maxSearchBytes = 10 << 20`. Selectores reales del fixture: `.page_directorio .anime__item`, título+href en `h5 a`, portada en `.anime__item__pic[data-setbg]` (absolutizada). El href se absolutiza, pasa por `ExceptionResolver.Resolve` (el mapa se consulta con la **URL completa**) y de ahí sale el **slug** que hace de `models.Anime.ID` — nunca derivado del título. Devuelve slice **no nil** vacío si no hay resultados, y con query vacía no hace ninguna petición.
+- `func (j *JkAnime) GetAnimeDetails(ctx, id)` → `models.AnimeDetail{}, nil, ErrNotImplemented`; `func (j *JkAnime) GetVideoSources(ctx, episodeID, opts)` → `nil, ErrNotImplemented`.
+- Internos: `searchPath = "/buscar/"`, `maxSearchBytes`, `siteURL()`, `resolver()`, `parseSearch`, `absoluta`, `slugFromURL`.
+- Tests: `search_test.go` (9 tests / 12 con subtests, red de nada, corren con `-race`; **reutiliza** los helpers de `exceptions_test.go` y no define otro `TestMain`) + `search_integration_test.go` (`//go:build integration`, smoke contra el sitio real). Fixtures reales (solo lectura): `testdata/search.html` (búsqueda "bleach": 10 resultados) y `testdata/search_empty.html` (búsqueda sin resultados: 0 items).
+
 ## Desviaciones del plan
 
 > Cualquier cambio respecto a `tareas_v4.md` (nombres, decisiones, archivos extra tocados con permiso).
@@ -223,6 +236,12 @@ Paralelizables (si usas varias sesiones a la vez): T06/T09/T10 · T12–T15 entr
 - T06: `Resolve` no devuelve error (firma de la tarea): el fallo se expresa como `UsedException=false` + slug tal cual, con aviso `slog.Warn` (logx no exporta su logger; el error HTTP ya queda registrado por `logx.Request` dentro de `httpx.Get`).
 - T06: `ResolvedAnimeURL` lleva tags `json` snake_case por convención del proyecto, aunque hoy no cruza a Wails (T20/T23 decidirán si se expone).
 - Sin archivos tocados fuera de `internal/scraper/jkanime/exceptions.go` e `internal/scraper/jkanime/exceptions_test.go` (el fixture `testdata/excepciones.json` solo se leyó).
+- T07: la ruta se verificó en vivo: `GET /buscar/<query>` responde 200 y es la ruta canónica — el formulario del sitio manda `GET /buscar?q=…` y el servidor **redirige** a `/buscar/<query>` (comprobado con `bleach` y con `naruto shippuden`). `Search` usa la ruta con `url.PathEscape(query)` (escape de segmento: espacio → `%20`, `/` → `%2F`, `;`/`?` → `%3B`/`%3F`), como pedía la tarea.
+- T07: fixtures capturados con `curl.exe` directo a `testdata/` (HTTP 200, **sin challenge de Cloudflare**; no hizo falta Playwright): `search.html` (35 KB, 10 resultados de "bleach") y, como extra para el caso vacío, `search_empty.html` (23 KB, 0 items). Sin recortar (no eran enormes); solo se sanitizó el `<meta name="csrf-token">` a `TOKEN_DE_PRUEBA`.
+- T07: el smoke de red vive en el archivo **nuevo** `search_integration_test.go` con `//go:build integration`, porque las etiquetas de build son por archivo y `search_test.go` debe correr en la puerta de calidad sin red. Es el único archivo creado fuera de la lista "Puedes tocar" (mismo paquete, no se modificó nada existente fuera de ella).
+- T07: `Search` devuelve un slice **no nil** (JSON `[]`, no `null`) tanto en vacío como en sin resultados, pensando en la UI; con query vacía o en blanco no hace petición.
+- T07: `Anime.ID` queda como **slug del href ya pasado por el resolver** (p. ej. `bleach`): T08 reconstruye `<base>/<slug>/` para el detalle; volver a resolverla no tiene efecto (el mapa se consulta por la URL completa y la clave rota ya no aparece).
+- Sin archivos tocados fuera de `internal/scraper/jkanime/jkanime.go`, `search.go`, `search_test.go`, `search_integration_test.go` y `testdata/` (ni `exceptions.go`, ni `app.go`, ni `frontend/**`).
 
 ## Problemas pendientes / deuda técnica
 
@@ -244,6 +263,11 @@ Paralelizables (si usas varias sesiones a la vez): T06/T09/T10 · T12–T15 entr
 - T06: un fallo de descarga se reintenta en cada `Resolve` (sin negativo-cache): durante un corte remoto cada llamada puede tardar hasta `exceptionsTimeout`, serializadas por el mutex. Si molesta, añadir negativo-cache con TTL en la tarea que lo necesite.
 - T06: el aviso `slog.Warn` va al logger por defecto de `slog`, no al de `logx`; para unificar formato y redacción, T20/T29 puede instalar `slog.SetDefault(logx.New(dev))`.
 - T06: el paquete `jkanime` ya define `TestMain` (en `exceptions_test.go`): **T07+ no debe definir otro** en el mismo paquete.
+- T07: `GetAnimeDetails`/`GetVideoSources` devuelven `ErrNotImplemented` a propósito; T08/T09/T17–T20 los implementan y borran esa rama.
+- T07: contrato del id para T08/T09/T22 — `Anime.ID` es el slug sin barra ni dominio; la URL del detalle es `<base>/<slug>/`.
+- T07: con el resolver por defecto (`New(..., nil)`), la primera búsqueda descarga el mapa de excepciones de GitHub (máx. 5 s, cacheado en memoria); T20 puede inyectar un `ExceptionResolver` compartido o precargarlo al arrancar.
+- T07: no se envían cabeceras `Accept`/`Accept-Language` y el sitio respondió igual (verificado en el smoke); si JKAnime las exige, añadirlas vía `ReqOptions.Header`.
+- T07: las páginas de búsqueda capturadas (`bleach`, `naruto shippuden`) no traen paginación; si aparece, tratarla en la tarea que la necesite.
 
 ## Bitácora
 
@@ -255,3 +279,4 @@ Paralelizables (si usas varias sesiones a la vez): T06/T09/T10 · T12–T15 entr
 | 2026-10-04 | T05 | opencode/mimo-v2.6-flash-free | OK | `gofmt -l .` sin salida, `go vet ./...` limpio, `go test ./...` en verde (`internal/models` 5 tests/37 subtests PASS); solo se crearon `internal/models/ids.go` e `ids_test.go` |
 | 2026-10-04 | T04 | opencode/mimo-v2.6-flash-free | OK | `gofmt -l .` sin salida, `go vet ./...` limpio, `go test -race ./...` en verde (`internal/scraper` 7 tests PASS con `-race`); solo se crearon `internal/scraper/provider.go`, `registry.go` y `registry_test.go` |
 | 2026-10-04 | T06 | opencode/mimo-v2.6-flash-free | OK | `gofmt -l .` sin salida, `go vet ./...` limpio, `go test -race ./...` en verde (`internal/scraper/jkanime` 11 tests/24 con subtests PASS con `-race`); solo se crearon `internal/scraper/jkanime/exceptions.go` y `exceptions_test.go` |
+| 2026-10-04 | T07 | opencode/mimo-v2.6-flash-free | OK | `gofmt -l .` sin salida, `go vet ./...` (+ `-tags integration`) limpio, `go test -race ./...` en verde (paquete `jkanime`: 20 tests top-level PASS con `-race` = 11 de T06 + 9 de T07); smoke `go test -tags integration ./internal/scraper/jkanime/ -run RedReal -v` PASS con 10 resultados reales. Fixtures `search.html` y `search_empty.html` capturados con `curl.exe` (HTTP 200, sin challenge), ruta `/buscar/<query>` verificada en vivo; solo se tocaron `jkanime.go`, `search.go`, `search_test.go`, `search_integration_test.go` y `testdata/` |
