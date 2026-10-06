@@ -90,11 +90,11 @@ func TestNewOrdenaLaCadena(t *testing.T) {
 	var orden []string
 	// Registrados deliberadamente fuera de orden; los desconocidos (fembed,
 	// zippy) deben conservar su orden de registro al final.
-	servers := &extractorFalso{nombre: NameServers, marcador: "var servers", orden: &orden, fuentes: fuentesDe("s1")}
-	fembed := &extractorFalso{nombre: "fembed", orden: &orden, fuentes: fuentesDe("f1")}
-	jkphp := &extractorFalso{nombre: NameJKPHP, marcador: "JKPHP", orden: &orden, fuentes: fuentesDe("p1")}
-	jkplayer := &extractorFalso{nombre: NameJKPlayer, marcador: "data-src", orden: &orden, fuentes: fuentesDe("j1")}
-	zippy := &extractorFalso{nombre: "zippy", orden: &orden, fuentes: fuentesDe("z1")}
+	servers := &extractorFalso{nombre: NameServers, marcador: "var servers", orden: &orden, fuentes: fuentesDe("https://cdn.example.test/s1.m3u8")}
+	fembed := &extractorFalso{nombre: "fembed", orden: &orden, fuentes: fuentesDe("https://cdn.example.test/f1.m3u8")}
+	jkphp := &extractorFalso{nombre: NameJKPHP, marcador: "JKPHP", orden: &orden, fuentes: fuentesDe("https://cdn.example.test/p1.m3u8")}
+	jkplayer := &extractorFalso{nombre: NameJKPlayer, marcador: "data-src", orden: &orden, fuentes: fuentesDe("https://cdn.example.test/j1.m3u8")}
+	zippy := &extractorFalso{nombre: "zippy", orden: &orden, fuentes: fuentesDe("https://cdn.example.test/z1.m3u8")}
 
 	r := New(servers, fembed, jkphp, jkplayer, zippy)
 	fuentes, err := r.Resolve(context.Background(), Page{URL: "https://jkanime.net/ver/one-piece-1", HTML: htmlEpisodio})
@@ -129,18 +129,22 @@ func TestPrioridadNormalizaNombre(t *testing.T) {
 }
 
 func TestNewCopiaYDescartaNulos(t *testing.T) {
-	uno := &extractorFalso{nombre: "fembed", fuentes: fuentesDe("f1")}
-	dos := &extractorFalso{nombre: "zippy", fuentes: fuentesDe("z1")}
+	const (
+		urlF1 = "https://cdn.example.test/f1.m3u8"
+		urlZ1 = "https://cdn.example.test/z1.m3u8"
+	)
+	uno := &extractorFalso{nombre: "fembed", fuentes: fuentesDe(urlF1)}
+	dos := &extractorFalso{nombre: "zippy", fuentes: fuentesDe(urlZ1)}
 	entrada := []VideoExtractor{uno, nil, dos}
 	r := New(entrada...)
 
 	// La lista se copia: reasignar el elemento no cambia la cadena.
-	entrada[0] = &extractorFalso{nombre: "cambiado", fuentes: fuentesDe("x")}
+	entrada[0] = &extractorFalso{nombre: "cambiado", fuentes: fuentesDe("https://cdn.example.test/x.m3u8")}
 	fuentes, err := r.Resolve(context.Background(), Page{HTML: htmlEpisodio})
 	if err != nil {
 		t.Fatalf("Resolve: %v", err)
 	}
-	queria := []string{"f1", "z1"}
+	queria := []string{urlF1, urlZ1}
 	if !slices.Equal(urls(fuentes), queria) {
 		t.Errorf("URLs = %v, quería %v", urls(fuentes), queria)
 	}

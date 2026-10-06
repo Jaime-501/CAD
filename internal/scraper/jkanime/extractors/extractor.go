@@ -154,6 +154,9 @@ func (r *Resolver) Resolve(ctx context.Context, page Page) ([]models.VideoSource
 			total = append(total, f)
 		}
 	}
+	// Normalización al final de la cadena (T16): valida esquemas, completa
+	// tipos vacíos y deduplica por recurso; si no queda nada, ErrSinFuentes.
+	total = Normalize(total)
 	if len(total) == 0 {
 		if err := ctx.Err(); err != nil {
 			return nil, fmt.Errorf("%w: %w", ErrSinFuentes, err)

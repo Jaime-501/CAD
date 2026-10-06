@@ -2,12 +2,12 @@ package jkanime
 
 import (
 	"context"
-	"errors"
 	"strings"
 
 	"miapp/internal/httpx"
 	"miapp/internal/models"
 	"miapp/internal/scraper"
+	"miapp/internal/scraper/jkanime/extractors"
 )
 
 const (
@@ -20,11 +20,6 @@ const (
 	// en models.Anime.Provider.
 	providerName = "jkanime"
 )
-
-// ErrNotImplemented marcan los métodos de Provider que todavía no tienen
-// implementación: lo queda en GetVideoSources hasta T17/T20 (fuentes de
-// vídeo). Se comprueba con errors.Is.
-var ErrNotImplemented = errors.New("jkanime: operación no implementada todavía")
 
 // JkAnime implementa scraper.Provider sobre jkanime.net. Sus dependencias se
 // inyectan (doer, URL base y resolver de excepciones) para que los tests
@@ -66,9 +61,46 @@ func (j *JkAnime) GetAnimeDetails(ctx context.Context, id string) (models.AnimeD
 	return j.getAnimeDetails(ctx, id)
 }
 
-// GetVideoSources se implementa en T17/T20, cuando existan los extractores.
+// GetVideoSources descarga la página del episodio (T10), la pasa por la
+// cadena de extractores —JKPlayer → JKPHP → Servers con MediaFire— y
+// devuelve las fuentes ya normalizadas: la validación, la deduplicación
+// y la completado de tipos los hace Normalize dentro de Resolve (T16).
+// No se cachea nada: los enlaces son temporales (regla 9), por lo que
+// opts.NoCache hoy no cambia el comportamiento.
+//
+// Los errores llegan tal cual de fetchEpisodePage (404, 403, 419...) o
+// de la cadena (extractors.ErrSinFuentes cuando ningún extractor aporta
+// una fuente reproducible, envolviendo también ctx.Err() si se canceló).
 func (j *JkAnime) GetVideoSources(ctx context.Context, episodeID string, opts scraper.SourceOpts) ([]models.VideoSource, error) {
-	return nil, ErrNotImplemented
+	pagina, err := j.fetchEpisodePage(ctx, episodeID)
+	if err != nil {
+		return nil, err
+	}
+	return j.cadenaDeExtractores().Resolve(ctx, paginaExtractores(pagina))
+}
+
+// cadenaDeExtractores monta la cadena de T17 con el doer del proveedor
+// (mismo cliente y cookiejar que el resto del flujo, reglas 3 y 4) y con
+// MediaFire inyectado como RemoteResolver del extractor de servidores.
+// New se encarga de ordenarla en canónico: JKPlayer → JKPHP → Servers.
+func (j *JkAnime) cadenaDeExtractores() *extractors.Resolver {
+	base := extractors.Base{Doer: j.Doer}
+	return extractors.New(
+		&extractors.JKPlayerExtractor{Base: base},
+		&extractors.JKPHPExtractor{Base: base},
+		&extractors.ServersExtractor{
+			Base:      base,
+			Resolvers: []extractors.RemoteResolver{&extractors.MediaFireResolver{}},
+		},
+	)
+}
+
+// paginaExtractores convierte la página cruda del episodio (T10) en la
+// Page que procesan los extractores (T11): mismos campos y semántica
+// (URL final tras redirecciones, HTML crudo, Headers sin Set-Cookie),
+// porque extractors no puede importar este paquete (regla de dependencias).
+func paginaExtractores(p EpisodePage) extractors.Page {
+	return extractors.Page{URL: p.URL, HTML: p.HTML, Headers: p.Headers}
 }
 
 // siteURL devuelve la URL base sin barra final; con el valor cero (o en

@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"miapp/internal/httpx"
-	"miapp/internal/scraper"
 )
 
 // fixtureBusqueda carga un HTML real de testdata (capturado con la respuesta
@@ -235,14 +234,12 @@ func TestSearchDemasiadoGrande(t *testing.T) {
 }
 
 func TestMetodosNoImplementados(t *testing.T) {
+	// Desde T17 no queda ningún método de Provider sin implementar:
+	// GetAnimeDetails (T09) y GetVideoSources (T17) ya funcionan, así que
+	// solo queda comprobar la identidad del proveedor.
 	j := New(nil, "", nil)
 	if j.Name() != "jkanime" {
 		t.Errorf("Name() = %q, quería %q", j.Name(), providerName)
-	}
-
-	_, err := j.GetVideoSources(context.Background(), "jkanime:bleach:episode:1", scraper.SourceOpts{})
-	if !errors.Is(err, ErrNotImplemented) {
-		t.Errorf("GetVideoSources err = %v, quería ErrNotImplemented", err)
 	}
 }
 
