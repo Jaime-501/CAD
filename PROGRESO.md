@@ -47,8 +47,8 @@ Antes de las tareas que parsean HTML/JSON real debe existir un **fixture real y 
 - [x] Página de un episodio → T10
 - [x] Respuestas del player `jkplayer/um?...` → T12 — `jkplayer_um.html` (DPlayer, URL cifrada con `atob`, 16932 B) y `jkplayer_umv.html` (video.js, el player que la página carga por defecto, 3906 B). **El sitio no publica `.vtt`**: se muestrearon ~130 episodios (homepage, clásicos, películas, especiales y una serie en chino) en páginas de episodio, respuestas `um`/`umv`, playlists m3u8 y peticiones reales del navegador → 0 pistas; el test de subtítulos usa HTML artificial (autorizado en sesión: "una variante con .vtt si existe").
 - [x] Respuesta de `jk.php` → T13 — `jkphp.html` (de `https://jkplayers.com/jk.php?u=…`, 200, 6582 B) y `jkplayer_jk.html` (de `jkanime.net/jkplayer/jk?u=…`, la referencia que hoy emiten las páginas, 6528 B). `jkanime.net/jk.php` responde 404 (nginx).
-- [ ] Página con `var servers` → T14
-- [ ] Página de MediaFire → T15
+- [x] Página con `var servers` → T14 — `extractors/testdata/servers.html` (recorte **verbatim** de `jkanime/testdata/episode_page.html`, bleach/1: `<head>` completo + bloque `.bg-servers` + los dos `<script>` que declaran/consumen `var servers`; 24166 B). Verificado con `grep` sobre el HTML crudo: `var servers` está en la respuesta del servidor (línea 1089 del fixture de T10), no en el DOM renderizado. 10 servidores (Mediafire, Mega, VOE, Vidhide, Filemoon, Mixdrop, Mp4upload, Streamtape, Streamwish, Doodstream). Sanitizado: `csrf-token` ya era `TOKEN_DE_PRUEBA` (T10) y los parámetros `e=` cifrados de los iframes `jkplayer/um|umv` → `E_PRUEBA` (regla 12).
+- [x] Página de MediaFire → T15 — `extractors/testdata/mediafire.html` (recorte **verbatim** de la respuesta cruda de `https://www.mediafire.com/file/aaxudss27tqq7c8/` con `curl.exe`: 200, 330502 B → 114644 B, `<head>` + bloque `.dl-btn-cont` con el `#downloadButton`). El remote de Mediafire del fixture de T14 apunta a esta página. Verificado en el HTML crudo: el enlace de descarga (`id="downloadButton"`, `aria-label="Download file"`) está **en la respuesta del servidor** (con Playwright no se registró ninguna XHR que lo entregue: está en el HTML, no tras ejecutar JS). Sanitizado: la firma del host (`download1529.mediafire.com/<firma>/`) → `FIRMA_DE_PRUEBA`, el token del `input name="security"` → `SEGURIDAD_DE_PRUEBA` y `dkey=` → `DKEY_DE_PRUEBA`; sin cookies (las `Set-Cookie` no se guardan). Comprobado además con `curl.exe` que `mediafire.com/file/…` responde 302 a `www.mediafire.com` y que el enlace de descarga responde 206 (probe de 1 byte) con y sin Referer.
 
 Nombres sugeridos de archivo (dentro del `testdata/` de cada paquete): `search.html`, `detail.html`, `episodes_p1.json`, `episodes_p2.json`, `episode_page.html`, `jkplayer_um.html` (y una variante con `.vtt`), `jkphp.html`, `servers.html`, `mediafire.html`.
 
@@ -96,8 +96,8 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha y verificada
 | [x] | T11 | Arquitectura de extractores | T03, T10 | Sola |
 | [x] | T12 | Extractor JKPlayer (softsubs) | T11 | Agrupable T12–T15 |
 | [x] | T13 | Extractor JKPHP | T11 | Agrupable T12–T15 |
-| [ ] | T14 | Extractor `var servers` | T11 | Agrupable T12–T15 |
-| [ ] | T15 | Resolver MediaFire | T11 | Agrupable T12–T15 |
+| [x] | T14 | Extractor `var servers` | T11 | Agrupable T12–T15 |
+| [x] | T15 | Resolver MediaFire | T11 | Agrupable T12–T15 |
 | [ ] | T16 | Normalizador de VideoSource | T12–T15 | Con T17 |
 | [ ] | T17 | Selector de mejor fuente + GetVideoSources | T16 | Con T16 |
 | [ ] | T18 | AnimeFLV — búsqueda con fallback | T02, T04 | Sola |
@@ -126,6 +126,17 @@ Paralelizables (si usas varias sesiones a la vez): T06/T09/T10 · T12–T15 entr
 - T11: los extractores reciben `extractors.Page`, no `jkanime.EpisodePage` (regla de dependencias); convertir `EpisodePage → Page` es de **T17**.
 - T12: `VideoSource.Referer` = URL del **propio iframe** del player (decisión de la captura con Playwright: el `.m3u8` del CDN responde 200 con ese referer). **T19 inyecta el Referer en el proxy local**: coordinar allí para no duplicar la cabecera.
 - T13: `VideoSource.Referer` = URL del **propio iframe** (mismo criterio que T12). Ojo: la respuesta de `jk.php` declara `<meta name="referrer" content="never"/>`, así que el navegador no enviaría referer al `stream/jkmedia/…`; si **T16/T19** prefieren otro criterio (o vacío), decidirlo allí.
+- T14: **`extractor.go` no necesitó cambios** (mismo caso que T12/T13): registrar el extractor es devolver `NameServers`, que ya estaba en `ordenCanonico` desde T11.
+- T14: `ServersExtractor` emite como Iframe el **remote decodificado** (p. ej. `https://voe.sx/e/mlnsng0cwwn7`), no el wrapper `jkplayer/c1?u=…&s=…` que construye el JS de la página: verificado con `curl.exe` que `c1` responde con `<iframe src="<remote descodificado">` — solo decodifica, así que se ahorra una petición. Si algún host exigiera el wrapper (referer de jkanime.net), reconsiderarlo en **T17/T19**.
+- T14: las entradas `Mediafire`/`1Fichier` (las que la propia página excluye del bloque de vídeo: solo publican descarga) **no producen fuente si no hay resolver**. El contrato de delegación vive en `servers.go`: `RemoteResolver{ CanResolve(server) bool; Resolve(ctx, doer, remote) }`, y `ServersExtractor` le pasa su `Base.Doer` (no crea uno propio). **T15** implementa `MediaFireResolver` con esa interfaz y **T17** debe montar la cadena con `&ServersExtractor{Base: Base{Doer: cli}, Resolvers: []RemoteResolver{&MediaFireResolver{}}}`.
+- T14: `VideoSource.Server` de las fuentes Iframe es el **nombre real del host** (`"VOE"`, `"Mega"`, `"Filemoon"`…), no `"servers"` (el Resolver solo rellena la etiqueta si viene vacía) → **T16/T17** no deben asumir que `Server` es siempre un nombre de extractor.
+- T14: `testdata/servers_invalido.html` es un fixture **artificial** (el sitio solo sirve `var servers` con JSON válido): reproduce una lista cortada a media entrada para el caso de JSON inválido que pide la comprobación. El resto de datos del archivo (el objeto de VOE) es real, recortado del fixture real.
+- T15: `MediaFireResolver` **no es un `VideoExtractor`** y no tiene `Name()`: cumple el `RemoteResolver` de T14 y se instancia sin estado (`MediaFireResolver{}`). **T17** monta `&ServersExtractor{Base: Base{Doer: cli}, Resolvers: []RemoteResolver{&MediaFireResolver{}}}`; la operación de log es `mediafire`.
+- T15: `VideoSource.Referer` sale **vacío** porque `downloadN.mediafire.com` no lo exige: probes de 1 byte con `curl.exe` devuelven 206 con y sin cabecera (`content-type: video/mp4`, `accept-ranges: bytes`, `157058980` B = 149.78 MB, que coincide con el "Download (149.78MB)" del botón). Si llegara a exigirlo, va la URL de la página del archivo: decidirlo en **T16/T19**, junto al criterio de Referer de T12/T13.
+- T15: la URL que devuelve es un enlace **firmado y temporal**: no se persiste ni se cachea en ninguna capa (regla 9). **T16/T17** no deben guardarla ni deduplicar por ella literalmente (deduplicar por recurso base, como ya hace `ServersExtractor`).
+- T15: `Type` sale de `tipoDeRecurso` (hoy siempre `.mp4`); un enlace sin extensión reconocible quedaría `""` → tratar en **T16** (mismo caso pendiente que T12).
+- T15: solo resuelve MediaFire; `1Fichier` —la otra entrada de solo descarga que excluye el JS de la página— sigue sin resolver → si el sitio llega a servirla, ampliar en **T17** o en una tarea futura.
+- T15: el HTML de los casos negativos de `mediafire_test.go` es **artificial** (sin botón de descarga, `href="#"` en estado "Preparing", enlace a otro host, comillas simples): el sitio solo sirve la página completa con el enlace correcto. Regla 11.
 
 ## Pendientes activos
 
@@ -154,3 +165,9 @@ Paralelizables (si usas varias sesiones a la vez): T06/T09/T10 · T12–T15 entr
 - T12: cada iframe distinto dispara su propia petición (hasta 4 por página) → deduplicar en **T16/T17** si molesta.
 - T13: `JKPHPExtractor` todavía no lo construye nadie → **T17**.
 - T13: la descarga de la página del player está duplicada con `JKPlayerExtractor.fuentesDePlayer` (mismo límite y mismos helpers) → unificar en **T29** en una sola función parametrizada por `Server`/`Extractor`.
+- T14: `ServersExtractor` todavía no lo construye nadie (la cadena se arma con `New(...)` y los resolvers) → **T17** (montaje de la cadena). El `RemoteResolver` que faltaba ya existe desde T15 (`MediaFireResolver`).
+- T14: las fuentes Iframe salen con `Referer`, `Quality`, `Headers` y `Subtitles` vacíos → completar/tratar en **T16**; si el reproductor necesita un referer para el embed, decidirlo en **T19**.
+- T14: `Remote.Tamano` (el `size` del sitio, "150 MB") y `Server.Lang` llegan parseados pero nadie los consume → **T16/T26/T27** si la UI quiere mostrarlos.
+- T15: `MediaFireResolver` todavía no lo monta nadie (hay que pasarlo en `ServersExtractor.Resolvers`) → **T17**.
+- T15: la fuente sale con `Referer`, `Quality`, `Headers` y `Subtitles` vacíos → completar/tratar en **T16**.
+- T15: el enlace firmado caduca en minutos; si el reproductor arranca tarde o retoma tras un ratón, el MP4 puede responder 403 → **T17/T19** decidir si se vuelve a resolver antes de reproducir (aquí no se cachea, regla 9).
