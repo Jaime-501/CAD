@@ -4,20 +4,21 @@ import (
 	"context"
 	"fmt"
 
+	"miapp/internal/httpx"
 	"miapp/internal/models"
-	"miapp/internal/scraper"
+	"miapp/internal/scraper/animeflv"
 )
 
 // App struct
 type App struct {
 	ctx             context.Context
-	animeFlvScraper *scraper.AnimeFLV
+	animeFlvScraper *animeflv.AnimeFLV
 }
 
 // NewApp creates a new App application struct
 func NewApp() *App {
 	return &App{
-		animeFlvScraper: scraper.NewAnimeFLV(),
+		animeFlvScraper: animeflv.New(httpx.NewClient(httpx.ClientOptions{}), ""),
 	}
 }
 
@@ -33,5 +34,5 @@ func (a *App) Greet(name string) string {
 }
 
 func (a *App) SearchAnime(query string) ([]models.Anime, error) {
-	return a.animeFlvScraper.Search(query)
+	return a.animeFlvScraper.Search(a.ctx, query)
 }
