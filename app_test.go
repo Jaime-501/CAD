@@ -205,6 +205,9 @@ type entorno struct {
 	proxy *proxyFalso
 	emis  *emisorFalso
 	cache *cache.Cache
+	// dirHistorial es el directorio inyectado para el historial de T22:
+	// arrancar lo abre ahí (nunca en la configuración real del usuario).
+	dirHistorial string
 }
 
 func nuevoEntorno(t *testing.T, ps ...scraper.Provider) *entorno {
@@ -215,7 +218,7 @@ func nuevoEntorno(t *testing.T, ps ...scraper.Provider) *entorno {
 // nuevoEntornoConCache monta el núcleo con una caché inyectada (los tests de
 // T21 necesitan controlar el reloj o leer la caché directamente). El cleanup
 // cierra el núcleo: así ninguna rutina de limpieza de la caché sobrevive al
-// test (sin goroutines huérfanas).
+// test (sin goroutines huérfanas) y el historial abierto queda cerrado.
 func nuevoEntornoConCache(t *testing.T, c *cache.Cache, ps ...scraper.Provider) *entorno {
 	t.Helper()
 	reg := scraper.NewRegistry()
@@ -226,11 +229,13 @@ func nuevoEntornoConCache(t *testing.T, c *cache.Cache, ps ...scraper.Provider) 
 	}
 	emis := nuevoEmisorFalso()
 	px := nuevoProxyFalso()
+	dirHistorial := t.TempDir()
 	e := &entorno{
-		n:     nuevoNucleo(reg, px, extractors.SelectBestSource, emis.emitir, c),
-		proxy: px,
-		emis:  emis,
-		cache: c,
+		n:            nuevoNucleo(reg, px, extractors.SelectBestSource, emis.emitir, c, dirHistorial),
+		proxy:        px,
+		emis:         emis,
+		cache:        c,
+		dirHistorial: dirHistorial,
 	}
 	t.Cleanup(func() { _ = e.n.cerrar() })
 	return e
@@ -707,7 +712,7 @@ func TestSinEmisorNoEmiteNiFalla(t *testing.T) {
 	}
 	px := nuevoProxyFalso()
 	// Núcleo SIN emisor: es como la app antes de startup.
-	n := nuevoNucleo(reg, px, extractors.SelectBestSource, nil, cache.New(ttlCacheDetalle))
+	n := nuevoNucleo(reg, px, extractors.SelectBestSource, nil, cache.New(ttlCacheDetalle), t.TempDir())
 
 	res, err := n.detalle(context.Background(), "jkanime", "bleach")
 	if err != nil {
@@ -733,7 +738,7 @@ func TestArrancarInstalaElEmisorYElProxy(t *testing.T) {
 	}
 	px := nuevoProxyFalso()
 	emis := nuevoEmisorFalso()
-	n := nuevoNucleo(reg, px, extractors.SelectBestSource, nil, cache.New(ttlCacheDetalle))
+	n := nuevoNucleo(reg, px, extractors.SelectBestSource, nil, cache.New(ttlCacheDetalle), t.TempDir())
 	// arrancar pone a funcionar la limpieza de la caché: que no quede la
 	// goroutine suelta al terminar el test.
 	t.Cleanup(func() { _ = n.cerrar() })

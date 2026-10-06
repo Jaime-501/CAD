@@ -104,3 +104,19 @@ func (a *App) GetAnimeDetails(provider string, id string) (DetalleResultado, err
 func (a *App) GetVideoSources(provider string, episodeID string, noCache bool) ([]models.VideoSource, error) {
 	return a.core.fuentes(a.contexto(), provider, episodeID, noCache)
 }
+
+// SaveProgress guarda el progreso de un episodio (lo llamará el reproductor
+// cada ~5 s): el almacén escribe a disco de forma atómica y calcula aquí el
+// is_watched (CurrentTime/TotalDuration >= 0.90; el que traiga el llamador
+// se ignora). Falla con ErrHistorialNoDisponible antes de arrancar o si el
+// almacén no pudo abrirse, y con db.ErrCerrado tras el shutdown.
+func (a *App) SaveProgress(progress models.WatchProgress) error {
+	return a.core.guardarProgreso(progress)
+}
+
+// GetProgress devuelve el historial guardado de un anime, en orden de
+// primera guardada; animeID vacío devuelve el historial entero. Cada
+// registro trae is_watched ya calculado por el backend.
+func (a *App) GetProgress(animeID string) ([]models.WatchProgress, error) {
+	return a.core.verProgreso(animeID)
+}

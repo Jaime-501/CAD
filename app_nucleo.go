@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"miapp/internal/cache"
+	"miapp/internal/db"
 	"miapp/internal/httpx"
 	"miapp/internal/models"
 	"miapp/internal/scraper"
@@ -40,6 +41,13 @@ const (
 // la UI; el sentinel interno de scraper NO se arrastra, porque Wails entrega
 // al frontend solo el texto y este dice algo útil.
 var ErrDetalleNoDisponible = errors.New("Detalle no disponible para este proveedor")
+
+// ErrHistorialNoDisponible es lo que ven SaveProgress/GetProgress cuando no
+// hay almacén abierto: antes de arrancar, si su apertura falló (el
+// núcleo lo loguea y sigue, la app no muere por un historial) o si se pide
+// historial sin haber arrancado nunca. Tras un shutdown el almacén sigue
+// abierto pero marcado como cerrado, y ahí el error es db.ErrCerrado.
+var ErrHistorialNoDisponible = errors.New("El historial de visualización no está disponible")
 
 // Emisor entrega un evento al frontend. En producción es un cierre sobre
 // runtime.EventsEmit con el contexto de startup; en tests, un doble que
@@ -96,16 +104,24 @@ type streamActivo struct {
 	fallo  atomic.Bool
 }
 
-// nucleo es la lógica de orquestación: proveedores, eventos, proxy y la
-// caché local de detalle. Vive fuera de app.go para poder testearla sin Wails
-// ni red: todas sus dependencias entran por interfaz o por inyección y el
-// emisor es una función inyectada.
+// nucleo es la lógica de orquestación: proveedores, eventos, proxy, la
+// caché local de detalle y el historial de visualización. Vive fuera de
+// app.go para poder testearla sin Wails ni red: todas sus dependencias
+// entran por interfaz o por inyección y el emisor es una función inyectada.
 type nucleo struct {
 	registro RegistroProviders
 	proxy    ProxyLocal
 	mejor    Resolutor
 	// cacheLocal guarda detalle+episodios por clave proveedor:animeID (T21).
 	cacheLocal *cache.Cache
+	// rutaHistorial es el directorio del historial (T22): "" = el por
+	// defecto de db (os.UserConfigDir()/miapp); los tests inyectan
+	// t.TempDir(). Solo la lee arrancar.
+	rutaHistorial string
+	// historial se abre en arrancar y se cierra en cerrar; nil mientras no
+	// abra (antes de arrancar o si su apertura falló). cerrar NO lo borra,
+	// así que un guardado tardío ve db.ErrCerrado y no una carrera.
+	historial *db.DB
 
 	mu sync.Mutex
 	// emisor es el que empuja eventos al frontend (nil hasta arrancar).
@@ -117,11 +133,20 @@ type nucleo struct {
 
 // nuevoNucleo crea el núcleo con las dependencias inyectadas. Una caché nil
 // se sustituye por una por defecto (nunca debe llegar nil: rompería detalle).
-func nuevoNucleo(reg RegistroProviders, px ProxyLocal, sel Resolutor, emis Emisor, c *cache.Cache) *nucleo {
+// rutaHistorial es el directorio del historial de visualización (T22): vacío
+// = el por defecto de db.
+func nuevoNucleo(reg RegistroProviders, px ProxyLocal, sel Resolutor, emis Emisor, c *cache.Cache, rutaHistorial string) *nucleo {
 	if c == nil {
 		c = cache.New(ttlCacheDetalle)
 	}
-	return &nucleo{registro: reg, proxy: px, mejor: sel, emisor: emis, cacheLocal: c}
+	return &nucleo{
+		registro:      reg,
+		proxy:         px,
+		mejor:         sel,
+		emisor:        emis,
+		cacheLocal:    c,
+		rutaHistorial: rutaHistorial,
+	}
 }
 
 // nuevoNucleoPorDefecto monta las dependencias reales de la app:
@@ -135,7 +160,9 @@ func nuevoNucleo(reg RegistroProviders, px ProxyLocal, sel Resolutor, emis Emiso
 //     red, decisión de T19),
 //   - extractors.SelectBestSource como selector de la mejor fuente (T17),
 //   - cache.New(ttlCacheDetalle) como caché local de detalle+episodios (T21);
-//     su rutina de limpieza se arranca con arrancar y se para con cerrar.
+//     su rutina de limpieza se arranca con arrancar y se para con cerrar,
+//   - el historial de visualización en el directorio por defecto de db
+//     (os.UserConfigDir()/miapp, T22): ahí se abre en arrancar.
 func nuevoNucleoPorDefecto() *nucleo {
 	doer := httpx.NewClient(httpx.ClientOptions{})
 
@@ -150,19 +177,33 @@ func nuevoNucleoPorDefecto() *nucleo {
 	}
 
 	return nuevoNucleo(reg, stream.NewProxy(nil), extractors.SelectBestSource, nil,
-		cache.New(ttlCacheDetalle))
+		cache.New(ttlCacheDetalle), "")
 }
 
 // arrancar prepara el núcleo para servir: instala el emisor de eventos, pone
-// a funcionar la limpieza de la caché local y el proxy a escuchar en
-// 127.0.0.1 (sin Escuchar, Register devuelve las fuentes sin registrar,
-// T19). Se llama desde App.startup.
+// a funcionar la limpieza de la caché local, abre el historial de
+// visualización (T22) y el proxy a escuchar en 127.0.0.1 (sin Escuchar,
+// Register devuelve las fuentes sin registrar, T19). Se llama desde
+// App.startup.
+//
+// El historial es lo único cuyo fallo NO se devuelve: si no se puede abrir
+// (sin permisos, ruta inexistente...) se loguea y la app sigue viva sin
+// historial —guardar o leer progreso dará ErrHistorialNoDisponible—, porque
+// el proxy y la reproducción no dependen de él.
 func (n *nucleo) arrancar(emis Emisor) error {
 	n.mu.Lock()
 	n.emisor = emis
 	n.mu.Unlock()
 
 	n.cacheLocal.Arrancar()
+
+	if h, err := db.Open(n.rutaHistorial); err != nil {
+		slog.Warn("la app sigue sin historial de visualización", "err", err)
+	} else {
+		n.mu.Lock()
+		n.historial = h
+		n.mu.Unlock()
+	}
 
 	base, err := n.proxy.Escuchar()
 	if err != nil {
@@ -174,8 +215,9 @@ func (n *nucleo) arrancar(emis Emisor) error {
 
 // cerrar cancela el stream activo (si lo hay) —borrando su entrada de caché
 // incompleta, que ya no tendrá stream que la complete—, detiene la limpieza
-// de la caché (sin goroutines huérfanas) y para el proxy. Se llama desde
-// App.shutdown, que registra OnShutdown en main.go. Es idempotente.
+// de la caché (sin goroutines huérfanas), cierra el historial de
+// visualización y para el proxy. Se llama desde App.shutdown, que registra
+// OnShutdown en main.go. Es idempotente.
 func (n *nucleo) cerrar() error {
 	n.mu.Lock()
 	st := n.stream
@@ -187,6 +229,11 @@ func (n *nucleo) cerrar() error {
 		n.borrarSiIncompleta(st.clave)
 	}
 	n.cacheLocal.Cerrar()
+	if h := n.historialAbierto(); h != nil {
+		if err := h.Close(); err != nil {
+			slog.Warn("no pude cerrar el historial de visualización", "err", err)
+		}
+	}
 	return n.proxy.Cerrar()
 }
 
@@ -358,6 +405,37 @@ func (n *nucleo) fuentes(ctx context.Context, proveedor, episodeID string, noCac
 		salida = append(salida, f)
 	}
 	return salida, nil
+}
+
+// guardarProgreso delega en el historial de visualización (SaveProgress,
+// T22). El núcleo solo aporta el almacén abierto en arrancar: el cálculo de
+// IsWatched y la escritura atómica son del paquete db.
+func (n *nucleo) guardarProgreso(progress models.WatchProgress) error {
+	h := n.historialAbierto()
+	if h == nil {
+		return ErrHistorialNoDisponible
+	}
+	return h.SaveProgress(progress)
+}
+
+// verProgreso devuelve el historial guardado de un anime (animeID vacío =
+// entero); ver db.DB.GetProgress para el orden y el resto de contratos.
+func (n *nucleo) verProgreso(animeID string) ([]models.WatchProgress, error) {
+	h := n.historialAbierto()
+	if h == nil {
+		return nil, ErrHistorialNoDisponible
+	}
+	return h.GetProgress(animeID)
+}
+
+// historialAbierto devuelve el almacén bajo el mutex del núcleo. Es nil
+// antes de arrancar o si su apertura falló; cerrar no lo borra, así que
+// después del shutdown la llamada llega al almacén y devuelve db.ErrCerrado
+// sin carrera con arrancar.
+func (n *nucleo) historialAbierto() *db.DB {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	return n.historial
 }
 
 // proveedor busca un provider por nombre; si no existe, devuelve un error
