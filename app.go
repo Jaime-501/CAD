@@ -98,8 +98,9 @@ func (a *App) GetAnimeDetails(provider string, id string) (DetalleResultado, err
 
 // GetVideoSources devuelve las fuentes de un episodio con la mejor PRIMERO.
 // Las HLS/MP4 vienen con la URL apuntando al proxy local (127.0.0.1); los
-// iframes pasan sin proxy. noCache se acepta y por ahora se ignora: no hay
-// caché (regla 9; la caché local es T21).
+// iframes pasan sin proxy. noCache se acepta, se reenvía al proveedor y se
+// sigue ignorando: la caché local (T21) guarda detalle y episodios, nunca
+// fuentes de vídeo (los enlaces son temporales, regla 9).
 func (a *App) GetVideoSources(provider string, episodeID string, noCache bool) ([]models.VideoSource, error) {
 	return a.core.fuentes(a.contexto(), provider, episodeID, noCache)
 }

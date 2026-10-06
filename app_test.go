@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"miapp/internal/cache"
 	"miapp/internal/models"
 	"miapp/internal/scraper"
 	"miapp/internal/scraper/jkanime/extractors"
@@ -203,9 +204,19 @@ type entorno struct {
 	n     *nucleo
 	proxy *proxyFalso
 	emis  *emisorFalso
+	cache *cache.Cache
 }
 
 func nuevoEntorno(t *testing.T, ps ...scraper.Provider) *entorno {
+	t.Helper()
+	return nuevoEntornoConCache(t, cache.New(ttlCacheDetalle), ps...)
+}
+
+// nuevoEntornoConCache monta el núcleo con una caché inyectada (los tests de
+// T21 necesitan controlar el reloj o leer la caché directamente). El cleanup
+// cierra el núcleo: así ninguna rutina de limpieza de la caché sobrevive al
+// test (sin goroutines huérfanas).
+func nuevoEntornoConCache(t *testing.T, c *cache.Cache, ps ...scraper.Provider) *entorno {
 	t.Helper()
 	reg := scraper.NewRegistry()
 	for _, p := range ps {
@@ -215,11 +226,14 @@ func nuevoEntorno(t *testing.T, ps ...scraper.Provider) *entorno {
 	}
 	emis := nuevoEmisorFalso()
 	px := nuevoProxyFalso()
-	return &entorno{
-		n:     nuevoNucleo(reg, px, extractors.SelectBestSource, emis.emitir),
+	e := &entorno{
+		n:     nuevoNucleo(reg, px, extractors.SelectBestSource, emis.emitir, c),
 		proxy: px,
 		emis:  emis,
+		cache: c,
 	}
+	t.Cleanup(func() { _ = e.n.cerrar() })
+	return e
 }
 
 // ---------------------------------------------------------------------------
@@ -693,7 +707,7 @@ func TestSinEmisorNoEmiteNiFalla(t *testing.T) {
 	}
 	px := nuevoProxyFalso()
 	// Núcleo SIN emisor: es como la app antes de startup.
-	n := nuevoNucleo(reg, px, extractors.SelectBestSource, nil)
+	n := nuevoNucleo(reg, px, extractors.SelectBestSource, nil, cache.New(ttlCacheDetalle))
 
 	res, err := n.detalle(context.Background(), "jkanime", "bleach")
 	if err != nil {
@@ -719,7 +733,10 @@ func TestArrancarInstalaElEmisorYElProxy(t *testing.T) {
 	}
 	px := nuevoProxyFalso()
 	emis := nuevoEmisorFalso()
-	n := nuevoNucleo(reg, px, extractors.SelectBestSource, nil)
+	n := nuevoNucleo(reg, px, extractors.SelectBestSource, nil, cache.New(ttlCacheDetalle))
+	// arrancar pone a funcionar la limpieza de la caché: que no quede la
+	// goroutine suelta al terminar el test.
+	t.Cleanup(func() { _ = n.cerrar() })
 
 	if err := n.arrancar(emis.emitir); err != nil {
 		t.Fatalf("arrancar: %v", err)
