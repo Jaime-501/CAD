@@ -107,7 +107,7 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha y verificada
 | [x] | T20 | Integración app.go y eventos Wails | T09, T17, T19 | Sola (pesada) |
 | [x] | T21 | Caché local | T20 | Sola (pesada) |
 | [x] | T22 | Persistencia del historial | T03 | Sola (pesada) |
-| [ ] | T23 | Regenerar bindings Wails | T20–T22 | Sola |
+| [x] | T23 | Regenerar bindings Wails | T20–T22 | Sola |
 | [ ] | T24 | Estado Svelte | T23 | Sola |
 | [ ] | T25 | UI de búsqueda y navegación | T23 | Sola |
 | [ ] | T26 | Vista de detalle y episodios | T24, T25 | Sola |
@@ -211,6 +211,26 @@ Paralelizables (si usas varias sesiones a la vez): T06/T09/T10 · T12–T15 entr
 - T28 (**hallazgo en `um`**): `urlsDeVideo` devuelve **varias candidatas por página**, así que reescribir únicamente el payload de `atob` hace que `um` aporte 2 fuentes HLS con recursos base distintos (el manifiesto local y la copia literal `hls.loadSource(...)` de nika) y el dedup **no** las une → 12 fuentes en vez de 11 y un HLS apuntando a un dominio real (aunque nunca se pide). Solución en el test: reescribir **también** la copia literal con la misma regex de T17 (`https://…m3u8…`) → `um`+`umv` deduplican a 1 y la cadena devuelve las **11 fuentes de T17** (1 HLS + 1 MP4 + 9 iframe), con1 HLS y 1 MP4 assertados y `SelectBestSource` comprobado contra la posición 0 de `GetVideoSources`.
 - T28 (**red privada, historial y regla 13**): `stream.PermitirRedPrivada()` se usa **solo** en el test offline (el `httptest` escucha en 127.0.0.1; en producción sigue `NewProxy(nil)` sin esa opción). El E2E real fija `n.rutaHistorial = t.TempDir()` **antes de `arrancar`** para no tocar el perfil del usuario, y hace el round-trip `SaveProgress`/`GetProgress` igual que el offline. Contra la red real solo se pide el **manifiesto** del HLS por el proxy (75920 B en la pasada): ningún segmento se descarga (regla 13) y si la mejor fuente fuera MP4 solo se anota en el log.
 - T28 (**cerrada**): **sin firmas nuevas** (solo tests) → `docs/firmas/*.md` intactos (fuera de "Puedes tocar" en esta tarea). Tests nuevos: **1** offline (`TestE2EFlujoCompletoOffline`: búsqueda → detalle con streaming y eventos → caché sin segundo fetch → 11 fuentes con HLS/MP4 vía proxy → manifiesto + segmento pedidos al propio sitio → historial → "nada salió a la red") y **1** real (`TestE2EFlujoCompletoRedReal`: misma cadena con asserts blandos — 10 resultados, 23 lotes, 11 fuentes, manifiesto real de 75920 B, historial en temporal). Comprobación final: `gofmt -l .` sin salida · `go vet ./...` OK · `go vet -tags integration ./...` OK · `go build ./...` OK · `go test -race -count=1 ./...` OK (**11 paquetes**) · `go test -tags integration ./... -run E2E -v` OK (los 2 tests PASS: 13,9 s real + 0,34 s offline). **Ningún archivo tocado fuera de "Puedes tocar"** (`frontend/**` y el código de producción intactos).
+- T23 (**regeneración**): `docker compose run --rm app wails generate module` desde la raíz. **`frontend/dist` ya existía** (venía de una sesión anterior), así que **no hizo falta `npm run build`**. Salida: solo el banner de patrocinio de Wails, **sin errores**. Archivos regenerados (los 3 únicos del repo): `frontend/wailsjs/go/main/App.d.ts`, `frontend/wailsjs/go/main/App.js`, `frontend/wailsjs/go/models.ts` (+186 líneas). **Ninguna edición manual de `frontend/wailsjs/**`** y ningún archivo tocado fuera de "Puedes tocar".
+- T23 (**métodos expuestos** — firmas TS exactas de `frontend/wailsjs/go/main/App.d.ts`), para **T24–T27**:
+  - `GetAnimeDetails(arg1:string, arg2:string): Promise<main.DetalleResultado>` → Go `GetAnimeDetails(provider, id string) (DetalleResultado, error)`.
+  - `GetVideoSources(arg1:string, arg2:string, arg3:boolean): Promise<Array<models.VideoSource>>` → Go `(provider, episodeID string, noCache bool)`.
+  - `SearchAnime(arg1:string): Promise<Array<models.Anime>>` — **sin cambios** (el que usa `App.svelte`, T25).
+  - `SaveProgress(arg1:models.WatchProgress): Promise<void>` → Go `error` (un solo retorno, T20).
+  - `GetProgress(arg1:string): Promise<Array<models.WatchProgress>>` — `arg1` **vacío = historial entero** (lista "continuar viendo").
+  - `Greet(arg1:string): Promise<string>` (plantilla Wails, se conserva).
+  - Los parámetros salen **posicionales** (`arg1`…): no hay nombres; no existe ningún `Search`.
+- T23 (**tipos y campos generados** — `frontend/wailsjs/go/models.ts`, clases con constructor que copia desde el JSON):
+  - `main.DetalleResultado` → `detail: models.AnimeDetail`, `episodes: models.Episode[]`.
+  - `models.Anime` → `id`, `title`, `cover_url`, `provider` (todos `string`).
+  - `models.AnimeDetail` → `id`, `title`, `provider`, `type`, `status`, `genres: string[]`, `synopsis`, `cover`, `total_episodes: number`.
+  - `models.Episode` → `id: string`, `number: number`, `title`, `thumbnail`, `kind: string` (no hay unión TS: `kind` vale `episode|movie|special`).
+  - `models.VideoSource` → `url`, `type: string` (`hls|mp4|iframe`), `quality`, `server`, `headers: Record<string,string>`, `referer`, `subtitles?: Subtitle[]` (único **opcional**, `omitempty` de T03).
+  - `models.Subtitle` → `url`, `lang`.
+  - `models.WatchProgress` → `anime_id`, `episode_id`, `current_time: number`, `total_duration: number`, `is_watched: boolean`.
+  - **No se generan** `EpisodeBatch` ni los payloads de `episodes:update` / `episodes:complete`: **solo viajan en eventos**, no están en ninguna firma expuesta → **T24** los define a mano en `frontend/src/api.ts` (no es un error de generación).
+- T23 (**comprobación**): `npm run check` en `frontend/` → **0 errores, 0 avisos** (`svelte-check found 0 errors and 0 warnings`); `App.svelte` no usa ningún binding que haya cambiado (solo `SearchAnime`), así que **no hay nada que anotar para T25**.
+- T23 (**cerrada**): `gofmt`/`vet`/`test` no aplican (sin Go). Comprobación real: `npm run check` en `frontend/` → **`svelte-check found 0 errors and 0 warnings`**.
 
 ## Pendientes activos
 
@@ -260,7 +280,7 @@ Paralelizables (si usas varias sesiones a la vez): T06/T09/T10 · T12–T15 entr
 - T19: el proxy **no re-resuelve** ni cachea (regla 9) y devuelve tal cual los 4xx/5xx del origen (p. ej. 403 de una URL firmada caducada) → la recuperación es de **T27**. Sigue registrando lo que le den, **salvo iframes**: T20 no los registra (solo `hls`/`mp4`).
 - T19: no consume `SelectBestSource` ni `Quality`/`Server` (solo `URL`, `Referer`, `Headers`, `Subtitles`) → `SelectBestSource` ya lo consume T20 en su capa; `Quality`/`Server` siguen esperando a **T26/T27**.
 - T21: ~~el punto de inserción de la caché~~ → **resuelto en T21**: la caché se insertó en **`nucleo.detalle`** (no en `nucleo.fuentes`: `GetVideoSources` nunca se cachea, regla 9); `noCache` sigue sin consumirse → **T27**.
-- T23: regenerar `frontend/wailsjs/**` (`wails generate module`): aparecen `GetAnimeDetails`, `GetVideoSources`, **`SaveProgress`**/**`GetProgress`** y los modelos `DetalleResultado{detail, episodes}` y **`WatchProgress`**; `SearchAnime`/`Greet` siguen igual. Los eventos (`episodes:update`/`episodes:complete`) **no** salen en bindings: se suscriben con `runtime.EventsOn`.
+- T23: ~~regenerar `frontend/wailsjs/**`~~ → **resuelto en T23**: `wails generate module` ejecutado; firmas exactas de métodos y campos snake_case anotados en las desviaciones de abajo. Los eventos (`episodes:update`/`episodes:complete`) **no** salen en bindings: se suscriben con `runtime.EventsOn` → **T24**.
 - T24: consumir `GetVideoSources(provider, episodeID, noCache)` (ahora devuelve la mejor primero y con proxy `127.0.0.1` en HLS/MP4) y `GetAnimeDetails` con `DetalleResultado`.
 - T25: mensaje de fallback de búsqueda y el texto `ErrDetalleNoDisponible` ("Detalle no disponible para este proveedor") al intentar el detalle de AnimeFLV.
 - T26: acumular lotes por `anime_id`+`batch` (los eventos llegan antes de resolver la llamada y sin orden); recibir `episodes:complete` con `{anime_id, error}`.
