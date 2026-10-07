@@ -9,8 +9,6 @@ export function GetProgress(arg1:string):Promise<Array<models.WatchProgress>>;
 
 export function GetVideoSources(arg1:string,arg2:string,arg3:boolean):Promise<Array<models.VideoSource>>;
 
-export function Greet(arg1:string):Promise<string>;
-
 export function SaveProgress(arg1:models.WatchProgress):Promise<void>;
 
 export function SearchAnime(arg1:string):Promise<Array<models.Anime>>;

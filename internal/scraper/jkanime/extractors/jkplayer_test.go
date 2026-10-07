@@ -231,6 +231,64 @@ func TestJKPlayerDedupPorRecurso(t *testing.T) {
 	}
 }
 
+// TestJKPlayerVariasCandidatasDelMismoVideoUnaFuente cubre el dedup por
+// recurso DENTRO de una sola página de player (T29): la misma URL de vídeo
+// aparece cifrada con atob, en dos hls.loadSource y en <source>, siempre
+// con una firma temporal distinta, y debe salir una sola fuente (la
+// primera en orden de prioridad); los recursos distintos de esa misma
+// página sí salen, y la página solo se pide una vez.
+func TestJKPlayerVariasCandidatasDelMismoVideoUnaFuente(t *testing.T) {
+	const playerConCandidatas = `<!DOCTYPE html><html><body>
+<script>
+  var player = new DPlayer({ video: { url: atob('aHR0cHM6Ly9jZG4uZXhhbXBsZS50ZXN0L3YubTN1OD9zdD1BQUE=') } });
+  hls.loadSource('https://cdn.example.test/v.m3u8?st=BBB');
+  hls.loadSource('https://respaldo.example.test/v.m3u8?st=XXX');
+</script>
+<source src='https://cdn.example.test/v.m3u8?st=CCC' type='application/x-mpegURL'>
+<video><source src='https://cdn.example.test/extra.mp4'></video>
+</body></html>`
+	ps := nuevoServidorPlayer(t, map[string]string{"/jkplayer/um": playerConCandidatas})
+	cli := httpx.NewClient(httpx.ClientOptions{})
+
+	page := Page{
+		URL:  ps.srv.URL + "/bleach/1/",
+		HTML: paginaConIframes(rutaUM),
+	}
+	fuentes, err := (JKPlayerExtractor{Base: Base{Doer: cli}}).Extract(context.Background(), page)
+	if err != nil {
+		t.Fatalf("Extract: %v", err)
+	}
+	queria := []struct {
+		url  string
+		tipo models.ResourceType
+	}{
+		{"https://cdn.example.test/v.m3u8?st=AAA", models.ResourceHLS},
+		{"https://respaldo.example.test/v.m3u8?st=XXX", models.ResourceHLS},
+		{"https://cdn.example.test/extra.mp4", models.ResourceMP4},
+	}
+	if len(fuentes) != len(queria) {
+		t.Fatalf("fuentes = %d, quería %d (las 3 firmas de v.m3u8 en 1, el respaldo y el mp4): %+v",
+			len(fuentes), len(queria), fuentes)
+	}
+	for i, q := range queria {
+		if fuentes[i].URL != q.url {
+			t.Errorf("fuentes[%d].URL = %q, quería %q", i, fuentes[i].URL, q.url)
+		}
+		if fuentes[i].Type != q.tipo {
+			t.Errorf("fuentes[%d].Type = %q, quería %q", i, fuentes[i].Type, q.tipo)
+		}
+		if fuentes[i].Server != NameJKPlayer {
+			t.Errorf("fuentes[%d].Server = %q, quería %q", i, fuentes[i].Server, NameJKPlayer)
+		}
+		if fuentes[i].Referer == "" {
+			t.Errorf("fuentes[%d].Referer vacío: cada fuente debe llevar la URL de su iframe", i)
+		}
+	}
+	if pedidas := ps.rutasPedidas(); len(pedidas) != 1 || pedidas[0] != "/jkplayer/um" {
+		t.Errorf("rutas pedidas = %v, quería [/jkplayer/um] (una sola petición por página)", pedidas)
+	}
+}
+
 // TestJKPlayerSubtitulos usa un HTML artificial de player: los fixtures
 // reales de hoy no incluyen ninguna pista .vtt (el sitio no publica
 // softsubs; ver PROGRESO.md), pero el escaneo genérico debe rellenar

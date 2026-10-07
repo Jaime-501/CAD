@@ -163,10 +163,14 @@ func (p *Proxy) Handler() http.Handler {
 // Register asocia las cabeceras requeridas de la fuente (Referer y Headers)
 // a una sesión nueva con TTL y devuelve la misma fuente con las URLs del
 // recurso y de los subtítulos apuntando al proxy. Solo viajan por la URL el
-// id de sesión y la URL de destino codificada: las cabeceras jamás.
+// id de sesión y la URL de destino codificada: las cabeceras jamás, y por lo
+// tanto **tampoco salen en la fuente devuelta** (T29): ya viven en la sesión,
+// que es el único que las lee al reenviar, y esa fuente es la que llega al
+// frontend. Los iframes no pasan por aquí y conservan sus campos.
 //
 // Requiere que antes se haya llamado a Escuchar (o ConBaseURL); sin base no
-// hay dónde apuntar y se devuelve la fuente sin registrar.
+// hay dónde apuntar y se devuelve la fuente sin registrar (y con sus
+// campos intactos).
 func (p *Proxy) Register(source models.VideoSource) (proxiedSource models.VideoSource) {
 	if source.URL == "" {
 		return source
@@ -185,6 +189,8 @@ func (p *Proxy) Register(source models.VideoSource) (proxiedSource models.VideoS
 
 	proxiedSource = source
 	proxiedSource.URL = p.urlProxy(id, source.URL)
+	proxiedSource.Referer = ""
+	proxiedSource.Headers = nil
 	if len(source.Subtitles) > 0 {
 		subs := make([]models.Subtitle, len(source.Subtitles))
 		for i, sub := range source.Subtitles {
@@ -236,9 +242,12 @@ func aplicarCORS(w http.ResponseWriter, r *http.Request) {
 	h.Set("Access-Control-Allow-Headers", "Range, If-Range, Accept, Accept-Language, Origin, Content-Type")
 }
 
-// urlSegura reduce una URL a esquema+host+ruta para los logs: las URLs de
-// vídeo van firmadas (query con la firma temporal) y no se registran
-// completas. Los parámetros firmados no los cubre logx.Redact.
+// urlSegura reduce una URL a esquema+host+ruta para los logs del proxy: lo
+// que se registra es la URL de DESTINO del reenvío, que el CDN entrega
+// firmada. Desde T29 logx.Redact enmascara los parámetros de firma que
+// conocemos (?e=, ?st=, X-Amz-*, …) y por eso httpx puede registrar sus
+// URLs enteras, pero aquí no se puede enumerar el nombre que use cada CDN
+// → se mantiene sin query (regla: ninguna URL firmada completa al log).
 func urlSegura(u *url.URL) string {
 	if u == nil {
 		return ""

@@ -23,7 +23,7 @@
 - `func (a *App) startup(ctx context.Context)` — guarda el ctx, `slog.SetDefault(logx.New(os.Getenv("MIAPP_DEV") != ""))` (instala logx en `app.go`, pendiente de **T01**, y unifica el `slog` de jkanime, pendiente de **T06**) y `core.arrancar(emisor)` con `emisor = func(ev string, data any) { runtime.EventsEmit(ctx, ev, data) }`.
 - `func (a *App) shutdown(_ context.Context)` — `core.cerrar()`; registrado como `OnShutdown` en `main.go`.
 - `func (a *App) contexto() context.Context`
-- `func (a *App) Greet(name string) string` — se conserva (plantilla Wails).
+- **T29 eliminó `Greet`** (plantilla Wails, sin ningún consumidor en `frontend/src`); los bindings se regeneraron con `wails generate module` → ya no aparece en `frontend/wailsjs/go/main/App.{js,d.ts}`.
 - `func (a *App) SearchAnime(query string) ([]models.Anime, error)` — **conservado** tal cual lo consume `App.svelte`; **no existe `Search`**.
 - `func (a *App) GetAnimeDetails(provider string, id string) (DetalleResultado, error)`
 - `func (a *App) GetVideoSources(provider string, episodeID string, noCache bool) ([]models.VideoSource, error)`
@@ -77,7 +77,7 @@
   - búsqueda (6): gana JKAnime sin tocar el fallback · fallback por lista vacía · fallback por error · ambos caídos → error con los dos mensajes · sin resultados no es error · sin proveedores registrados no revienta;
   - detalle (6): proveedor desconocido con la lista de disponibles · `ErrNoDetails` → `ErrDetalleNoDisponible` (y no arrastra el sentinel de scraper) · sin `EpisodeStreamer` no emite · lotes + `episodes:complete` · fallo de página llega como `error` en `complete` · **cambio de anime cancela el stream anterior y sus lotes tardíos se suprimen**;
   - ciclo de vida (3): `shutdown` cancela el stream y cierra el proxy (y es idempotente) · sin emisor no falla · `arrancar` instala el emisor y hace `Escuchar`;
-  - fuentes (3): solo HLS/MP4 pasan por el proxy con la mejor primero (el iframe queda intacto y sin registrar) · `noCache` se reenvía y no hay caché (dos llamadas = dos peticiones al provider) · proveedor desconocido.
+  - fuentes (3): solo HLS/MP4 pasan por el proxy con la mejor primero (el iframe queda intacto y sin registrar, **conservando su `Referer`**; las proxificadas salen **sin `Referer`/`Headers`**, T29, y la sesión del doble sí los recibe) · `noCache` se reenvía y no hay caché (dos llamadas = dos peticiones al provider) · proveedor desconocido.
 - `app_integration_test.go` — `TestBusquedaRedReal` (`//go:build integration`): `nuevoNucleoPorDefecto()` + `buscar("bleach")` contra la red real; exige resultados y que el primero sea de `jkanime` (si falla, el fallback lo taparía y el smoke lo dice en el mensaje). Ejecutado en verde: **10 resultados**.
 
 #### Decisiones y límites

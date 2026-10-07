@@ -97,10 +97,14 @@ func nuevoProxyFalso() *proxyFalso {
 }
 
 func (p *proxyFalso) Register(s models.VideoSource) models.VideoSource {
+	// Como el proxy real (T29): la sesión se queda con el Referer/Headers
+	// (aquí, en `registradas`) y la fuente devuelta sale sin ellos.
 	p.mu.Lock()
 	p.registradas = append(p.registradas, s)
 	p.mu.Unlock()
 	s.URL = p.base + "/proxy?s=falsa&u=" + url.QueryEscape(s.URL)
+	s.Referer = ""
+	s.Headers = nil
 	return s
 }
 
@@ -765,7 +769,7 @@ func TestFuentesSoloHLSYMP4PasanPorElProxyYLaMejorVaPrimero(t *testing.T) {
 	originales := []models.VideoSource{
 		{URL: "https://cdn.example/uno.m3u8", Type: models.ResourceHLS, Referer: "https://jkanime.net/"},
 		{URL: "https://cdn.example/dos.mp4", Type: models.ResourceMP4},
-		{URL: "https://voe.sx/e/abc123", Type: models.ResourceIframe, Server: "VOE"},
+		{URL: "https://voe.sx/e/abc123", Type: models.ResourceIframe, Server: "VOE", Referer: "https://voe.sx/"},
 	}
 	prov := &proveedorFalso{
 		nombre: "jkanime",
@@ -804,15 +808,23 @@ func TestFuentesSoloHLSYMP4PasanPorElProxyYLaMejorVaPrimero(t *testing.T) {
 	if salida[2].Server != "VOE" || salida[2].Type != models.ResourceIframe {
 		t.Errorf("el iframe perdió campos: %+v", salida[2])
 	}
+	// El iframe no pasa por el proxy, así que sus campos (poco) se conservan.
+	if salida[2].Referer != "https://voe.sx/" {
+		t.Errorf("el iframe debía conservar su Referer: %+v", salida[2])
+	}
 
 	// El proxy solo debe haber registrado las dos reproducibles.
 	registradas, _, _ := e.proxy.contadores()
 	if registradas != 2 {
 		t.Errorf("registradas = %d; solo HLS y MP4 (los iframes no)", registradas)
 	}
-	// El Referer de la sesión viaja al proxy (campo intacto).
-	if salida[0].Referer != "https://jkanime.net/" {
-		t.Errorf("Referer = %q; Register debe preservarlo", salida[0].Referer)
+	// T29: el Referer/Headers se quedan en la sesión (registradas) y la
+	// fuente devuelta —la que cruza el puente de Wails— sale sin ellos.
+	if e.proxy.registradas[0].Referer != "https://jkanime.net/" {
+		t.Errorf("la sesión no recibió el Referer: %+v", e.proxy.registradas[0])
+	}
+	if salida[0].Referer != "" || salida[0].Headers != nil {
+		t.Errorf("la fuente hacia el frontend arrastra cabeceras: %+v", salida[0])
 	}
 }
 

@@ -61,13 +61,51 @@ func (JKPlayerExtractor) CanHandle(page Page) bool {
 // cabecera que el CDN del .m3u8 exige (captura con Playwright MCP, véase
 // PROGRESO.md). Los enlaces repetidos del mismo vídeo —um y umv— se
 // resuelven por recurso base, sin la query de firma temporal.
+//
+// T29: la implementación es la compartida con JKPHPExtractor
+// (extraeIframesDePlayer), que solo cambia las etiquetas y los textos.
 func (e JKPlayerExtractor) Extract(ctx context.Context, page Page) ([]models.VideoSource, error) {
+	return extraeIframesDePlayer(ctx, page, rePlayerJK, cfgJKPlayer, e.Doer)
+}
+
+// cfgJKPlayer es la parametrización de JKPlayerExtractor para la descarga
+// compartida de páginas de player (T29).
+var cfgJKPlayer = cfgPlayer{
+	nombre:  NameJKPlayer,
+	mencion: "el player",
+	pagina:  "del player",
+	sujeto:  "el player",
+}
+
+// cfgPlayer parametriza lo que los dos extractores de página de player
+// hacen con ella: la descarga, el parseo y la deduplicación son idénticos
+// (T29) y solo cambian las etiquetas de log/resultado y los textos de error.
+type cfgPlayer struct {
+	// nombre es NameJKPlayer o NameJKPHP: Operation y Extractor del log
+	// y Server de cada fuente (hoy coinciden los tres).
+	nombre string
+	// mencion es lo que el HTML declara mencionar: "el player" | "jk.php".
+	mencion string
+	// pagina es la frase de la página tras la preposición:
+	// "del player" | "de jk.php".
+	pagina string
+	// sujeto encabeza el error cuando la página no expone vídeo:
+	// "el player" | "la página".
+	sujeto string
+}
+
+// extraeIframesDePlayer recorre los iframes que re localiza en la página
+// del episodio, descarga cada página del player una sola vez (dedup por
+// URL de iframe) y agrega sus fuentes deduplicándolas por recurso base (la
+// query de firma temporal no distingue vídeos). Implementación compartida
+// de JKPlayerExtractor.Extract y JKPHPExtractor.Extract (T29).
+func extraeIframesDePlayer(ctx context.Context, page Page, re *regexp.Regexp, cfg cfgPlayer, doer httpx.HTTPDoer) ([]models.VideoSource, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	enlaces := rePlayerJK.FindAllString(page.HTML, -1)
+	enlaces := re.FindAllString(page.HTML, -1)
 	if len(enlaces) == 0 {
-		return nil, fmt.Errorf("%s: el HTML menciona el player pero no contiene ninguna URL de iframe", NameJKPlayer)
+		return nil, fmt.Errorf("%s: el HTML menciona %s pero no contiene ninguna URL de iframe", cfg.nombre, cfg.mencion)
 	}
 
 	var (
@@ -79,7 +117,7 @@ func (e JKPlayerExtractor) Extract(ctx context.Context, page Page) ([]models.Vid
 	for _, bruto := range enlaces {
 		player, err := absolverURL(bruto, page.URL)
 		if err != nil {
-			errores = append(errores, fmt.Errorf("iframe del player: %w", err))
+			errores = append(errores, fmt.Errorf("iframe %s: %w", cfg.pagina, err))
 			continue
 		}
 		if visitas[player.String()] {
@@ -87,7 +125,7 @@ func (e JKPlayerExtractor) Extract(ctx context.Context, page Page) ([]models.Vid
 		}
 		visitas[player.String()] = true
 
-		producidas, err := e.fuentesDePlayer(ctx, page, player)
+		producidas, err := fuentesDePaginaDePlayer(ctx, doer, cfg, page, player)
 		if err != nil {
 			errores = append(errores, err)
 			continue
@@ -108,19 +146,23 @@ func (e JKPlayerExtractor) Extract(ctx context.Context, page Page) ([]models.Vid
 		if len(errores) > 0 {
 			return nil, errors.Join(errores...)
 		}
-		return nil, fmt.Errorf("%s: sin URL de vídeo reproducible en la página del player", NameJKPlayer)
+		return nil, fmt.Errorf("%s: sin URL de vídeo reproducible en la página %s", cfg.nombre, cfg.pagina)
 	}
 	return fuentes, nil
 }
 
-// fuentesDePlayer descarga la página de un iframe del player y traduce sus
-// candidatas a VideoSource. La petición lleva el Referer de la página del
-// episodio (regla 3: con el doer compartido viajan también las cookies).
-func (e JKPlayerExtractor) fuentesDePlayer(ctx context.Context, page Page, player *url.URL) ([]models.VideoSource, error) {
-	resp, err := httpx.Get(ctx, e.Doer, player.String(), httpx.ReqOptions{
+// fuentesDePaginaDePlayer descarga la página de un iframe del player y
+// traduce sus candidatas a VideoSource con los helpers de parseo de este
+// archivo (urlsDeVideo, absolverURL, recursoBase, tipoDeRecurso,
+// subtitulosDe) y el límite maxPlayerBytes. La petición lleva el Referer
+// de la página del episodio y, con el doer compartido, también sus cookies
+// (regla 3); cada fuente usa como Referer la URL del propio iframe, que es
+// la cabecera que exige su CDN.
+func fuentesDePaginaDePlayer(ctx context.Context, doer httpx.HTTPDoer, cfg cfgPlayer, page Page, player *url.URL) ([]models.VideoSource, error) {
+	resp, err := httpx.Get(ctx, doer, player.String(), httpx.ReqOptions{
 		Provider:  "jkanime",
-		Operation: "jkplayer",
-		Extractor: NameJKPlayer,
+		Operation: cfg.nombre,
+		Extractor: cfg.nombre,
 		Referer:   page.URL,
 	})
 	if err != nil {
@@ -133,7 +175,7 @@ func (e JKPlayerExtractor) fuentesDePlayer(ctx context.Context, page Page, playe
 		return nil, err
 	}
 	if len(cuerpo) > maxPlayerBytes {
-		return nil, fmt.Errorf("la página del player pesa %d bytes y el máximo es %d", len(cuerpo), maxPlayerBytes)
+		return nil, fmt.Errorf("la página %s pesa %d bytes y el máximo es %d", cfg.pagina, len(cuerpo), maxPlayerBytes)
 	}
 
 	subs := subtitulosDe(string(cuerpo), player)
@@ -151,13 +193,13 @@ func (e JKPlayerExtractor) fuentesDePlayer(ctx context.Context, page Page, playe
 		fuentes = append(fuentes, models.VideoSource{
 			URL:       u.String(),
 			Type:      tipoDeRecurso(u, string(cuerpo)),
-			Server:    NameJKPlayer,
+			Server:    cfg.nombre,
 			Referer:   player.String(),
 			Subtitles: subs,
 		})
 	}
 	if len(fuentes) == 0 {
-		return nil, fmt.Errorf("%s: el player no expone ninguna URL de vídeo válida", NameJKPlayer)
+		return nil, fmt.Errorf("%s: %s no expone ninguna URL de vídeo válida", cfg.nombre, cfg.sujeto)
 	}
 	return fuentes, nil
 }

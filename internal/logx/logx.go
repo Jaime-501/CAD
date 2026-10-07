@@ -1,8 +1,10 @@
 // Package logx proporciona logging estructurado con redacción de secretos.
 //
 // Regla del proyecto: nunca se registran en logs cookies, tokens CSRF ni
-// cabeceras Authorization/Set-Cookie. Todo lo que pase por este paquete
-// (mensaje y atributos) se limpia con Redact antes de escribirse.
+// cabeceras Authorization/Set-Cookie, y tampoco URLs firmadas completas
+// (una query que autentica el recurso: ?e=/t=/st=/op= de los players o
+// los X-Amz-* de S3). Todo lo que pase por este paquete (mensaje y
+// atributos) se limpia con Redact antes de escribirse.
 package logx
 
 import (
@@ -24,11 +26,16 @@ var (
 	reLine = regexp.MustCompile(`(?i)\b(set-cookie|proxy-authorization|authorization|cookie)(\s*[:=]\s*)[^\r\n]+`)
 	// csrf=..., _token=..., token=..., apikey=... sueltos
 	reKV = regexp.MustCompile(`(?i)\b(csrf(?:[-_]?token)?|xsrf[-_]?token|_token|access_token|token|api[-_]?key|apikey|sid)(\s*[:=]\s*)([^\s,;&"'<>]+)`)
+	// Firmas de recurso en la query: no son secretos de sesión, pero SÍ
+	// autentican el vídeo, así que una URL firmada completa tampoco se
+	// registra (T29: ?e=..&t=..&op=.. de jkplayer, ?st=.. del CDN,
+	// ?Signature=.. y los X-Amz-*/awsaccesskeyid/policy de S3/CloudFront).
+	reFirma = regexp.MustCompile(`(?i)([?&](?:e|t|st|op|key|sig|signature|sign|expires|expiry|policy|key-pair-id|awsaccesskeyid|x-amz-algorithm|x-amz-credential|x-amz-date|x-amz-expires|x-amz-signedheaders|x-amz-signature|x-amz-security-token|x-amz-key-pair-id)=)[^&\s"'<>]+`)
 )
 
 // Redact enmascara secretos en una cadena: cabeceras Cookie/Set-Cookie/
-// Authorization, parámetros csrf/token/_token en URLs y cuerpos, y sus
-// variantes JSON.
+// Authorization, parámetros csrf/token/_token en URLs y cuerpos, sus
+// variantes JSON y las URLs firmadas (query que autentica el recurso).
 func Redact(s string) string {
 	if s == "" {
 		return s
@@ -37,6 +44,7 @@ func Redact(s string) string {
 	s = reParam.ReplaceAllString(s, "${1}***")
 	s = reLine.ReplaceAllString(s, "${1}${2}***")
 	s = reKV.ReplaceAllString(s, "${1}${2}***")
+	s = reFirma.ReplaceAllString(s, "${1}***")
 	return s
 }
 

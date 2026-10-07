@@ -17,7 +17,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"net/http"
 	"sort"
 	"strings"
 
@@ -42,15 +41,15 @@ var ordenCanonico = []string{NameJKPlayer, NameJKPHP, NameServers}
 
 // Page es la página cruda de un episodio que procesan los extractores. Es
 // el equivalente a jkanime.EpisodePage (que este paquete no puede importar
-// por la regla de dependencias): T17 la construye desde esa página.
+// por la regla de dependencias): T17 la construye desde esa página. Solo
+// viajan la URL final y el HTML: las cabeceras de la respuesta se quedan
+// en jkanime (ningún extractor las lee).
 type Page struct {
 	// URL final del episodio, después de las redirecciones del sitio: se
 	// usa para absolutizar rutas relativas y como Referer.
 	URL string
 	// HTML crudo del cuerpo de la respuesta.
 	HTML string
-	// Headers de la respuesta final, sin Set-Cookie (regla 10).
-	Headers http.Header
 }
 
 // VideoExtractor extrae fuentes de vídeo de una página de episodio. Los

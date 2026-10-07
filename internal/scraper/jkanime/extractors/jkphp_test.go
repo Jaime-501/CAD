@@ -6,6 +6,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -249,6 +252,77 @@ func TestJKPHPSinURLDeIframe(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "ninguna URL de iframe") {
 		t.Errorf("err = %v, quería el mensaje de sin URL de iframe", err)
+	}
+}
+
+// TestJKPHPExtraeDePaginaRealDeEpisodio cierra el hueco anotado en T13:
+// ninguna página de episodio real de los fixtures traía la referencia
+// jkplayer/jk?u=…, así que esa parte del extractor se probaba con HTML
+// artificial. T29 capturó `../testdata/episode_page_jkphp.html` (en
+// `internal/scraper/jkanime/testdata/`: bleach-sennen-kessen-hen/1,
+// sanitizado según la regla 12: token CSRF, IP del cliente y parámetros
+// firmados) y aquí se recorre la cadena entera con ese HTML: detección →
+// petición al player → fuente MP4.
+func TestJKPHPExtraeDePaginaRealDeEpisodio(t *testing.T) {
+	ruta := filepath.Join("..", "testdata", "episode_page_jkphp.html")
+	crudo, err := os.ReadFile(ruta)
+	if err != nil {
+		t.Fatalf("fixture real de episodio (%s): %v", ruta, err)
+	}
+	pagina := string(crudo)
+
+	// La regla 12: el token CSRF del fixture debe ser el sanitizado.
+	reCSRF := regexp.MustCompile(`name="csrf-token" content="([^"]+)"`)
+	if m := reCSRF.FindStringSubmatch(pagina); len(m) != 2 || m[1] != "TOKEN_DE_PRUEBA" {
+		t.Fatalf("el fixture no trae el token CSRF sanitizado: %v", m)
+	}
+
+	reReferencia := regexp.MustCompile(`https://jkanime\.net/jkplayer/jk\?[^"' ]+`)
+	referencias := reReferencia.FindAllString(pagina, -1)
+	if len(referencias) != 1 {
+		t.Fatalf("el fixture real trae %d referencias jkplayer/jk?u=…, quería 1: %v", len(referencias), referencias)
+	}
+	if !(JKPHPExtractor{}).CanHandle(Page{URL: "https://jkanime.net/bleach-sennen-kessen-hen/1/", HTML: pagina}) {
+		t.Fatal("CanHandle no reconoce la referencia de la página real")
+	}
+
+	// La referencia real se apunta al servidor local, que sirve la
+	// respuesta real del player (mismo truco que T17 en su cadena).
+	ps := nuevoServidorPlayer(t, map[string]string{"/jkplayer/jk": cargarFixture(t, "jkplayer_jk.html")})
+	iframeLocal := ps.srv.URL + "/jkplayer/jk?u=stream/jkmedia/prueba"
+	page := Page{
+		URL:  ps.srv.URL + "/bleach-sennen-kessen-hen/1/",
+		HTML: strings.ReplaceAll(pagina, referencias[0], iframeLocal),
+	}
+	if strings.Contains(page.HTML, referencias[0]) {
+		t.Fatal("la referencia real no se reescribió al servidor local")
+	}
+
+	fuentes, err := (JKPHPExtractor{Base: Base{Doer: httpx.NewClient(httpx.ClientOptions{})}}).Extract(context.Background(), page)
+	if err != nil {
+		t.Fatalf("Extract sobre el HTML real: %v", err)
+	}
+	if len(fuentes) != 1 {
+		t.Fatalf("fuentes = %d, quería 1", len(fuentes))
+	}
+	f := fuentes[0]
+	if f.URL != urlJKPlayerJK {
+		t.Errorf("URL = %q, quería %q", f.URL, urlJKPlayerJK)
+	}
+	if f.Type != models.ResourceMP4 {
+		t.Errorf("Type = %q, quería %q", f.Type, models.ResourceMP4)
+	}
+	if f.Server != NameJKPHP {
+		t.Errorf("Server = %q, quería %q", f.Server, NameJKPHP)
+	}
+	if f.Referer != iframeLocal {
+		t.Errorf("Referer = %q, quería la URL del iframe %q", f.Referer, iframeLocal)
+	}
+	if pedidas := ps.rutasPedidas(); len(pedidas) != 1 || pedidas[0] != "/jkplayer/jk" {
+		t.Errorf("rutas pedidas = %v, quería [/jkplayer/jk]", pedidas)
+	}
+	if referer, _, _ := ps.ultimaPeticion(); referer != page.URL {
+		t.Errorf("Referer de la petición = %q, quería %q (la página del episodio)", referer, page.URL)
 	}
 }
 

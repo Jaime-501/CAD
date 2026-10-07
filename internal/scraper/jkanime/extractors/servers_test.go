@@ -175,8 +175,8 @@ func TestServersDelegaMediafire(t *testing.T) {
 	if mf.llamadas != 1 {
 		t.Fatalf("llamadas al resolver = %d, quería 1 (solo Mediafire)", mf.llamadas)
 	}
-	if mf.remoto.Nombre != "Mediafire" || mf.remoto.Slug != "upp07829rIJoW" {
-		t.Errorf("remote = %+v, quería Nombre Mediafire y slug upp07829rIJoW", mf.remoto)
+	if mf.remoto.Nombre != "Mediafire" {
+		t.Errorf("remote = %+v, quería Nombre Mediafire", mf.remoto)
 	}
 	if mf.remoto.URL == nil || mf.remoto.URL.String() != remoteMediafire {
 		t.Errorf("remote.URL = %v, quería %q ya decodificado", mf.remoto.URL, remoteMediafire)

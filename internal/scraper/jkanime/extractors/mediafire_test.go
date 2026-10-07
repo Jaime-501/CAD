@@ -59,7 +59,7 @@ func (s *servidorMediaFire) remote(t *testing.T, nombre string) Remote {
 	if err != nil {
 		t.Fatalf("parsear la URL de la página: %v", err)
 	}
-	return Remote{Nombre: nombre, Slug: "upp07829rIJoW", Tamano: "150 MB", URL: u}
+	return Remote{Nombre: nombre, URL: u}
 }
 
 func (s *servidorMediaFire) peticiones() (paths []string, ua, refer string) {

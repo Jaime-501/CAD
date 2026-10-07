@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -19,6 +20,7 @@ import (
 
 	"miapp/internal/cache"
 	"miapp/internal/httpx"
+	"miapp/internal/logx"
 	"miapp/internal/models"
 	"miapp/internal/scraper"
 	"miapp/internal/scraper/animeflv"
@@ -427,6 +429,83 @@ func esperarCompleto(t *testing.T, emis *emisorFalso, animeID string, limite tim
 }
 
 // ---------------------------------------------------------------------------
+// Captura de logs de un flujo completo (T29): nada de lo que el flujo
+// recorrido pida o reciba debe salir en claro en logx ni en slog.
+// ---------------------------------------------------------------------------
+
+// registroSeguro es un io.Writer con mutex: los logs llegan de varios
+// goroutines (stream, proxy) y -race está activo.
+type registroSeguro struct {
+	mu sync.Mutex
+	b  bytes.Buffer
+}
+
+func (r *registroSeguro) Write(p []byte) (int, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.b.Write(p)
+}
+
+func (r *registroSeguro) String() string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.b.String()
+}
+
+// reFirmaEnLog busca en el texto capturado una query que firma un recurso
+// con un valor de 4+ caracteres: con la redacción activa solo quedan ***
+// (3), así que cualquier coincidencia es una URL firmada filtrada.
+var reFirmaEnLog = regexp.MustCompile(`(?i)[?&](?:e|t|st|op|key|sig|signature|sign|expires|expiry|policy|key-pair-id|awsaccesskeyid|x-amz-signature|token|csrf(?:[-_]?token)?|_token)=([^&\s"'<>]{4,})`)
+
+// capturarLogs redirige slog (que TestMain descarta) y logx (JSON a stderr
+// por defecto) a un buffer mientras dura el test, y los restaura al salir.
+func capturarLogs(t *testing.T) *registroSeguro {
+	t.Helper()
+	reg := &registroSeguro{}
+	l := slog.New(logx.NewHandler(slog.NewTextHandler(reg, &slog.HandlerOptions{Level: slog.LevelInfo})))
+	slog.SetDefault(l)
+	logx.SetDefault(l)
+	t.Cleanup(func() {
+		slog.SetDefault(slog.New(slog.NewTextHandler(io.Discard, nil))) // como TestMain
+		logx.New(false)                                                 // JSON a stderr, como en producción
+	})
+	return reg
+}
+
+// comprobarLogsSinSecretos falla si el flujo dejó cookies, CSRF, tokens o
+// URLs firmadas completas en la salida capturada.
+func comprobarLogsSinSecretos(t *testing.T, reg *registroSeguro) {
+	t.Helper()
+	salida := reg.String()
+	if salida == "" {
+		t.Error("los logs del flujo están vacíos: la captura no funciona y esta comprobación no probaría nada")
+		return
+	}
+	t.Logf("logs del flujo capturados: %d bytes", len(salida))
+	if !strings.Contains(salida, "http_request") {
+		t.Error("la captura no contiene ninguna petición http registrada")
+	}
+	if coincidencia := reFirmaEnLog.FindString(salida); coincidencia != "" {
+		t.Errorf("los logs contienen una URL firmada/token sin redactar: %q", coincidencia)
+	}
+	// Frases concretas que jamás deben aparecer en claro.
+	bloqueadas := []string{
+		"SESION_DE_PRUEBA", // cookie de sesión del sitio (offline)
+		"jkanime_session=",
+		"Set-Cookie",
+		"_token=",
+		"csrf-token",
+		"Authorization:",
+	}
+	lower := strings.ToLower(salida)
+	for _, secreto := range bloqueadas {
+		if strings.Contains(lower, strings.ToLower(secreto)) {
+			t.Errorf("el registro %q aparece en los logs:\n%s", secreto, salida)
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
 // E2E offline: recorre la aplicación entera contra el sitio falso.
 // ---------------------------------------------------------------------------
 
@@ -437,6 +516,7 @@ func esperarCompleto(t *testing.T, emis *emisorFalso, animeID string, limite tim
 // proveedor corta cualquier host ajeno y el proxy solo se le pide el
 // manifiesto y el segmento del propio sitio.
 func TestE2EFlujoCompletoOffline(t *testing.T) {
+	registro := capturarLogs(t)
 	sitio := nuevoSitioFalso(t)
 
 	transporte := &transporteSoloLocal{servidor: hostDe(sitio.srv.URL), base: http.DefaultTransport}
@@ -591,6 +671,12 @@ func TestE2EFlujoCompletoOffline(t *testing.T) {
 		} else if enProxy {
 			t.Errorf("la fuente %s (%s) no debía pasar por el proxy: %q", f.Server, f.Type, f.URL)
 		}
+		// T29: la fuente proxificada es la que cruza el puente de Wails, así
+		// que sale sin cabeceras: el Referer/Headers vive solo en la sesión
+		// del proxy, que es quien los inyecta al origen.
+		if enProxy && (f.Referer != "" || f.Headers != nil) {
+			t.Errorf("la fuente %s va hacia el frontend con cabeceras: %+v", f.Server, f)
+		}
 	}
 	conteo := map[models.ResourceType]int{}
 	for _, f := range fuentes {
@@ -736,16 +822,44 @@ func TestE2EFlujoCompletoOffline(t *testing.T) {
 			t.Errorf("faltó la petición %q al sitio falso; se hicieron: %v", q, peticiones)
 		}
 	}
+	// T29: además de "todas presentes", la lista debe ser EXACTA: una
+	// petición repetida (p. ej. una segunda búsqueda o una segunda descarga
+	// del mapa de excepciones en la misma consulta) es un fallo, no un detalle.
+	esperadas := append([]string(nil), queria...)
+	hubieron := append([]string(nil), peticiones...)
+	sort.Strings(esperadas)
+	sort.Strings(hubieron)
+	if strings.Join(esperadas, "\n") != strings.Join(hubieron, "\n") {
+		t.Errorf("las peticiones no son exactas (quería %d, se hicieron %d)\n  quería:\n  %s\n  hizo:\n  %s",
+			len(esperadas), len(hubieron),
+			strings.Join(esperadas, "\n  "), strings.Join(hubieron, "\n  "))
+	}
+	if n := contar(peticiones, "GET "+rutaBusqueda+"bleach"); n != 1 {
+		t.Errorf("la búsqueda a JKAnime se pidió %d veces; debe ser exactamente 1", n)
+	}
+	if n := contar(peticiones, "GET "+rutaExcepciones); n != 1 {
+		t.Errorf("el mapa de excepciones se descargó %d veces; debe ser 1 por proceso", n)
+	}
 	t.Logf("sitio falso: %d peticiones\n  %s", len(peticiones), strings.Join(peticiones, "\n  "))
+
+	// --- 8. Los logs del flujo no dejan secretos ni URLs firmadas --------
+	// (T29): se revisa la salida REAL de todo lo anterior: búsqueda con
+	// cookies y CSRF, extractor jkplayer con su firma y petición al proxy.
+	comprobarLogsSinSecretos(t, registro)
 }
 
 func contiene(lista []string, buscado string) bool {
+	return contar(lista, buscado) > 0
+}
+
+func contar(lista []string, buscado string) int {
+	n := 0
 	for _, s := range lista {
 		if s == buscado {
-			return true
+			n++
 		}
 	}
-	return false
+	return n
 }
 
 // resumenFuentes vota, por servidor y tipo, cuántas fuentes devolvió la

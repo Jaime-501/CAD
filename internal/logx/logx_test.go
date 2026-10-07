@@ -97,3 +97,59 @@ func TestRequestRedactaURL(t *testing.T) {
 		t.Errorf("faltan atributos de la petición: %q", out)
 	}
 }
+
+// TestRedactURLFirmada: una URL que autentica el recurso (players de
+// jkplayer, CDN con st=, S3/CloudFront) tampoco se registra completa
+// (regla del proyecto; T29).
+func TestRedactURLFirmada(t *testing.T) {
+	casos := []struct {
+		nombre, in, veido string
+		secrets           []string
+	}{
+		{
+			nombre: "player jkplayer",
+			in:     "https://cdn.test/jkplayer/um?e=FIRMA_E&op=NzM1NjQ=&t=FIRMA_T",
+			veido:  "?e=***&op=***&t=***",
+			secrets: []string{
+				"FIRMA_E", "FIRMA_T", "NzM1NjQ",
+			},
+		},
+		{
+			nombre:  "CDN con st",
+			in:      "https://cdn.test/hls/playlist.m3u8?st=FIRMA_ST&other=1",
+			veido:   "?st=***&other=1",
+			secrets: []string{"FIRMA_ST"},
+		},
+		{
+			nombre:  "S3/CloudFront",
+			in:      "https://bucket.s3.test/v.mp4?X-Amz-Algorithm=AWS4&X-Amz-Signature=SECRETO_AMZ&X-Amz-Credential=CRED",
+			veido:   "X-Amz-Algorithm=***&X-Amz-Signature=***&X-Amz-Credential=***",
+			secrets: []string{"SECRETO_AMZ", "CRED", "AWS4"},
+		},
+		{
+			nombre:  "Signature/Policy",
+			in:      "https://dl.test/archivo?Signature=SECRETO_SIG&Expires=1700000000&Policy=POLITICA",
+			veido:   "?Signature=***&Expires=***&Policy=***",
+			secrets: []string{"SECRETO_SIG", "1700000000", "POLITICA"},
+		},
+	}
+	for _, c := range casos {
+		t.Run(c.nombre, func(t *testing.T) {
+			out := Redact(c.in)
+			for _, s := range c.secrets {
+				if strings.Contains(out, s) {
+					t.Errorf("firma %q visible: %q", s, out)
+				}
+			}
+			if !strings.Contains(out, c.veido) {
+				t.Errorf("query = %q, quería ver %q", out, c.veido)
+			}
+		})
+	}
+
+	// Los parámetros que no firman nada siguen intactos.
+	otros := Redact("https://jkanime.net/buscar/bleach?page=2&lang=es")
+	if !strings.Contains(otros, "page=2&lang=es") {
+		t.Errorf("parámetros inocentes alterados: %q", otros)
+	}
+}

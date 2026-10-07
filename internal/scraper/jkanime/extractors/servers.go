@@ -48,15 +48,13 @@ type RemoteResolver interface {
 }
 
 // Server es una entrada cruda de la lista `var servers`, con los campos
-// tal y como los declara el JSON de la página (fixture real
-// testdata/servers.html).
+// que el flujo consume, tal y como los declara el JSON de la página
+// (fixture real testdata/servers.html). El sitio publica además `slug`,
+// `lang`, `size` y `append` (idioma y posición del botón): se decodifican
+// igual que aquí se ignoran, no hace falta modelarlos.
 type Server struct {
 	Remote string `json:"remote"` // URL del host, cifrada en base64
-	Slug   string `json:"slug"`
 	Server string `json:"server"` // nombre visible: "VOE", "Mediafire"…
-	Lang   int    `json:"lang"`
-	Size   string `json:"size"`
-	Append int    `json:"append"`
 }
 
 // Remote es una entrada ya decodificada y validada: el enlace real del
@@ -64,8 +62,6 @@ type Server struct {
 // RemoteResolver.
 type Remote struct {
 	Nombre string   // etiqueta del servidor (Server.Server)
-	Slug   string   // Server.slug, por si el resolver lo necesita
-	Tamano string   // Server.size ("150 MB")
 	URL    *url.URL // remote decodificado de base64, http(s) con host
 }
 
@@ -225,8 +221,6 @@ func decodificarRemote(entrada Server) (Remote, error) {
 	}
 	return Remote{
 		Nombre: nombre,
-		Slug:   strings.TrimSpace(entrada.Slug),
-		Tamano: strings.TrimSpace(entrada.Size),
 		URL:    remote,
 	}, nil
 }

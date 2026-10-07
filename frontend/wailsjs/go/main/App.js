@@ -14,10 +14,6 @@ export function GetVideoSources(arg1, arg2, arg3) {
   return window['go']['main']['App']['GetVideoSources'](arg1, arg2, arg3);
 }
 
-export function Greet(arg1) {
-  return window['go']['main']['App']['Greet'](arg1);
-}
-
 export function SaveProgress(arg1) {
   return window['go']['main']['App']['SaveProgress'](arg1);
 }

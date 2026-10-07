@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"runtime"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -123,6 +124,42 @@ func TestEscuchaSoloEnLoopbackYPuertoAleatorio(t *testing.T) {
 	}
 }
 
+// TestCerrarDetieneElServidor comprueba que Cerrar termina el goroutine de
+// Serve que arranca Escuchar (nada sobrevive al shutdown) y que el puerto
+// queda inutilizable.
+func TestCerrarDetieneElServidor(t *testing.T) {
+	p := NewProxy(nil, PermitirRedPrivada())
+	base := runtime.NumGoroutine()
+
+	dir, err := p.Escuchar()
+	if err != nil {
+		t.Fatalf("Escuchar: %v", err)
+	}
+
+	resp := pedir(t, dir+"/proxy?s=ida&u="+url.QueryEscape("https://cdn.example.test/a.mp4"), nil)
+	if resp.StatusCode != http.StatusNotFound {
+		t.Errorf("status = %d, quería 404 con sesión inexistente", resp.StatusCode)
+	}
+	_ = resp.Body.Close()
+
+	if err := p.Cerrar(); err != nil {
+		t.Fatalf("Cerrar: %v", err)
+	}
+	clientePrueba.Transport.(*http.Transport).CloseIdleConnections()
+
+	if _, err := http.Get(dir + "/proxy"); err == nil {
+		t.Error("tras Cerrar el proxy seguía respondiendo")
+	}
+
+	limite := time.Now().Add(3 * time.Second)
+	for runtime.NumGoroutine() > base && time.Now().Before(limite) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if n := runtime.NumGoroutine(); n > base {
+		t.Errorf("goroutines = %d (base %d): Cerrar dejó algo corriendo", n, base)
+	}
+}
+
 // TestInyectaCabecerasDeLaSesionYNoLasDelCliente: el Referer y los Headers
 // del VideoSource van en la sesión y llegan al origen; Cookie y
 // Authorization del reproductor jamás; Range sí.
@@ -159,6 +196,12 @@ func TestInyectaCabecerasDeLaSesionYNoLasDelCliente(t *testing.T) {
 	}
 	if len(reg.Subtitles) != 1 || !strings.HasPrefix(reg.Subtitles[0].URL, dir+"/proxy?") {
 		t.Errorf("subtítulo no reescrito: %+v", reg.Subtitles)
+	}
+	// T29: las cabeceras se quedan en la sesión; la fuente devuelta (la que
+	// recibe el frontend) sale limpia. Prueba de que siguen ahí: lo de abajo.
+	if reg.Referer != "" || reg.Headers != nil {
+		t.Errorf("la fuente devuelta arrastra cabeceras: referer=%q headers=%v",
+			reg.Referer, reg.Headers)
 	}
 
 	resp := pedir(t, reg.URL, func(r *http.Request) {

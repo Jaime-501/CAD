@@ -96,11 +96,12 @@ func (j *JkAnime) cadenaDeExtractores() *extractors.Resolver {
 }
 
 // paginaExtractores convierte la página cruda del episodio (T10) en la
-// Page que procesan los extractores (T11): mismos campos y semántica
-// (URL final tras redirecciones, HTML crudo, Headers sin Set-Cookie),
-// porque extractors no puede importar este paquete (regla de dependencias).
+// Page que procesan los extractores (T11): URL final tras redirecciones y
+// HTML crudo, porque extractors no puede importar este paquete (regla de
+// dependencias). Las cabeceras se quedan en EpisodePage (ningún extractor
+// las lee).
 func paginaExtractores(p EpisodePage) extractors.Page {
-	return extractors.Page{URL: p.URL, HTML: p.HTML, Headers: p.Headers}
+	return extractors.Page{URL: p.URL, HTML: p.HTML}
 }
 
 // siteURL devuelve la URL base sin barra final; con el valor cero (o en

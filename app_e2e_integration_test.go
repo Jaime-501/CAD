@@ -24,6 +24,7 @@ import (
 // y solo es fatal lo que rompe la cadena del E2E. Del HLS se pide únicamente
 // el manifiesto: ningún segmento se descarga (regla 13).
 func TestE2EFlujoCompletoRedReal(t *testing.T) {
+	registro := capturarLogs(t) // T29: la salida real tampoco filtra secretos
 	n := nuevoNucleoPorDefecto()
 	n.rutaHistorial = t.TempDir() // el historial del E2E vive en un temporal, no en el perfil
 	emis := nuevoEmisorFalso()
@@ -211,4 +212,7 @@ func TestE2EFlujoCompletoRedReal(t *testing.T) {
 		t.Errorf("el upsert no actualizó en el sitio: %+v", guardado)
 	}
 	t.Logf("historial: round-trip de %d registro(s) en un temporal", len(guardado))
+
+	// --- 6. Los logs del flujo real no dejan secretos ni URLs firmadas ---
+	comprobarLogsSinSecretos(t, registro)
 }

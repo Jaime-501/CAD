@@ -233,10 +233,11 @@ func TestSearchDemasiadoGrande(t *testing.T) {
 	}
 }
 
-func TestMetodosNoImplementados(t *testing.T) {
-	// Desde T17 no queda ningún método de Provider sin implementar:
-	// GetAnimeDetails (T09) y GetVideoSources (T17) ya funcionan, así que
-	// solo queda comprobar la identidad del proveedor.
+// TestName comprueba la identidad del proveedor: desde T17 no queda
+// ningún método de Provider sin implementar (GetAnimeDetails llegó en T09
+// y GetVideoSources en T17), así que era lo único que comprobaba el
+// antiguo TestMetodosNoImplementados (renombrado aquí).
+func TestName(t *testing.T) {
 	j := New(nil, "", nil)
 	if j.Name() != "jkanime" {
 		t.Errorf("Name() = %q, quería %q", j.Name(), providerName)

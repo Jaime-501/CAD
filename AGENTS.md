@@ -6,7 +6,7 @@ Aplicación de escritorio Wails v2 (módulo Go y nombre de la app: `miapp`): Bac
  
 - `docker compose up` — flujo principal de desarrollo (Go/wails **no están en el PATH** en esta máquina; la imagen tiene Go 1.25, Node 20, y la CLI de wails). Ejecuta `xvfb-run -a wails dev -browser=false -devserver 0.0.0.0:34115`; interfaz de la app en el navegador en http://localhost:34115, Vite en :5173.
 - Comprobaciones específicas de Go sin iniciar la app: `docker compose run --rm app go build ./...` / `go vet ./...` / `go test -race -count=1 ./...`.
-- Tests con red real (smoke): llevan build tag `integration`, p. ej. `docker compose run --rm app go test -tags integration ./internal/scraper/animeflv/ -v` (o el paquete que corresponda). `go test ./...` normal debe pasar **sin red**.
+- Tests con red real (smoke): llevan build tag `integration`, p. ej. `docker compose run --rm app go test -tags integration ./internal/scraper/animeflv/ -v` (o el paquete que corresponda); con `./...` se ejecutan además los E2E de la raíz (`TestE2EFlujoCompletoRedReal`, ~14 s, y el offline `TestE2EFlujoCompletoOffline` va sin tag). `go test ./...` normal debe pasar **sin red**.
 - Solo frontend, desde `frontend/`: `npm install` (requerido primero), `npm run dev`, `npm run build`, `npm run check` (svelte-check; la única comprobación de tipos).
 - Sin linters, sin CI. Verificación = `gofmt -l .` (sin salida) + `go vet ./...` (también con `-tags integration`) + `go test -race -count=1 ./...` + `go build ./...` + `npm run check` (este último solo en tareas de frontend). `-race` funciona en el contenedor (CGO=1, gcc).
 ## Consideraciones importantes (Gotchas)

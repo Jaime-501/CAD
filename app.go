@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"os"
 	"sync"
@@ -73,11 +72,6 @@ func (a *App) contexto() context.Context {
 		return context.Background()
 	}
 	return a.ctx
-}
-
-// Greet returns a greeting for the given name
-func (a *App) Greet(name string) string {
-	return fmt.Sprintf("Hello %s, It's show time!", name)
 }
 
 // SearchAnime busca anime y conserva la firma que ya usa App.svelte:
