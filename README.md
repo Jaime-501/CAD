@@ -5,10 +5,11 @@ Readme · MD
  
 Aplicación de escritorio para Windows que te permite **buscar anime, ver la lista de episodios y reproducirlos** en una interfaz sencilla, con tu progreso guardado para retomar donde lo dejaste.
  
-<!-- Añade capturas en docs/img/ y descomenta:
-![Búsqueda](docs/img/busqueda.png)
-![Reproductor](docs/img/reproductor.png)
--->
+![Búsqueda](docs/img/Busqueda.png)
+
+![Detalles](docs/img/Detalles.png)
+
+![Reproductor](docs/img/Reproduccion.png)
  
 ## Qué puedes hacer
  
