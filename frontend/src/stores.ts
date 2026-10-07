@@ -138,8 +138,15 @@ export async function openAnime(provider: string, animeID: string): Promise<void
   }
 }
 
-/** Búsqueda → `searchResults`/`searchState`; una respuesta tardía de otra query se descarta. */
+/**
+ * Búsqueda → `searchResults`/`searchState`. Las respuestas obsoletas se
+ * descartan por contador de secuencia (T25: cambio mínimo autorizado) y, además,
+ * si la query ya no es la vigente.
+ */
+let secuenciaBusqueda = 0;
+
 export async function search(query: string): Promise<void> {
+  const seq = ++secuenciaBusqueda;
   const q = query.trim();
   if (!q) {
     searchResults.set([]);
@@ -151,11 +158,11 @@ export async function search(query: string): Promise<void> {
   searchState.set({ loading: true, error: '', query: q });
   try {
     const resultados = await searchAnime(q);
-    if (get(searchState).query !== q) return;
+    if (seq !== secuenciaBusqueda || get(searchState).query !== q) return;
     searchResults.set(resultados);
     searchState.set({ loading: false, error: '', query: q });
   } catch (e) {
-    if (get(searchState).query !== q) return;
+    if (seq !== secuenciaBusqueda || get(searchState).query !== q) return;
     searchResults.set([]);
     searchState.set({ loading: false, error: String(e), query: q });
   }
