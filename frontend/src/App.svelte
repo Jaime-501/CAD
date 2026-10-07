@@ -2,8 +2,9 @@
   import { onDestroy, onMount, tick } from 'svelte';
   import { disposeEvents, initEvents } from './stores';
   import {
-    guardarScrollBusqueda,
-    recuperarScrollBusqueda,
+    claveScroll,
+    guardarScroll,
+    recuperarScroll,
     vista,
     type VistaNombre,
   } from './views';
@@ -28,16 +29,17 @@
     disposeEvents();
   });
 
-  // Al cambiar de vista: se guarda el scroll de la búsqueda al salir de ella
-  // y se restaura al volver; el resto de vistas empiezan arriba del todo.
+  // Al cambiar de vista: se guarda el scroll de la vista que se deja (la de
+  // búsqueda por su clave única; la de detalle, por anime; la del reproductor,
+  // por episodio) y se restaura al volver. Las pantallas nuevas empiezan arriba.
   $: sincronizarVista($vista);
 
   async function sincronizarVista(destino: VistaNombre) {
     if (destino === vistaPrevia) return;
-    if (vistaPrevia === 'busqueda') guardarScrollBusqueda(window.scrollY);
+    guardarScroll(claveScroll(vistaPrevia), window.scrollY);
     vistaPrevia = destino;
     await tick();
-    window.scrollTo(0, destino === 'busqueda' ? recuperarScrollBusqueda() : 0);
+    window.scrollTo(0, recuperarScroll(claveScroll(destino)));
   }
 </script>
 
