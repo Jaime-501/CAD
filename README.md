@@ -7,6 +7,16 @@ y **AnimeFLV** (solo fallback de búsqueda, ver [Limitación de AnimeFLV](#limit
 
 Los textos de la interfaz, los comentarios del código y esta documentación están en español.
 
+## Requisitos
+
+- **Docker** (con `docker compose`): es la única forma de desarrollar y compilar en esta
+  máquina — Go y la CLI de `wails` **no están en el PATH del host**. La imagen trae Go 1.25,
+  Node 20, Xvfb y la CLI de Wails.
+- **Windows 11** para usar el `.exe` resultante. El ejecutable necesita el **WebView2 Runtime**
+  (viene de serie en Windows 11).
+- Node/npm solo hacen falta por tu cuenta si trabajas **fuera** del contenedor
+  (`frontend/node_modules`); dentro de la imagen ya están.
+
 ## Desarrollo (Docker)
 
 En esta máquina **Go y la CLI de `wails` no están en el PATH**: todo se ejecuta dentro del
@@ -100,13 +110,47 @@ importa algo que no exista, `npm run build`/`npm run check` fallarán hasta rege
 ## Compilar el .exe de Windows desde Docker
 
 ```sh
+# Release (lo normal): la app NO abre ninguna consola
 docker compose run --rm app wails build -platform windows/amd64
+
+# Depuración: abre una consola con la salida de los logs
+docker compose run --rm app wails build -platform windows/amd64 -debug
 ```
 
 El ejecutable queda en **`build/bin/miapp.exe`** (directorio ignorado por git). El build
-regenera bindings y recompila el frontend (`npm run build`). Para probar la reproducción real
-(HLS/MP4) hay que usar el `.exe` en Windows: en el flujo Docker el proxy escucha en
-`127.0.0.1` **dentro del contenedor** y el navegador del host no lo alcanza.
+regenera bindings y recompila el frontend (`npm run build`). La versión **sin `-debug`** es la
+de producción: arranca como proceso gráfico y **no aparece ninguna ventana de terminal** (los
+logs van a `stderr`, que en Windows nadie ve); con `-debug` el enlazado **no** incluye
+`-windowsgui`, así que se abre una consola donde se leen los mensajes de `logx`. Para probar la
+reproducción real (HLS/MP4) hay que usar el `.exe` en Windows: en el flujo Docker el proxy
+escucha en `127.0.0.1` **dentro del contenedor** y el navegador del host no lo alcanza.
+
+## Datos que guarda la app
+
+- **Historial de visualización**: `%AppData%\miapp\historial.json` (`os.UserConfigDir()/miapp`),
+  un JSON plano con un registro por episodio visto (`anime_id`, `episode_id`, `current_time`,
+  `total_duration`, `is_watched`, umbral 0.90). Se escribe de forma **atómica** en cada guardado
+  (~5 s mientras se reproduce); si el archivo queda corrupto se renombra a `historial.json.bak`
+  y se empieza vacío. No hay borrado de registros (pendiente de producto).
+- **Carpeta `miapp.exe`**: la crea **WebView2** (el motor de la interfaz) para su propio
+  perfil — caché, cookies del webview, etc. No es un directorio de la app: puedes borrarla y
+  se vuelve a crear; no la versiones ni la toques con la app abierta.
+- **Caché de detalle/episodios**: solo en memoria (TTL de 10 min), no se persiste.
+- En el flujo de desarrollo con Docker el historial se escribe **dentro del contenedor**
+  (`os.UserConfigDir()` del contenedor), no en `%AppData%`.
+
+## Limitaciones conocidas
+
+1. **AnimeFLV es solo búsqueda** (ver [Limitación de AnimeFLV](#limitación-de-animeflv)).
+2. **"Continuar" no tiene marca de tiempo**: `WatchProgress` guarda posición y duración pero
+   **no cuándo** se guardó, así que el botón elige el episodio de **mayor número** con progreso
+   (y si ya está visto, el siguiente), no el último que se vio. Arreglarlo exige un campo de
+   fecha/hora en `internal/models` + `internal/db` + bindings + frontend (pendiente de producto).
+3. **El proxy local no es alcanzable desde el navegador del host en Docker**: escucha en
+   `127.0.0.1` *dentro* del contenedor, así que en `http://localhost:34115` las fuentes HLS/MP4
+   fallan con `ERR_CONNECTION_REFUSED` y el reproductor avanza al siguiente iframe. Para ver
+   vídeo de verdad hay que ejecutar el `.exe` compilado (o publicar el puerto del proxy, que no
+   se hace a propósito: es loopback y con anti-SSRF).
 
 ## Limitación de AnimeFLV
 
