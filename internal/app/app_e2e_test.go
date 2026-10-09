@@ -1,7 +1,8 @@
-package main
+package app
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"fmt"
 	"io"
@@ -40,14 +41,14 @@ import (
 // pide a través del proxy, cosa que T17 no hace). Anotado en PROGRESO.md.
 // ---------------------------------------------------------------------------
 const (
-	rutaFixtureBusqueda  = "internal/scraper/jkanime/testdata/search.html"
-	rutaFixtureDetalle   = "internal/scraper/jkanime/testdata/detail.html"
-	rutaFixturePagina1   = "internal/scraper/jkanime/testdata/episodes_p1.json"
-	rutaFixturePagina2   = "internal/scraper/jkanime/testdata/episodes_p2.json"
-	rutaFixtureEpisodio  = "internal/scraper/jkanime/testdata/episode_page.html"
-	rutaFixturePlayerUM  = "internal/scraper/jkanime/extractors/testdata/jkplayer_um.html"
-	rutaFixturePlayerUMv = "internal/scraper/jkanime/extractors/testdata/jkplayer_umv.html"
-	rutaFixtureMediaFire = "internal/scraper/jkanime/extractors/testdata/mediafire.html"
+	rutaFixtureBusqueda  = "../scraper/jkanime/testdata/search.html"
+	rutaFixtureDetalle   = "../scraper/jkanime/testdata/detail.html"
+	rutaFixturePagina1   = "../scraper/jkanime/testdata/episodes_p1.json"
+	rutaFixturePagina2   = "../scraper/jkanime/testdata/episodes_p2.json"
+	rutaFixtureEpisodio  = "../scraper/jkanime/testdata/episode_page.html"
+	rutaFixturePlayerUM  = "../scraper/jkanime/extractors/testdata/jkplayer_um.html"
+	rutaFixturePlayerUMv = "../scraper/jkanime/extractors/testdata/jkplayer_umv.html"
+	rutaFixtureMediaFire = "../scraper/jkanime/extractors/testdata/mediafire.html"
 )
 
 // Rutas del sitio falso.
@@ -578,16 +579,15 @@ func TestE2EFlujoCompletoOffline(t *testing.T) {
 	}
 
 	dirHistorial := t.TempDir()
-	n := nuevoNucleo(reg, px, extractors.SelectBestSource, nil, cache.New(ttlCacheDetalle), dirHistorial)
+	n := NuevoNucleo(reg, px, extractors.SelectBestSource, nil, cache.New(ttlCacheDetalle), dirHistorial)
 	emis := nuevoEmisorFalso()
-	if err := n.arrancar(emis.emitir); err != nil {
+	if err := n.Arrancar(emis.emitir); err != nil {
 		t.Fatalf("arrancando el núcleo: %v", err)
 	}
-	t.Cleanup(func() { _ = n.cerrar() })
-	a := &App{core: n}
+	t.Cleanup(func() { _ = n.Cerrar() })
 
 	// --- 1. Búsqueda ------------------------------------------------------
-	resultados, err := a.SearchAnime("bleach")
+	resultados, err := n.Buscar(context.Background(), "bleach")
 	if err != nil {
 		t.Fatalf("SearchAnime: %v", err)
 	}
@@ -618,7 +618,7 @@ func TestE2EFlujoCompletoOffline(t *testing.T) {
 	t.Logf("búsqueda: %d resultados; se sigue %q", len(resultados), slug)
 
 	// --- 2. Detalle con streaming y eventos -------------------------------
-	primera, err := a.GetAnimeDetails(proveedorPrincipal, slug)
+	primera, err := n.Detalle(context.Background(), proveedorPrincipal, slug)
 	if err != nil {
 		t.Fatalf("GetAnimeDetails: %v", err)
 	}
@@ -664,7 +664,7 @@ func TestE2EFlujoCompletoOffline(t *testing.T) {
 
 	// --- 3. La caché evita un segundo fetch -------------------------------
 	detallesAntes, ajaxAntes := sitio.cuantas("GET "+rutaDetalle), sitio.cuantas("POST "+rutaAJAX)
-	segunda, err := a.GetAnimeDetails(proveedorPrincipal, slug)
+	segunda, err := n.Detalle(context.Background(), proveedorPrincipal, slug)
 	if err != nil {
 		t.Fatalf("segunda GetAnimeDetails: %v", err)
 	}
@@ -683,7 +683,7 @@ func TestE2EFlujoCompletoOffline(t *testing.T) {
 
 	// --- 4. Fuentes de vídeo y elección de la mejor -----------------------
 	epID := primera.Episodes[0].ID
-	fuentes, err := a.GetVideoSources(proveedorPrincipal, epID, false)
+	fuentes, err := n.Fuentes(context.Background(), proveedorPrincipal, epID, false)
 	if err != nil {
 		t.Fatalf("GetVideoSources: %v", err)
 	}
@@ -794,12 +794,12 @@ func TestE2EFlujoCompletoOffline(t *testing.T) {
 		len(cuerpo), len(cuerpoSeg), respSeg.Header.Get("Content-Type"))
 
 	// --- 6. Historial de visualización (T22) ------------------------------
-	if err := a.SaveProgress(models.WatchProgress{
+	if err := n.GuardarProgreso(models.WatchProgress{
 		AnimeID: slug, EpisodeID: epID, CurrentTime: 90, TotalDuration: 240,
 	}); err != nil {
 		t.Fatalf("SaveProgress: %v", err)
 	}
-	guardado, err := a.GetProgress(slug)
+	guardado, err := n.VerProgreso(slug)
 	if err != nil {
 		t.Fatalf("GetProgress: %v", err)
 	}
@@ -809,19 +809,19 @@ func TestE2EFlujoCompletoOffline(t *testing.T) {
 	if guardado[0].CurrentTime != 90 || guardado[0].TotalDuration != 240 || guardado[0].IsWatched {
 		t.Errorf("round-trip del historial: %+v", guardado[0])
 	}
-	if err := a.SaveProgress(models.WatchProgress{
+	if err := n.GuardarProgreso(models.WatchProgress{
 		AnimeID: slug, EpisodeID: epID, CurrentTime: 230, TotalDuration: 240,
 	}); err != nil {
 		t.Fatalf("SaveProgress (actualización): %v", err)
 	}
-	guardado, err = a.GetProgress(slug)
+	guardado, err = n.VerProgreso(slug)
 	if err != nil {
 		t.Fatalf("GetProgress (2): %v", err)
 	}
 	if len(guardado) != 1 || !guardado[0].IsWatched {
 		t.Errorf("el upsert no actualizó en el sitio: %+v", guardado)
 	}
-	todo, err := a.GetProgress("")
+	todo, err := n.VerProgreso("")
 	if err != nil {
 		t.Fatalf("GetProgress (historial entero): %v", err)
 	}
@@ -948,9 +948,9 @@ func primeraURIDelManifiesto(manifiesto string) string {
 // Fixtures reales de AnimeAV1 que sirve el sitio (solo lectura; las
 // portadas son del CDN y no se piden, así que no hace falta reescribirlos).
 const (
-	rutaFixtureCatalogoAV1 = "internal/scraper/animeav1/testdata/catalogo_data.json"
-	rutaFixtureDetalleAV1  = "internal/scraper/animeav1/testdata/detail_data.json"
-	rutaFixtureEpisodioAV1 = "internal/scraper/animeav1/testdata/episode_data.json"
+	rutaFixtureCatalogoAV1 = "../scraper/animeav1/testdata/catalogo_data.json"
+	rutaFixtureDetalleAV1  = "../scraper/animeav1/testdata/detail_data.json"
+	rutaFixtureEpisodioAV1 = "../scraper/animeav1/testdata/episode_data.json"
 )
 
 // Rutas del sitio falso de AnimeAV1, además de /buscar/ y /excepciones.json
@@ -1244,17 +1244,16 @@ func TestE2EAnimeAV1FlujoCompletoOffline(t *testing.T) {
 	}
 
 	dirHistorial := t.TempDir()
-	n := nuevoNucleo(reg, px, extractors.SelectBestSource, nil, cache.New(ttlCacheDetalle), dirHistorial)
+	n := NuevoNucleo(reg, px, extractors.SelectBestSource, nil, cache.New(ttlCacheDetalle), dirHistorial)
 	emis := nuevoEmisorFalso()
-	if err := n.arrancar(emis.emitir); err != nil {
+	if err := n.Arrancar(emis.emitir); err != nil {
 		t.Fatalf("arrancando el núcleo: %v", err)
 	}
-	t.Cleanup(func() { _ = n.cerrar() })
-	a := &App{core: n}
+	t.Cleanup(func() { _ = n.Cerrar() })
 	rutaManifest := "" // se fija en el paso 4 con la URL del manifiesto
 
 	// --- 1. Búsqueda combinada (T34) -------------------------------------
-	resultados, err := a.SearchAnime("bleach")
+	resultados, err := n.Buscar(context.Background(), "bleach")
 	if err != nil {
 		t.Fatalf("SearchAnime: %v", err)
 	}
@@ -1300,7 +1299,7 @@ func TestE2EAnimeAV1FlujoCompletoOffline(t *testing.T) {
 		len(resultados), jk, av1, slug)
 
 	// --- 2. Detalle de AnimeAV1 con streaming y eventos ------------------
-	primera, err := a.GetAnimeDetails(proveedorComplemento, slug)
+	primera, err := n.Detalle(context.Background(), proveedorComplemento, slug)
 	if err != nil {
 		t.Fatalf("GetAnimeDetails(animeav1): %v", err)
 	}
@@ -1361,7 +1360,7 @@ func TestE2EAnimeAV1FlujoCompletoOffline(t *testing.T) {
 
 	// --- 3. La caché evita un segundo fetch -------------------------------
 	detallesAntes := sitio.cuantas(rutaDetalleAV1)
-	segunda, err := a.GetAnimeDetails(proveedorComplemento, slug)
+	segunda, err := n.Detalle(context.Background(), proveedorComplemento, slug)
 	if err != nil {
 		t.Fatalf("segunda GetAnimeDetails: %v", err)
 	}
@@ -1384,7 +1383,7 @@ func TestE2EAnimeAV1FlujoCompletoOffline(t *testing.T) {
 	if epID != "animeav1:bleach:episode:1" {
 		t.Errorf("el primer episodio es %q; se esperaba animeav1:bleach:episode:1", epID)
 	}
-	fuentes, err := a.GetVideoSources(proveedorComplemento, epID, false)
+	fuentes, err := n.Fuentes(context.Background(), proveedorComplemento, epID, false)
 	if err != nil {
 		t.Fatalf("GetVideoSources: %v", err)
 	}

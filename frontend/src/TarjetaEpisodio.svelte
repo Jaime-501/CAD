@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { models } from '../wailsjs/go/models';
+  import type { models } from './api';
 
   /** Tarjeta de un episodio del grid (T26): miniatura, estado y apertura. */
   export let episodio: models.Episode;

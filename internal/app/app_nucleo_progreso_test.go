@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"strings"
@@ -34,7 +34,7 @@ func registrosDeProveedor(proveedor string, registros []models.WatchProgress) []
 // escrito en disco sigue intacto tras releerlo con otro almacén.
 func TestProgresoDelMismoSlugSeAislaPorPrefijoDelEpisodeID(t *testing.T) {
 	e := nuevoEntorno(t)
-	if err := e.n.arrancar(e.emis.emitir); err != nil {
+	if err := e.n.Arrancar(e.emis.emitir); err != nil {
 		t.Fatalf("arrancar: %v", err)
 	}
 
@@ -45,12 +45,12 @@ func TestProgresoDelMismoSlugSeAislaPorPrefijoDelEpisodeID(t *testing.T) {
 		{AnimeID: "bleach", EpisodeID: "animeav1:bleach:episode:1", CurrentTime: 30, TotalDuration: 240},
 	}
 	for _, p := range progresos {
-		if err := e.n.guardarProgreso(p); err != nil {
+		if err := e.n.GuardarProgreso(p); err != nil {
 			t.Fatalf("guardarProgreso(%s): %v", p.EpisodeID, err)
 		}
 	}
 
-	todos, err := e.n.verProgreso("bleach")
+	todos, err := e.n.VerProgreso("bleach")
 	if err != nil {
 		t.Fatalf("verProgreso: %v", err)
 	}
@@ -93,14 +93,14 @@ func TestProgresoDelMismoSlugSeAislaPorPrefijoDelEpisodeID(t *testing.T) {
 
 	// (c) nada reescrito: el historial entero sigue con los dos y otro
 	// almacén sobre el mismo directorio los vuelve a leer igual.
-	historial, err := e.n.verProgreso("")
+	historial, err := e.n.VerProgreso("")
 	if err != nil {
 		t.Fatalf("historial entero: %v", err)
 	}
 	if len(historial) != 2 {
 		t.Errorf("historial = %+v; quería los 2 registros", historial)
 	}
-	if err := e.n.cerrar(); err != nil {
+	if err := e.n.Cerrar(); err != nil {
 		t.Fatalf("cerrar: %v", err)
 	}
 	reabierto, err := db.Open(e.dirHistorial)

@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"context"
@@ -56,7 +56,7 @@ func TestAnimeAV1PuntaAPuntaDetalleLotesYCaché(t *testing.T) {
 	e := nuevoEntorno(t, fake)
 	ctx := context.Background()
 
-	primera, err := e.n.detalle(ctx, "animeav1", "bleach")
+	primera, err := e.n.Detalle(ctx, "animeav1", "bleach")
 	if err != nil {
 		t.Fatalf("detalle: %v", err)
 	}
@@ -76,7 +76,7 @@ func TestAnimeAV1PuntaAPuntaDetalleLotesYCaché(t *testing.T) {
 
 	// Segunda llamada: hit de caché completo (T21), sin volver al proveedor
 	// y con todos los episodios ordenados por número.
-	segunda, err := e.n.detalle(ctx, "animeav1", "bleach")
+	segunda, err := e.n.Detalle(ctx, "animeav1", "bleach")
 	if err != nil {
 		t.Fatalf("segunda detalle: %v", err)
 	}
@@ -124,7 +124,7 @@ func TestAnimeAV1CancelacionDelCtxDetieneLosLotes(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	if _, err := e.n.detalle(ctx, "animeav1", "bleach"); err != nil {
+	if _, err := e.n.Detalle(ctx, "animeav1", "bleach"); err != nil {
 		t.Fatalf("detalle: %v", err)
 	}
 	e.emis.esperar(t, 1) // el lote 2 ya llegó
@@ -197,11 +197,11 @@ func TestAnimeAV1CabecerasSoloVivenEnElProxy(t *testing.T) {
 	if err := reg.Register(fake); err != nil {
 		t.Fatalf("registro: %v", err)
 	}
-	n := nuevoNucleo(reg, px, extractors.SelectBestSource, nuevoEmisorFalso().emitir,
+	n := NuevoNucleo(reg, px, extractors.SelectBestSource, nuevoEmisorFalso().emitir,
 		cache.New(ttlCacheDetalle), t.TempDir())
-	t.Cleanup(func() { _ = n.cerrar() })
+	t.Cleanup(func() { _ = n.Cerrar() })
 
-	salida, err := n.fuentes(context.Background(), "animeav1", "animeav1:bleach:episode:1", false)
+	salida, err := n.Fuentes(context.Background(), "animeav1", "animeav1:bleach:episode:1", false)
 	if err != nil {
 		t.Fatalf("fuentes: %v", err)
 	}

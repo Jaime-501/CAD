@@ -1,8 +1,9 @@
 //go:build integration
 
-package main
+package app
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/url"
@@ -25,17 +26,15 @@ import (
 // el manifiesto: ningún segmento se descarga (regla 13).
 func TestE2EFlujoCompletoRedReal(t *testing.T) {
 	registro := capturarLogs(t) // T29: la salida real tampoco filtra secretos
-	n := nuevoNucleoPorDefecto()
-	n.rutaHistorial = t.TempDir() // el historial del E2E vive en un temporal, no en el perfil
+	n := NuevoNucleoPorDefecto(t.TempDir())
 	emis := nuevoEmisorFalso()
-	if err := n.arrancar(emis.emitir); err != nil {
+	if err := n.Arrancar(emis.emitir); err != nil {
 		t.Fatalf("arrancando el núcleo: %v", err)
 	}
-	t.Cleanup(func() { _ = n.cerrar() })
-	a := &App{core: n}
+	t.Cleanup(func() { _ = n.Cerrar() })
 
 	// --- 1. Búsqueda ------------------------------------------------------
-	resultados, err := a.SearchAnime("bleach")
+	resultados, err := n.Buscar(context.Background(), "bleach")
 	if err != nil {
 		t.Fatalf("SearchAnime contra la red real: %v", err)
 	}
@@ -68,7 +67,7 @@ func TestE2EFlujoCompletoRedReal(t *testing.T) {
 	t.Logf("búsqueda: %d resultados; se sigue %q", len(resultados), slug)
 
 	// --- 2. Detalle con streaming y eventos -------------------------------
-	detalle, err := a.GetAnimeDetails(proveedorPrincipal, slug)
+	detalle, err := n.Detalle(context.Background(), proveedorPrincipal, slug)
 	if err != nil {
 		t.Fatalf("GetAnimeDetails: %v", err)
 	}
@@ -114,7 +113,7 @@ func TestE2EFlujoCompletoRedReal(t *testing.T) {
 
 	// --- 3. Fuentes de vídeo y elección de la mejor -----------------------
 	epID := detalle.Episodes[0].ID
-	fuentes, err := a.GetVideoSources(proveedorPrincipal, epID, false)
+	fuentes, err := n.Fuentes(context.Background(), proveedorPrincipal, epID, false)
 	if err != nil {
 		t.Fatalf("GetVideoSources: %v", err)
 	}
@@ -184,12 +183,12 @@ func TestE2EFlujoCompletoRedReal(t *testing.T) {
 	}
 
 	// --- 5. Historial de visualización (T22) ------------------------------
-	if err := a.SaveProgress(models.WatchProgress{
+	if err := n.GuardarProgreso(models.WatchProgress{
 		AnimeID: slug, EpisodeID: epID, CurrentTime: 90, TotalDuration: 240,
 	}); err != nil {
 		t.Fatalf("SaveProgress: %v", err)
 	}
-	guardado, err := a.GetProgress(slug)
+	guardado, err := n.VerProgreso(slug)
 	if err != nil {
 		t.Fatalf("GetProgress: %v", err)
 	}
@@ -199,12 +198,12 @@ func TestE2EFlujoCompletoRedReal(t *testing.T) {
 	if guardado[0].CurrentTime != 90 || guardado[0].TotalDuration != 240 || guardado[0].IsWatched {
 		t.Errorf("round-trip del historial: %+v", guardado[0])
 	}
-	if err := a.SaveProgress(models.WatchProgress{
+	if err := n.GuardarProgreso(models.WatchProgress{
 		AnimeID: slug, EpisodeID: epID, CurrentTime: 230, TotalDuration: 240,
 	}); err != nil {
 		t.Fatalf("SaveProgress (actualización): %v", err)
 	}
-	guardado, err = a.GetProgress(slug)
+	guardado, err = n.VerProgreso(slug)
 	if err != nil {
 		t.Fatalf("GetProgress (2): %v", err)
 	}
@@ -244,17 +243,15 @@ func validarURLRecortada(t *testing.T, contexto, raw string) {
 // entero (regla 13) y ninguna URL firmada completa en la salida.
 func TestE2EAnimeAV1RedReal(t *testing.T) {
 	registro := capturarLogs(t)
-	n := nuevoNucleoPorDefecto()
-	n.rutaHistorial = t.TempDir() // el historial del E2E vive en un temporal, no en el perfil
+	n := NuevoNucleoPorDefecto(t.TempDir())
 	emis := nuevoEmisorFalso()
-	if err := n.arrancar(emis.emitir); err != nil {
+	if err := n.Arrancar(emis.emitir); err != nil {
 		t.Fatalf("arrancando el núcleo: %v", err)
 	}
-	t.Cleanup(func() { _ = n.cerrar() })
-	a := &App{core: n}
+	t.Cleanup(func() { _ = n.Cerrar() })
 
 	// --- 1. Búsqueda combinada (T34) --------------------------------------
-	resultados, err := a.SearchAnime("bleach")
+	resultados, err := n.Buscar(context.Background(), "bleach")
 	if err != nil {
 		t.Fatalf("SearchAnime contra la red real: %v", err)
 	}
@@ -292,7 +289,7 @@ func TestE2EAnimeAV1RedReal(t *testing.T) {
 	t.Logf("búsqueda: %d resultados (%d de animeav1); se sigue %q", len(resultados), av1, slug)
 
 	// --- 2. Detalle con streaming y eventos -------------------------------
-	detalle, err := a.GetAnimeDetails(proveedorComplemento, slug)
+	detalle, err := n.Detalle(context.Background(), proveedorComplemento, slug)
 	if err != nil {
 		t.Fatalf("GetAnimeDetails(animeav1): %v", err)
 	}
@@ -357,7 +354,7 @@ func TestE2EAnimeAV1RedReal(t *testing.T) {
 
 	// --- 3. Fuentes de vídeo y elección de la mejor -----------------------
 	epID := detalle.Episodes[0].ID
-	fuentes, err := a.GetVideoSources(proveedorComplemento, epID, false)
+	fuentes, err := n.Fuentes(context.Background(), proveedorComplemento, epID, false)
 	if err != nil {
 		t.Fatalf("GetVideoSources: %v", err)
 	}

@@ -42,8 +42,10 @@ npm run build
 
 ```
 main.go                  entrada Wails; incrusta frontend/dist (//go:embed)
-app.go                   métodos expuestos a Wails + ciclo de vida (startup/shutdown)
-app_nucleo.go            orquestación testeable con dobles (registro, proxy, caché, historial)
+app.go                   capa Wails delgada: métodos expuestos + ciclo de vida + dirHistorial (T37)
+internal/app             núcleo (package app): orquestación testeable con dobles (registro, proxy, caché, historial)
+  nucleo.go              el núcleo; sin dependencia de Wails (reglas P1–P3)
+  portabilidad_test.go   guardia P2/P3 con go/parser: internal/** sin wailsapp ni os.UserConfigDir
 frontend/                Svelte 5 + TS + Vite; wailsjs/ es código GENERADO (no editar)
 internal/logx            logging estructurado con redacción de secretos
 internal/httpx           cliente HTTP con cookiejar, errores tipados y reintentos
@@ -80,8 +82,9 @@ Regla de dependencias: `models` no importa nada del proyecto; los extractores no
   docker compose run --rm app go test -tags integration -count=1 ./...
   ```
 
-  Incluyen la búsqueda real de JKAnime y AnimeAV1 y los **E2E completos** (`app_e2e_integration_test.go`: `TestE2EFlujoCompletoRedReal` de JKAnime y `TestE2EAnimeAV1RedReal` de AnimeAV1: búsqueda → detalle con streaming → fuentes → manifiesto y un segmento con `Range` por el proxy → historial). Si un dominio cambia o el sitio cae, fallan **a propósito**.
-- Los E2E **offline** (`TestE2EFlujoCompletoOffline` y `TestE2EAnimeAV1FlujoCompletoOffline`, en `app_e2e_test.go`) recorren el mismo flujo contra un sitio falso montado con los fixtures reales, exigen que las peticiones sean exactamente las esperadas y que nada salga a la red. El de AnimeAV1 demuestra además que el proxy inyecta `Sec-Fetch-Site: same-origin` (segmento por el proxy → 206; directo sin cabecera → 403).
+  Incluyen la búsqueda real de JKAnime y AnimeAV1 y los **E2E completos** (`internal/app/app_e2e_integration_test.go`: `TestE2EFlujoCompletoRedReal` de JKAnime y `TestE2EAnimeAV1RedReal` de AnimeAV1: búsqueda → detalle con streaming → fuentes → manifiesto y un segmento con `Range` por el proxy → historial). Si un dominio cambia o el sitio cae, fallan **a propósito**.
+- Los E2E **offline** (`TestE2EFlujoCompletoOffline` y `TestE2EAnimeAV1FlujoCompletoOffline`, en `internal/app/app_e2e_test.go`) recorren el mismo flujo contra un sitio falso montado con los fixtures reales, exigen que las peticiones sean exactamente las esperadas y que nada salga a la red. El de AnimeAV1 demuestra además que el proxy inyecta `Sec-Fetch-Site: same-origin` (segmento por el proxy → 206; directo sin cabecera → 403).
+- **Guardia de portabilidad** (`internal/app/portabilidad_test.go`, sin red): recorre `internal/**` con `go/parser` y falla si el núcleo importa `github.com/wailsapp/*` (P2) o llama a `os.UserConfigDir`/`os.UserHomeDir` (P3; esas rutas las resuelve `app.go`).
 - **Fixtures:** son la respuesta cruda del servidor, sanitizada (`TOKEN_DE_PRUEBA`, `E_PRUEBA`…), sin cookies ni tokens reales. Cápturalos con `curl.exe` y revísalos antes de subirlos.
 
 ## Regenerar los bindings de Wails
@@ -108,7 +111,7 @@ El ejecutable queda en `build/bin/miapp.exe` (ignorado por git). La compilación
 
 ## Datos que guarda la app
 
-- **Historial:** `%AppData%\miapp\historial.json` (`os.UserConfigDir()/miapp`). Un registro por episodio (`anime_id`, `episode_id`, `current_time`, `total_duration`, `is_watched`; umbral 0.90). Escritura atómica; si el archivo se corrompe se renombra a `historial.json.bak` y se empieza vacío.
+- **Historial:** `%AppData%\miapp\historial.json` (`os.UserConfigDir()/miapp`, calculado en `app.go` por la regla P3: el núcleo solo recibe la ruta). Un registro por episodio (`anime_id`, `episode_id`, `current_time`, `total_duration`, `is_watched`; umbral 0.90). Escritura atómica; si el archivo se corrompe se renombra a `historial.json.bak` y se empieza vacío.
 - **Carpeta `miapp.exe`:** la crea WebView2 para su perfil (caché, cookies del webview). No es de la app.
 - **Caché de detalle/episodios:** solo en memoria, con TTL; no se persiste.
 - En Docker, el historial se escribe dentro del contenedor, no en `%AppData%`.
@@ -144,4 +147,4 @@ Versionado semántico (`vMAYOR.MENOR.PARCHE`).
 
 ## Trabajo con agentes
 
-El proyecto se construyó con un plan de tareas (`tareas/`) ejecutadas por un agente de código: T01–T29 en la v1.0 y T30–T36 (AnimeAV1, v1.1.0; T30–T35 en la rama `feature/animeav1`, ya fusionada en `main`) — T36 fue el cierre documental. `AGENTS.md` resume las reglas para agentes, `PROGRESO.md` es la memoria entre sesiones (los estados históricos, en `docs/PROGRESO_v1.0.md` y `docs/PROGRESO_v1.1.md`) y `docs/firmas/` contiene las firmas reales de cada paquete.
+El proyecto se construyó con un plan de tareas (`tareas/`) ejecutadas por un agente de código: T01–T29 en la v1.0, T30–T36 (AnimeAV1, v1.1.0; T30–T35 en la rama `feature/animeav1`, ya fusionada en `main` — T36 fue el cierre documental) y T37 (preparación para Android: núcleo en `internal/app`, reglas P1–P7). `AGENTS.md` resume las reglas para agentes, `PROGRESO.md` es la memoria entre sesiones (los estados históricos, en `docs/PROGRESO_v1.0.md` y `docs/PROGRESO_v1.1.md`) y `docs/firmas/` contiene las firmas reales de cada paquete.

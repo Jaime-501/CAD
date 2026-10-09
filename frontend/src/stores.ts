@@ -16,10 +16,14 @@
  * separación es una vista sobre los mismos registros.
  */
 import { get, writable } from 'svelte/store';
-import { EventsOff, EventsOn } from '../wailsjs/runtime/runtime.js';
-import type { models } from '../wailsjs/go/models';
-import { getAnimeDetails, getProgress, searchAnime } from './api';
-import type { EpisodesCompletePayload, EpisodesUpdatePayload } from './api';
+import {
+  getAnimeDetails,
+  getProgress,
+  onEpisodesComplete,
+  onEpisodesUpdate,
+  searchAnime,
+} from './api';
+import type { models } from './api';
 
 export interface SearchState {
   loading: boolean;
@@ -91,32 +95,21 @@ export function progressToMap(
   return mapa;
 }
 
-/** Wails serializa a JSON: el payload puede llegar como objeto o como string. */
-function parsePayload<T>(crudo: unknown): T | null {
-  if (typeof crudo === 'string') {
-    try {
-      return JSON.parse(crudo) as T;
-    } catch {
-      return null;
-    }
-  }
-  if (crudo && typeof crudo === 'object') return crudo as T;
-  return null;
-}
-
+/** ¿Hay puente Wails (window.runtime)? Sin él no se registra ningún listener. */
 function hayPuenteWails(): boolean {
   return typeof window !== 'undefined' && 'runtime' in window;
 }
 
 let listenersActive = false;
+/** Canceladores que devuelve `api.ts` (EventsOff de cada evento). */
+let cancelarUpdate: (() => void) | null = null;
+let cancelarComplete: (() => void) | null = null;
 
 /** Registra los listeners de eventos una sola vez (llamar al montar). */
 export function initEvents(): void {
   if (listenersActive || !hayPuenteWails()) return;
 
-  EventsOn('episodes:update', (crudo: unknown) => {
-    const payload = parsePayload<EpisodesUpdatePayload>(crudo);
-    if (!payload) return;
+  cancelarUpdate = onEpisodesUpdate((payload) => {
     // Lote de otro anime (o llegado tarde): se descarta. El slug por sí solo
     // no basta (T34): existe en varios proveedores, así que también se
     // descartan los episodios cuyo id no lleva el prefijo del proveedor abierto.
@@ -126,9 +119,7 @@ export function initEvents(): void {
     episodes.update((lista) => mergeEpisodes(lista, propios));
   });
 
-  EventsOn('episodes:complete', (crudo: unknown) => {
-    const payload = parsePayload<EpisodesCompletePayload>(crudo);
-    if (!payload) return;
+  cancelarComplete = onEpisodesComplete((payload) => {
     // `episodes:complete` solo lleva `anime_id` (modelo de Go, no tocable) y
     // Go emite un único stream activo, cancelando los anteriores: con el
     // slug no hay atribución por proveedor, pero tampoco stream concurrente.
@@ -143,7 +134,10 @@ export function initEvents(): void {
 /** Quita los listeners (llamar al desmontar; sin fugas). */
 export function disposeEvents(): void {
   if (!listenersActive) return;
-  EventsOff('episodes:update', 'episodes:complete');
+  cancelarUpdate?.();
+  cancelarComplete?.();
+  cancelarUpdate = null;
+  cancelarComplete = null;
   listenersActive = false;
 }
 

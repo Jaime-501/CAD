@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"context"
@@ -47,7 +47,7 @@ func TestDetalleSegundaLlamadaAlMismoIDNoVuelveAlProveedor(t *testing.T) {
 	e := nuevoEntornoConCache(t, cache.New(ttlCacheDetalle), fake)
 	ctx := context.Background()
 
-	primera, err := e.n.detalle(ctx, "jkanime", "bleach")
+	primera, err := e.n.Detalle(ctx, "jkanime", "bleach")
 	if err != nil {
 		t.Fatalf("1ª llamada: %v", err)
 	}
@@ -55,7 +55,7 @@ func TestDetalleSegundaLlamadaAlMismoIDNoVuelveAlProveedor(t *testing.T) {
 		t.Fatalf("1ª llamada = %+v; quería el detalle y la página 1", primera)
 	}
 
-	segunda, err := e.n.detalle(ctx, "jkanime", "bleach")
+	segunda, err := e.n.Detalle(ctx, "jkanime", "bleach")
 	if err != nil {
 		t.Fatalf("2ª llamada: %v", err)
 	}
@@ -101,12 +101,12 @@ func TestDetalleHitAPartidoSeAdjuntaAlStreamEnCurso(t *testing.T) {
 	e := nuevoEntornoConCache(t, cache.New(ttlCacheDetalle), fake)
 	ctx := context.Background()
 
-	if _, err := e.n.detalle(ctx, "jkanime", "bleach"); err != nil {
+	if _, err := e.n.Detalle(ctx, "jkanime", "bleach"); err != nil {
 		t.Fatalf("1ª llamada: %v", err)
 	}
 	e.emis.esperar(t, 1) // el primer lote ya está en la caché y en el emisor
 
-	parcial, err := e.n.detalle(ctx, "jkanime", "bleach")
+	parcial, err := e.n.Detalle(ctx, "jkanime", "bleach")
 	if err != nil {
 		t.Fatalf("2ª llamada: %v", err)
 	}
@@ -168,7 +168,7 @@ func TestCambioDeAnimeBorraLaEntradaIncompleta(t *testing.T) {
 	claveA := cache.Clave("jkanime", "anime-a")
 	claveB := cache.Clave("jkanime", "anime-b")
 
-	if _, err := e.n.detalle(ctx, "jkanime", "anime-a"); err != nil {
+	if _, err := e.n.Detalle(ctx, "jkanime", "anime-a"); err != nil {
 		t.Fatalf("detalle anime-a: %v", err)
 	}
 	e.emis.esperar(t, 1)
@@ -176,7 +176,7 @@ func TestCambioDeAnimeBorraLaEntradaIncompleta(t *testing.T) {
 		t.Fatal("la entrada de anime-a debía existir mientras streama")
 	}
 
-	if _, err := e.n.detalle(ctx, "jkanime", "anime-b"); err != nil {
+	if _, err := e.n.Detalle(ctx, "jkanime", "anime-b"); err != nil {
 		t.Fatalf("detalle anime-b: %v", err)
 	}
 	if _, ok := e.cache.Get(claveA); ok {
@@ -219,7 +219,7 @@ func TestErroresNoSeCachean(t *testing.T) {
 		}
 		e := nuevoEntornoConCache(t, cache.New(ttlCacheDetalle), fake)
 
-		if _, err := e.n.detalle(context.Background(), "jkanime", "bleach"); err != nil {
+		if _, err := e.n.Detalle(context.Background(), "jkanime", "bleach"); err != nil {
 			t.Fatalf("el fallo de una página no tumba la llamada: %v", err)
 		}
 		if _, ok := e.cache.Get(clave); ok {
@@ -230,7 +230,7 @@ func TestErroresNoSeCachean(t *testing.T) {
 			t.Errorf("completados = %+v; el error debe llegar al frontend como texto", c)
 		}
 		// Sin entrada cacheada, la 2ª llamada vuelve al proveedor.
-		if _, err := e.n.detalle(context.Background(), "jkanime", "bleach"); err != nil {
+		if _, err := e.n.Detalle(context.Background(), "jkanime", "bleach"); err != nil {
 			t.Fatalf("2ª llamada: %v", err)
 		}
 		if ops := fake.operaciones(); len(ops) != 2 {
@@ -250,7 +250,7 @@ func TestErroresNoSeCachean(t *testing.T) {
 		}
 		e := nuevoEntornoConCache(t, cache.New(ttlCacheDetalle), fake)
 
-		if _, err := e.n.detalle(context.Background(), "jkanime", "bleach"); err == nil {
+		if _, err := e.n.Detalle(context.Background(), "jkanime", "bleach"); err == nil {
 			t.Fatal("con el proveedor caído debe devolver error")
 		}
 		if _, ok := e.cache.Get(clave); ok {
@@ -274,10 +274,10 @@ func TestDetalleExpiradoVuelveAlProveedor(t *testing.T) {
 	e := nuevoEntornoConCache(t, c, fake)
 	ctx := context.Background()
 
-	if _, err := e.n.detalle(ctx, "jkanime", "bleach"); err != nil {
+	if _, err := e.n.Detalle(ctx, "jkanime", "bleach"); err != nil {
 		t.Fatalf("1ª llamada: %v", err)
 	}
-	if _, err := e.n.detalle(ctx, "jkanime", "bleach"); err != nil {
+	if _, err := e.n.Detalle(ctx, "jkanime", "bleach"); err != nil {
 		t.Fatalf("2ª llamada: %v", err)
 	}
 	if ops := fake.operaciones(); len(ops) != 1 {
@@ -286,7 +286,7 @@ func TestDetalleExpiradoVuelveAlProveedor(t *testing.T) {
 
 	reloj.avanzar(ttlCacheDetalle + time.Second)
 
-	if _, err := e.n.detalle(ctx, "jkanime", "bleach"); err != nil {
+	if _, err := e.n.Detalle(ctx, "jkanime", "bleach"); err != nil {
 		t.Fatalf("3ª llamada: %v", err)
 	}
 	if ops := fake.operaciones(); len(ops) != 2 {
@@ -313,10 +313,10 @@ func TestCerrarBorraLaEntradaIncompletaDelStream(t *testing.T) {
 	e := nuevoEntornoConCache(t, cache.New(ttlCacheDetalle), fake)
 	clave := cache.Clave("jkanime", "bleach")
 
-	if err := e.n.arrancar(e.emis.emitir); err != nil {
+	if err := e.n.Arrancar(e.emis.emitir); err != nil {
 		t.Fatalf("arrancar: %v", err)
 	}
-	if _, err := e.n.detalle(context.Background(), "jkanime", "bleach"); err != nil {
+	if _, err := e.n.Detalle(context.Background(), "jkanime", "bleach"); err != nil {
 		t.Fatalf("detalle: %v", err)
 	}
 	e.emis.esperar(t, 1)
@@ -324,7 +324,7 @@ func TestCerrarBorraLaEntradaIncompletaDelStream(t *testing.T) {
 		t.Fatal("la entrada debía existir mientras streama")
 	}
 
-	if err := e.n.cerrar(); err != nil {
+	if err := e.n.Cerrar(); err != nil {
 		t.Fatalf("cerrar: %v", err)
 	}
 	if _, ok := e.cache.Get(clave); ok {

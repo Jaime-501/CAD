@@ -1,8 +1,10 @@
-# Firmas reales — app.go / núcleo (paquete main)
+# Firmas reales — app.go (raíz) / núcleo (internal/app)
 
 > Firmas **tal como quedaron** (no como estaban en el plan); las sesiones siguientes se basan en esto.
-> **Si una firma de este archivo no coincide con el código, manda el código (`go doc .` en la raíz del proyecto).**
+> **Si una firma de este archivo no coincide con el código, manda el código (`go doc ./internal/app` y `go doc .` en la raíz del proyecto).**
 > Añade bloques nuevos con el formato `### Txx — <paquete>`.
+>
+> **Desde T37** el núcleo vive en `internal/app` (`package app`) y los bloques T20/T21/T22/T34 de este archivo describen ese mismo código **antes** del movimiento (nombres en minúscula, `app_nucleo.go` en la raíz). Para el estado actual, el bloque **T37** manda.
 
 **Bloques de este archivo y tarea que los creó:**
 
@@ -10,6 +12,7 @@
 - `### T21 — integración de la caché` → creado por **T21**; rellenado por **T22** (que sí pudo tocar `app_nucleo.go`; el detalle vive en `docs/firmas/cache.md`).
 - `### T22 — historial de visualización` → creado por **T22** (Persistencia del historial).
 - `### T34 — búsqueda combinada + AnimeAV1 en la app` → creado por **T34**; sus cambios de firma también están anotados *in situ* en el bloque T20.
+- `### T37 — portabilidad del núcleo` → creado por **T37** (núcleo en `internal/app`, directorio de datos por parámetro).
 
 ---
 
@@ -161,3 +164,38 @@ El paquete, su formato y sus tests están en **`docs/firmas/db.md`**. Aquí, lo 
 - `app_nucleo_animeav1_test.go` (3): detalle+lotes+caché de T21 con doble `animeav1` (2ª llamada = hit, `StreamAnimeDetails` una sola vez) · cancelación del ctx corta los lotes siguientes sin `episodes:complete` · **`TestAnimeAV1CabecerasSoloVivenEnElProxy`** con **proxy real** + `httptest` como origen: el origen SÍ recibe `Sec-Fetch-Site: same-origin` a través del proxy, el JSON que cruza el puente de Wails no contiene esa cabecera (`Headers == nil`, `Referer == ""`) y `Language` sí sobrevive para la etiqueta.
 - `frontend/src/etiquetas.test.ts` (20 comprobaciones: SUB, DUB, sin idioma, filtros y tipos) — se ejecuta con el esbuild de Vite, comando en la cabecera del archivo (no se pudo añadir script a `package.json`, fuera de "Puedes tocar").
 - Verificación visual en `http://localhost:34115`: búsqueda de `bleach` con tarjetas de **los dos** proveedores, ficha `animeav1 · TV · Finalizado · 366 episodios` cargada por lotes, selector con `HLS · SUB` / `HLS · DUB` / `UPNShare · SUB`… y cambio manual de fuente funcional. La reproducción real (proxy en `127.0.0.1`) solo con el `.exe` → **T35**.
+
+---
+
+### T37 — portabilidad del núcleo (internal/app + app.go)
+
+**Archivos:** `app.go` (raíz, capa Wails delgada), `internal/app/nucleo.go` (el núcleo, `package app`) y los tests en `internal/app/` (`app_test.go`, `app_e2e_test.go`, `app_e2e_integration_test.go`, `app_integration_test.go`, `app_nucleo_*_test.go`, `portabilidad_test.go`). `app_nucleo.go` **desapareció de la raíz** (se movió con `git mv`); los bloques de arriba (T20/T21/T22/T34) siguen describiendo el mismo código **antes** de ese movimiento y con los nombres en minúscula.
+
+#### Núcleo (`internal/app`, package `app`)
+
+- `type Nucleo struct` — era `nucleo`; mismos campos y mismo comportamiento.
+- `func NuevoNucleo(reg RegistroProviders, px ProxyLocal, sel Resolutor, emis Emisor, c *cache.Cache, rutaHistorial string) *Nucleo` — era `nuevoNucleo`.
+- `func NuevoNucleoPorDefecto(rutaHistorial string) *Nucleo` — era `nuevoNucleoPorDefecto()` sin parámetros: **ahora el directorio lo calcula el llamador** (P3, paso 4). El resto del montaje es el mismo (httpx compartido, jkanime+animeav1, `stream.NewProxy(nil)`, `SelectBestSource`, `cache.New(ttlCacheDetalle)`).
+- Métodos exportados que consume `app.go`: `Arrancar(emis Emisor) error` · `Cerrar() error` · `Buscar(ctx context.Context, query string) ([]models.Anime, error)` · `Detalle(ctx, proveedor, id string) (DetalleResultado, error)` · `Fuentes(ctx, proveedor, episodeID string, noCache bool) ([]models.VideoSource, error)` · `GuardarProgreso(progress models.WatchProgress) error` · `VerProgreso(animeID string) ([]models.WatchProgress, error)`.
+- Sigue sin exportar (los tests comparten paquete): `proveedor`, `iniciarStream`, `soltarStreamDistinto`, `streamDe`, `liberarStream`, `borrarSiIncompleta`, `historialAbierto`, `lote`, `emitirCompleto`, `emisorActual`, `nombres`, `detalleDesdeCache`, `errorDeDetalle`, `indiceDe`, `nuevoEntorno`, `streamActivo`, `ttlCacheDetalle`, `proveedorPrincipal/Complemento`.
+- Exportados en este paquete (sin cambios): `DetalleResultado`, `EpisodiosCompletados`, `ErrDetalleNoDisponible`, `ErrHistorialNoDisponible`, `RegistroProviders`, `ProxyLocal`, `Resolutor`, `Emisor`.
+- **Reglas fijadas:** no importa `github.com/wailsapp/*` (P2) y no llama a `os.UserConfigDir`/`os.UserHomeDir` (P3); la guardia `internal/app/portabilidad_test.go` lo verifica con `go/parser`.
+
+#### Wails (`app.go`)
+
+- `type App struct { mu sync.RWMutex; ctx context.Context; core *app.Nucleo }`.
+- `func dirHistorial() string` — **único** `os.UserConfigDir` del código (P3): `filepath.Join(base, "miapp")`; si el sistema no lo da devuelve `""` y `Arrancar` se queda sin historial con el mismo `slog.Warn` de antes.
+- `func NewApp() *App` — `&App{core: app.NuevoNucleoPorDefecto(dirHistorial())}`.
+- `type DetalleResultado struct { Detail models.AnimeDetail \`json:"detail"\`; Episodes []models.Episode \`json:"episodes"\` }` — **duplicado a propósito en `package main`**, con los mismos campos y tags que `app.DetalleResultado`, para que Wails lo siga generando como `main.DetalleResultado` en `frontend/wailsjs/go/models.ts` (diff vacío en `wailsjs`, paso 5). `GetAnimeDetails` traduce de una a otra.
+- El resto de métodos expuestos delegan tal cual: firmas **idénticas** a las de T22/T34 (arriba).
+- `MIAPP_DEV` sigue siendo el único `os.Getenv` (P7, en `startup`).
+
+#### `internal/db` (tocado por el paso 4)
+
+- `func Open(dir string) (*DB, error)`: con `dir == ""` devuelve el nuevo **`ErrDirectorioVacio`**; se eliminó `rutaPorDefecto()` y con ella `os.UserConfigDir` del paquete. La ruta final en escritorio **no cambia**: `%AppData%\miapp\historial.json` la calcula ahora `app.go`.
+- Test: `TestOpenConDirectorioVacioFalla` sustituye a `TestRutaPorDefectoEsConfigDelUsuarioMasMiapp` (13 tests en `db` antes y después).
+
+#### Tests
+
+- **302 tests de paquete antes → 303 después** (los mismos 302, más `TestNucleoPortableSinWailsNiRutasDeUsuario`): `miapp` 33 → `miapp/internal/app` 33+1; el resto de paquetes intactos (`db` 13, `extractors` 68…).
+- Los E2E ahora llaman al núcleo (`n.Buscar`, `n.Detalle`, `n.Fuentes`, `n.GuardarProgreso`, `n.VerProgreso` con `context.Background()`) porque `&App{core: n}` ya no compila en `internal/app` (`App` es de `package main`); sus fixtures pasan a rutas relativas `../scraper/…` (el cwd del test ahora es `internal/app/`).

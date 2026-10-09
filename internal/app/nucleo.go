@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"context"
@@ -115,19 +115,21 @@ type streamActivo struct {
 	fallo  atomic.Bool
 }
 
-// nucleo es la lógica de orquestación: proveedores, eventos, proxy, la
-// caché local de detalle y el historial de visualización. Vive fuera de
-// app.go para poder testearla sin Wails ni red: todas sus dependencias
-// entran por interfaz o por inyección y el emisor es una función inyectada.
-type nucleo struct {
+// Nucleo es la lógica de orquestación: proveedores, eventos, proxy, la
+// caché local de detalle y el historial de visualización. Vive en
+// internal/app —fuera de app.go y de Wails— para poder testearla sin Wails
+// ni red: todas sus dependencias entran por interfaz o por inyección y el
+// emisor es una función inyectada.
+type Nucleo struct {
 	registro RegistroProviders
 	proxy    ProxyLocal
 	mejor    Resolutor
 	// cacheLocal guarda detalle+episodios por clave proveedor:animeID (T21).
 	cacheLocal *cache.Cache
-	// rutaHistorial es el directorio del historial (T22): "" = el por
-	// defecto de db (os.UserConfigDir()/miapp); los tests inyectan
-	// t.TempDir(). Solo la lee arrancar.
+	// rutaHistorial es el directorio del historial (T22): lo decide quien
+	// monta el núcleo (app.go con os.UserConfigDir()/miapp); un "" haría
+	// que db.Open devolviera ErrDirectorioVacio y la app siguiera sin
+	// historial. Los tests inyectan t.TempDir(). Solo la lee arrancar.
 	rutaHistorial string
 	// historial se abre en arrancar y se cierra en cerrar; nil mientras no
 	// abra (antes de arrancar o si su apertura falló). cerrar NO lo borra,
@@ -142,15 +144,15 @@ type nucleo struct {
 	stream *streamActivo
 }
 
-// nuevoNucleo crea el núcleo con las dependencias inyectadas. Una caché nil
+// NuevoNucleo crea el núcleo con las dependencias inyectadas. Una caché nil
 // se sustituye por una por defecto (nunca debe llegar nil: rompería detalle).
 // rutaHistorial es el directorio del historial de visualización (T22): vacío
-// = el por defecto de db.
-func nuevoNucleo(reg RegistroProviders, px ProxyLocal, sel Resolutor, emis Emisor, c *cache.Cache, rutaHistorial string) *nucleo {
+// no es un valor especial (P3: db.ErrDirectorioVacio).
+func NuevoNucleo(reg RegistroProviders, px ProxyLocal, sel Resolutor, emis Emisor, c *cache.Cache, rutaHistorial string) *Nucleo {
 	if c == nil {
 		c = cache.New(ttlCacheDetalle)
 	}
-	return &nucleo{
+	return &Nucleo{
 		registro:      reg,
 		proxy:         px,
 		mejor:         sel,
@@ -160,7 +162,7 @@ func nuevoNucleo(reg RegistroProviders, px ProxyLocal, sel Resolutor, emis Emiso
 	}
 }
 
-// nuevoNucleoPorDefecto monta las dependencias reales de la app:
+// NuevoNucleoPorDefecto monta las dependencias reales de la app:
 //   - un único httpx.NewClient compartido por JKAnime y AnimeAV1 (mismo
 //     cookiejar y timeout; el jar separa por host, así que no se mezclan
 //     sesiones; AnimeAV1 además no necesita cookies, T31),
@@ -173,12 +175,13 @@ func nuevoNucleo(reg RegistroProviders, px ProxyLocal, sel Resolutor, emis Emiso
 //   - extractors.SelectBestSource como selector de la mejor fuente (T17),
 //   - cache.New(ttlCacheDetalle) como caché local de detalle+episodios (T21);
 //     su rutina de limpieza se arranca con arrancar y se para con cerrar,
-//   - el historial de visualización en el directorio por defecto de db
-//     (os.UserConfigDir()/miapp, T22): ahí se abre en arrancar.
+//   - el historial de visualización en el directorio que calcule el llamador
+//     (en la app, app.go con os.UserConfigDir()/miapp, T22): ahí se abre en
+//     arrancar.
 //
 // Registro: jkanime + animeav1 (AnimeFLV se retiró en T35); la búsqueda
 // consulta los dos en paralelo.
-func nuevoNucleoPorDefecto() *nucleo {
+func NuevoNucleoPorDefecto(rutaHistorial string) *Nucleo {
 	doer := httpx.NewClient(httpx.ClientOptions{})
 
 	reg := scraper.NewRegistry()
@@ -191,8 +194,8 @@ func nuevoNucleoPorDefecto() *nucleo {
 		}
 	}
 
-	return nuevoNucleo(reg, stream.NewProxy(nil), extractors.SelectBestSource, nil,
-		cache.New(ttlCacheDetalle), "")
+	return NuevoNucleo(reg, stream.NewProxy(nil), extractors.SelectBestSource, nil,
+		cache.New(ttlCacheDetalle), rutaHistorial)
 }
 
 // arrancar prepara el núcleo para servir: instala el emisor de eventos, pone
@@ -205,7 +208,7 @@ func nuevoNucleoPorDefecto() *nucleo {
 // (sin permisos, ruta inexistente...) se loguea y la app sigue viva sin
 // historial —guardar o leer progreso dará ErrHistorialNoDisponible—, porque
 // el proxy y la reproducción no dependen de él.
-func (n *nucleo) arrancar(emis Emisor) error {
+func (n *Nucleo) Arrancar(emis Emisor) error {
 	n.mu.Lock()
 	n.emisor = emis
 	n.mu.Unlock()
@@ -233,7 +236,7 @@ func (n *nucleo) arrancar(emis Emisor) error {
 // de la caché (sin goroutines huérfanas), cierra el historial de
 // visualización y para el proxy. Se llama desde App.shutdown, que registra
 // OnShutdown en main.go. Es idempotente.
-func (n *nucleo) cerrar() error {
+func (n *Nucleo) Cerrar() error {
 	n.mu.Lock()
 	st := n.stream
 	n.stream = nil
@@ -260,7 +263,7 @@ func (n *nucleo) cerrar() error {
 // respuesta con lo del resto. Solo es error si fallan TODOS los proveedores
 // registrados; si al menos uno pudo buscar, la lista —aunque venga vacía— no
 // es error. Sin proveedores registrados devuelve lista vacía sin error.
-func (n *nucleo) buscar(ctx context.Context, query string) ([]models.Anime, error) {
+func (n *Nucleo) Buscar(ctx context.Context, query string) ([]models.Anime, error) {
 	q := strings.TrimSpace(query)
 	nombres := []string{proveedorPrincipal, proveedorComplemento}
 
@@ -335,7 +338,7 @@ func (n *nucleo) buscar(ctx context.Context, query string) ([]models.Anime, erro
 // por lotes). scraper.ErrNoDetails no es un fallo grave (ningún proveedor
 // registrado lo devuelve hoy): se traduce en ErrDetalleNoDisponible y se
 // registra a nivel info.
-func (n *nucleo) detalle(ctx context.Context, proveedor, id string) (DetalleResultado, error) {
+func (n *Nucleo) Detalle(ctx context.Context, proveedor, id string) (DetalleResultado, error) {
 	proveedor = strings.TrimSpace(proveedor)
 	p, err := n.proveedor(proveedor)
 	if err != nil {
@@ -406,7 +409,7 @@ func (n *nucleo) detalle(ctx context.Context, proveedor, id string) (DetalleResu
 // caché local (T21) guarda detalle+episodios y NUNCA GetVideoSources (los
 // enlaces son temporales, regla 9), y T17 lo ignora. Se conserva la opción
 // para no romper la firma que consumirá T27.
-func (n *nucleo) fuentes(ctx context.Context, proveedor, episodeID string, noCache bool) ([]models.VideoSource, error) {
+func (n *Nucleo) Fuentes(ctx context.Context, proveedor, episodeID string, noCache bool) ([]models.VideoSource, error) {
 	p, err := n.proveedor(proveedor)
 	if err != nil {
 		return nil, err
@@ -458,7 +461,7 @@ func (n *nucleo) fuentes(ctx context.Context, proveedor, episodeID string, noCac
 // guardarProgreso delega en el historial de visualización (SaveProgress,
 // T22). El núcleo solo aporta el almacén abierto en arrancar: el cálculo de
 // IsWatched y la escritura atómica son del paquete db.
-func (n *nucleo) guardarProgreso(progress models.WatchProgress) error {
+func (n *Nucleo) GuardarProgreso(progress models.WatchProgress) error {
 	h := n.historialAbierto()
 	if h == nil {
 		return ErrHistorialNoDisponible
@@ -468,7 +471,7 @@ func (n *nucleo) guardarProgreso(progress models.WatchProgress) error {
 
 // verProgreso devuelve el historial guardado de un anime (animeID vacío =
 // entero); ver db.DB.GetProgress para el orden y el resto de contratos.
-func (n *nucleo) verProgreso(animeID string) ([]models.WatchProgress, error) {
+func (n *Nucleo) VerProgreso(animeID string) ([]models.WatchProgress, error) {
 	h := n.historialAbierto()
 	if h == nil {
 		return nil, ErrHistorialNoDisponible
@@ -480,7 +483,7 @@ func (n *nucleo) verProgreso(animeID string) ([]models.WatchProgress, error) {
 // antes de arrancar o si su apertura falló; cerrar no lo borra, así que
 // después del shutdown la llamada llega al almacén y devuelve db.ErrCerrado
 // sin carrera con arrancar.
-func (n *nucleo) historialAbierto() *db.DB {
+func (n *Nucleo) historialAbierto() *db.DB {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	return n.historial
@@ -488,7 +491,7 @@ func (n *nucleo) historialAbierto() *db.DB {
 
 // proveedor busca un provider por nombre; si no existe, devuelve un error
 // claro en español con los disponibles.
-func (n *nucleo) proveedor(nombre string) (scraper.Provider, error) {
+func (n *Nucleo) proveedor(nombre string) (scraper.Provider, error) {
 	nombre = strings.TrimSpace(nombre)
 	if p, ok := n.registro.Get(nombre); ok && p != nil {
 		return p, nil
@@ -501,7 +504,7 @@ func (n *nucleo) proveedor(nombre string) (scraper.Provider, error) {
 // caché incompleta (huérfana: ya no hay stream que la complete). Si el
 // anterior es del MISMO anime no se llega a llamar: detalle() se habría
 // adjuntado a su stream en la comprobación de la caché.
-func (n *nucleo) iniciarStream(base context.Context, clave string) (context.Context, *streamActivo) {
+func (n *Nucleo) iniciarStream(base context.Context, clave string) (context.Context, *streamActivo) {
 	if base == nil {
 		base = context.Background()
 	}
@@ -522,7 +525,7 @@ func (n *nucleo) iniciarStream(base context.Context, clave string) (context.Cont
 
 // soltarStreamDistinto cancela el stream activo solo si es de un anime
 // distinto al dado (cambio de anime) y borra su entrada incompleta.
-func (n *nucleo) soltarStreamDistinto(clave string) {
+func (n *Nucleo) soltarStreamDistinto(clave string) {
 	n.mu.Lock()
 	st := n.stream
 	n.mu.Unlock()
@@ -536,7 +539,7 @@ func (n *nucleo) soltarStreamDistinto(clave string) {
 }
 
 // streamDe devuelve el stream activo si es el de esa clave.
-func (n *nucleo) streamDe(clave string) *streamActivo {
+func (n *Nucleo) streamDe(clave string) *streamActivo {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	if n.stream != nil && n.stream.clave == clave {
@@ -548,7 +551,7 @@ func (n *nucleo) streamDe(clave string) *streamActivo {
 // liberarStream quita de la lista el stream que ya terminó, solo si sigue
 // siendo el registrado (otro pudo haberlo sustituido ya). No cancela nada:
 // ese trabajo es de quien lo sustituye o de cerrar().
-func (n *nucleo) liberarStream(st *streamActivo) {
+func (n *Nucleo) liberarStream(st *streamActivo) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	if n.stream == st {
@@ -559,7 +562,7 @@ func (n *nucleo) liberarStream(st *streamActivo) {
 // borrarSiIncompleta elimina la entrada de la caché solo si existe y todavía
 // no está completa: así un stream cancelado no deja nada esperándolo, pero
 // una lista ya terminada se conserva para el próximo hit.
-func (n *nucleo) borrarSiIncompleta(clave string) {
+func (n *Nucleo) borrarSiIncompleta(clave string) {
 	if e, ok := n.cacheLocal.Get(clave); ok && !e.Complete {
 		n.cacheLocal.Delete(clave)
 	}
@@ -581,7 +584,7 @@ func (n *nucleo) borrarSiIncompleta(clave string) {
 // Antes de CADA emisión se comprueba ctx.Err(): un stream cancelado (por
 // pedir otro anime o por shutdown) no emite nada más. Si no hay emisor
 // instalado (antes de startup) tampoco se emite.
-func (n *nucleo) lote(ctx context.Context, st *streamActivo, id string) func(models.EpisodeBatch) {
+func (n *Nucleo) lote(ctx context.Context, st *streamActivo, id string) func(models.EpisodeBatch) {
 	clave := st.clave
 	return func(lote models.EpisodeBatch) {
 		if ctx.Err() != nil {
@@ -625,7 +628,7 @@ func (n *nucleo) lote(ctx context.Context, st *streamActivo, id string) func(mod
 // ctx sigue vivo y hay emisor instalado (antes de startup no se emite).
 // texto es el fallo del lote final: vacío = todo bien. Un error de Go nunca
 // se serializa como payload.
-func (n *nucleo) emitirCompleto(ctx context.Context, animeID, texto string) {
+func (n *Nucleo) emitirCompleto(ctx context.Context, animeID, texto string) {
 	if ctx != nil && ctx.Err() != nil {
 		return
 	}
@@ -637,7 +640,7 @@ func (n *nucleo) emitirCompleto(ctx context.Context, animeID, texto string) {
 }
 
 // emisorActual devuelve el emisor bajo el mutex (nil si aún no arrancó).
-func (n *nucleo) emisorActual() Emisor {
+func (n *Nucleo) emisorActual() Emisor {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	return n.emisor
@@ -645,7 +648,7 @@ func (n *nucleo) emisorActual() Emisor {
 
 // nombres lista los proveedores registrados, para el error de proveedor
 // desconocido.
-func (n *nucleo) nombres() string {
+func (n *Nucleo) nombres() string {
 	todos := n.registro.All()
 	if len(todos) == 0 {
 		return "ninguno"

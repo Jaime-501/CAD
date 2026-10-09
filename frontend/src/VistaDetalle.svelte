@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { get } from 'svelte/store';
-  import type { models } from '../wailsjs/go/models';
+  import type { models } from './api';
   import { getProgress } from './api';
   import { etiquetaTipo } from './etiquetas';
   import {

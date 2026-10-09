@@ -1,6 +1,6 @@
 //go:build integration
 
-package main
+package app
 
 import (
 	"context"
@@ -12,9 +12,9 @@ import (
 // en la red. Comprueba que el registro está bien cableado y que gana el
 // proveedor principal. No se descarga ningún vídeo (regla 13).
 func TestBusquedaRedReal(t *testing.T) {
-	n := nuevoNucleoPorDefecto()
+	n := NuevoNucleoPorDefecto(t.TempDir())
 
-	resultados, err := n.buscar(context.Background(), "bleach")
+	resultados, err := n.Buscar(context.Background(), "bleach")
 	if err != nil {
 		t.Fatalf("búsqueda contra la red real: %v", err)
 	}

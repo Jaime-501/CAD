@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
   import { get } from 'svelte/store';
-  import type { models } from '../wailsjs/go/models';
+  import type { models } from './api';
   import { search, searchResults, searchState } from './stores';
   import { navegarA, type SeleccionAnime } from './views';
 

@@ -1,6 +1,11 @@
 /**
  * Envoltorios sobre los bindings generados de Wails (`frontend/wailsjs/**`, no editar).
  *
+ * **ÚNICO punto del frontend que importa `wailsjs`** (T37/P4): el resto de
+ * archivos (`stores.ts` y los componentes) importan de aquí — funciones,
+ * suscripciones tipadas y tipos reexportados—. Ningún otro archivo debe
+ * importar `../wailsjs/**`.
+ *
  * Los payloads de los eventos NO se generan (solo viajan por `runtime.EventsOn`),
  * así que se declaran a mano aquí con los mismos nombres JSON que emite Go:
  * ver `docs/firmas/app.md` (eventos) y `docs/firmas/models.md` (modelos).
@@ -12,7 +17,11 @@ import {
   SaveProgress,
   SearchAnime,
 } from '../wailsjs/go/main/App.js';
+import { EventsOff, EventsOn } from '../wailsjs/runtime/runtime.js';
 import type { main, models } from '../wailsjs/go/models';
+
+// Tipos generados, reexportados para que los consumidores no importen wailsjs.
+export type { main, models };
 
 /** Payload de `episodes:update` = `models.EpisodeBatch` de Go (el error va en `err`, no en `error`). */
 export interface EpisodesUpdatePayload {
@@ -89,4 +98,44 @@ export async function saveProgress(progress: models.WatchProgress): Promise<bool
 /** Historial de un anime; `animeID` vacío = historial entero (puede fallar: ver app.md T22). */
 export function getProgress(animeID: string): Promise<models.WatchProgress[]> {
   return GetProgress(animeID);
+}
+
+/** Wails serializa a JSON: el payload puede llegar como objeto o como string. */
+function parsePayload<T>(crudo: unknown): T | null {
+  if (typeof crudo === 'string') {
+    try {
+      return JSON.parse(crudo) as T;
+    } catch {
+      return null;
+    }
+  }
+  if (crudo && typeof crudo === 'object') return crudo as T;
+  return null;
+}
+
+/**
+ * Suscripción a `episodes:update` (lotes de episodios). Devuelve la función
+ * que cancela la suscripción —`EventsOff` del propio evento—; `stores.ts` la
+ * guarda en `initEvents` y la llama en `disposeEvents`. Como los listeners
+ * solo se crean aquí, quitar el evento los quita todos (mismo comportamiento
+ * que el `EventsOff` directo de antes de T37).
+ *
+ * Requiere el puente Wails (window.runtime), igual que cualquier otra
+ * función de este módulo.
+ */
+export function onEpisodesUpdate(cb: (payload: EpisodesUpdatePayload) => void): () => void {
+  EventsOn('episodes:update', (crudo: unknown) => {
+    const payload = parsePayload<EpisodesUpdatePayload>(crudo);
+    if (payload) cb(payload);
+  });
+  return () => EventsOff('episodes:update');
+}
+
+/** Suscripción a `episodes:complete` (cierre del stream). Ver `onEpisodesUpdate`. */
+export function onEpisodesComplete(cb: (payload: EpisodesCompletePayload) => void): () => void {
+  EventsOn('episodes:complete', (crudo: unknown) => {
+    const payload = parsePayload<EpisodesCompletePayload>(crudo);
+    if (payload) cb(payload);
+  });
+  return () => EventsOff('episodes:complete');
 }

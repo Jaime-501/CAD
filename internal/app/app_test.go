@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"context"
@@ -205,7 +205,7 @@ func (s *streamerFalso) StreamAnimeDetails(ctx context.Context, id string,
 
 // entorno junta el núcleo con sus dobles.
 type entorno struct {
-	n     *nucleo
+	n     *Nucleo
 	proxy *proxyFalso
 	emis  *emisorFalso
 	cache *cache.Cache
@@ -235,13 +235,13 @@ func nuevoEntornoConCache(t *testing.T, c *cache.Cache, ps ...scraper.Provider) 
 	px := nuevoProxyFalso()
 	dirHistorial := t.TempDir()
 	e := &entorno{
-		n:            nuevoNucleo(reg, px, extractors.SelectBestSource, emis.emitir, c, dirHistorial),
+		n:            NuevoNucleo(reg, px, extractors.SelectBestSource, emis.emitir, c, dirHistorial),
 		proxy:        px,
 		emis:         emis,
 		cache:        c,
 		dirHistorial: dirHistorial,
 	}
-	t.Cleanup(func() { _ = e.n.cerrar() })
+	t.Cleanup(func() { _ = e.n.Cerrar() })
 	return e
 }
 
@@ -346,7 +346,7 @@ func TestBusquedaCombinadaOrdenaJKAnimePrimeroAunqueRespondaElUltimo(t *testing.
 	}
 	e := nuevoEntorno(t, principal, segundo)
 
-	resultados, err := e.n.buscar(context.Background(), "bleach")
+	resultados, err := e.n.Buscar(context.Background(), "bleach")
 	if err != nil {
 		t.Fatalf("buscar: %v", err)
 	}
@@ -404,7 +404,7 @@ func TestBusquedaCombinadaToleraUnProveedorCaído(t *testing.T) {
 			}
 			e := nuevoEntorno(t, caido, proveedorSano)
 
-			resultados, err := e.n.buscar(context.Background(), "bleach")
+			resultados, err := e.n.Buscar(context.Background(), "bleach")
 			if err != nil {
 				t.Fatalf("con un proveedor sano no debe fallar: %v", err)
 			}
@@ -435,7 +435,7 @@ func TestBusquedaCombinadaAmbosCaídosDevuelveErrorEnEspanol(t *testing.T) {
 	}
 	e := nuevoEntorno(t, principal, segundo)
 
-	resultados, err := e.n.buscar(context.Background(), "bleach")
+	resultados, err := e.n.Buscar(context.Background(), "bleach")
 	if err == nil {
 		t.Fatal("con los dos proveedores caídos debe devolver error")
 	}
@@ -469,7 +469,7 @@ func TestBusquedaCombinadaPropagaElCtxCancelado(t *testing.T) {
 	defer cancel()
 	errCh := make(chan error, 1)
 	go func() {
-		_, err := e.n.buscar(ctx, "bleach")
+		_, err := e.n.Buscar(ctx, "bleach")
 		errCh <- err
 	}()
 
@@ -503,7 +503,7 @@ func TestBusquedaCombinadaSinResultadosNoEsError(t *testing.T) {
 		&proveedorFalso{nombre: "animeav1"},
 	)
 
-	resultados, err := e.n.buscar(context.Background(), "zzz-no-existe")
+	resultados, err := e.n.Buscar(context.Background(), "zzz-no-existe")
 	if err != nil {
 		t.Fatalf("sin resultados pero sin fallos no debe haber error: %v", err)
 	}
@@ -515,7 +515,7 @@ func TestBusquedaCombinadaSinResultadosNoEsError(t *testing.T) {
 func TestBusquedaSinProveedoresDevuelveVacio(t *testing.T) {
 	e := nuevoEntorno(t)
 
-	resultados, err := e.n.buscar(context.Background(), "bleach")
+	resultados, err := e.n.Buscar(context.Background(), "bleach")
 	if err != nil {
 		t.Fatalf("sin proveedores registrados no debe explotar: %v", err)
 	}
@@ -531,7 +531,7 @@ func TestBusquedaSinProveedoresDevuelveVacio(t *testing.T) {
 func TestDetalleProveedorDesconocidoDaErrorClaro(t *testing.T) {
 	e := nuevoEntorno(t, &proveedorFalso{nombre: "jkanime"})
 
-	_, err := e.n.detalle(context.Background(), "noexiste", "bleach")
+	_, err := e.n.Detalle(context.Background(), "noexiste", "bleach")
 	if err == nil {
 		t.Fatal("un proveedor desconocido debe dar error")
 	}
@@ -554,7 +554,7 @@ func TestDetalleErrNoDetailsDeAnimeFLVEsErrorTipado(t *testing.T) {
 	}
 	e := nuevoEntorno(t, flvs)
 
-	res, err := e.n.detalle(context.Background(), "animeflv", "bleach-sennen")
+	res, err := e.n.Detalle(context.Background(), "animeflv", "bleach-sennen")
 	if !errors.Is(err, ErrDetalleNoDisponible) {
 		t.Fatalf("err = %v; quería ErrDetalleNoDisponible", err)
 	}
@@ -583,7 +583,7 @@ func TestDetalleSinEpisodeStreamerNoEmiteEventos(t *testing.T) {
 	}
 	e := nuevoEntorno(t, flvs)
 
-	res, err := e.n.detalle(context.Background(), "animeflv", "bleach")
+	res, err := e.n.Detalle(context.Background(), "animeflv", "bleach")
 	if err != nil {
 		t.Fatalf("detalle: %v", err)
 	}
@@ -615,7 +615,7 @@ func TestDetalleEmiteLotesYPorcentajeCompleto(t *testing.T) {
 	}
 	e := nuevoEntorno(t, fake)
 
-	res, err := e.n.detalle(context.Background(), "jkanime", "bleach")
+	res, err := e.n.Detalle(context.Background(), "jkanime", "bleach")
 	if err != nil {
 		t.Fatalf("detalle: %v", err)
 	}
@@ -658,7 +658,7 @@ func TestDetalleConFalloDePaginaLoCuentaElEventoCompleto(t *testing.T) {
 	}
 	e := nuevoEntorno(t, fake)
 
-	if _, err := e.n.detalle(context.Background(), "jkanime", "bleach"); err != nil {
+	if _, err := e.n.Detalle(context.Background(), "jkanime", "bleach"); err != nil {
 		t.Fatalf("el fallo de una página no tumba la llamada: %v", err)
 	}
 
@@ -696,13 +696,13 @@ func TestCambioDeAnimeCancelaElStreamAnterior(t *testing.T) {
 	}
 	e := nuevoEntorno(t, fake)
 
-	if _, err := e.n.detalle(context.Background(), "jkanime", "anime-a"); err != nil {
+	if _, err := e.n.Detalle(context.Background(), "jkanime", "anime-a"); err != nil {
 		t.Fatalf("detalle anime-a: %v", err)
 	}
 	e.emis.esperar(t, 1) // el lote 2 de anime-a ya salió
 
 	// Pedir otro anime cancela el stream anterior.
-	res, err := e.n.detalle(context.Background(), "jkanime", "anime-b")
+	res, err := e.n.Detalle(context.Background(), "jkanime", "anime-b")
 	if err != nil {
 		t.Fatalf("detalle anime-b: %v", err)
 	}
@@ -743,19 +743,19 @@ func TestShutdownCancelaElStreamYCierraElProxy(t *testing.T) {
 	}
 	e := nuevoEntorno(t, fake)
 
-	if err := e.n.arrancar(e.emis.emitir); err != nil {
+	if err := e.n.Arrancar(e.emis.emitir); err != nil {
 		t.Fatalf("arrancar: %v", err)
 	}
 	if _, escuchadas, _ := e.proxy.contadores(); escuchadas != 1 {
 		t.Fatalf("escuchadas = %d; el proxy debe escuchar al arrancar", escuchadas)
 	}
 
-	if _, err := e.n.detalle(context.Background(), "jkanime", "bleach"); err != nil {
+	if _, err := e.n.Detalle(context.Background(), "jkanime", "bleach"); err != nil {
 		t.Fatalf("detalle: %v", err)
 	}
 	e.emis.esperar(t, 1)
 
-	if err := e.n.cerrar(); err != nil {
+	if err := e.n.Cerrar(); err != nil {
 		t.Fatalf("cerrar: %v", err)
 	}
 	select {
@@ -763,7 +763,7 @@ func TestShutdownCancelaElStreamYCierraElProxy(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		t.Fatal("shutdown no canceló el stream activo")
 	}
-	if err := e.n.cerrar(); err != nil {
+	if err := e.n.Cerrar(); err != nil {
 		t.Fatalf("cerrar debe ser idempotente: %v", err)
 	}
 
@@ -795,9 +795,9 @@ func TestSinEmisorNoEmiteNiFalla(t *testing.T) {
 	}
 	px := nuevoProxyFalso()
 	// Núcleo SIN emisor: es como la app antes de startup.
-	n := nuevoNucleo(reg, px, extractors.SelectBestSource, nil, cache.New(ttlCacheDetalle), t.TempDir())
+	n := NuevoNucleo(reg, px, extractors.SelectBestSource, nil, cache.New(ttlCacheDetalle), t.TempDir())
 
-	res, err := n.detalle(context.Background(), "jkanime", "bleach")
+	res, err := n.Detalle(context.Background(), "jkanime", "bleach")
 	if err != nil {
 		t.Fatalf("detalle sin emisor: %v", err)
 	}
@@ -821,18 +821,18 @@ func TestArrancarInstalaElEmisorYElProxy(t *testing.T) {
 	}
 	px := nuevoProxyFalso()
 	emis := nuevoEmisorFalso()
-	n := nuevoNucleo(reg, px, extractors.SelectBestSource, nil, cache.New(ttlCacheDetalle), t.TempDir())
+	n := NuevoNucleo(reg, px, extractors.SelectBestSource, nil, cache.New(ttlCacheDetalle), t.TempDir())
 	// arrancar pone a funcionar la limpieza de la caché: que no quede la
 	// goroutine suelta al terminar el test.
-	t.Cleanup(func() { _ = n.cerrar() })
+	t.Cleanup(func() { _ = n.Cerrar() })
 
-	if err := n.arrancar(emis.emitir); err != nil {
+	if err := n.Arrancar(emis.emitir); err != nil {
 		t.Fatalf("arrancar: %v", err)
 	}
 	if _, escuchadas, _ := px.contadores(); escuchadas != 1 {
 		t.Errorf("escuchadas = %d", escuchadas)
 	}
-	if _, err := n.detalle(context.Background(), "jkanime", "bleach"); err != nil {
+	if _, err := n.Detalle(context.Background(), "jkanime", "bleach"); err != nil {
 		t.Fatalf("detalle: %v", err)
 	}
 	if len(emis.lista()) != 3 {
@@ -858,7 +858,7 @@ func TestFuentesSoloHLSYMP4PasanPorElProxyYLaMejorVaPrimero(t *testing.T) {
 	}
 	e := nuevoEntorno(t, prov)
 
-	salida, err := e.n.fuentes(context.Background(), "jkanime", "jkanime:bleach:episode:1", false)
+	salida, err := e.n.Fuentes(context.Background(), "jkanime", "jkanime:bleach:episode:1", false)
 	if err != nil {
 		t.Fatalf("fuentes: %v", err)
 	}
@@ -916,7 +916,7 @@ func TestFuentesNoCacheSeAceptaYNoHayNadaCacheado(t *testing.T) {
 	}
 	e := nuevoEntorno(t, prov)
 
-	if _, err := e.n.fuentes(context.Background(), "jkanime", "jkanime:bleach:episode:1", true); err != nil {
+	if _, err := e.n.Fuentes(context.Background(), "jkanime", "jkanime:bleach:episode:1", true); err != nil {
 		t.Fatalf("fuentes: %v", err)
 	}
 	if opts := prov.optsRecibidos(); !opts.NoCache {
@@ -924,7 +924,7 @@ func TestFuentesNoCacheSeAceptaYNoHayNadaCacheado(t *testing.T) {
 	}
 	// Segunda petición idéntica: el provider se vuelve a llamar, es decir,
 	// el núcleo no cachea nada (regla 9; la caché es T21).
-	if _, err := e.n.fuentes(context.Background(), "jkanime", "jkanime:bleach:episode:1", true); err != nil {
+	if _, err := e.n.Fuentes(context.Background(), "jkanime", "jkanime:bleach:episode:1", true); err != nil {
 		t.Fatalf("fuentes: %v", err)
 	}
 	if ops := prov.operaciones(); len(ops) != 2 {
@@ -935,7 +935,7 @@ func TestFuentesNoCacheSeAceptaYNoHayNadaCacheado(t *testing.T) {
 func TestFuentesProveedorDesconocido(t *testing.T) {
 	e := nuevoEntorno(t, &proveedorFalso{nombre: "jkanime"})
 
-	_, err := e.n.fuentes(context.Background(), "noexiste", "jkanime:bleach:episode:1", false)
+	_, err := e.n.Fuentes(context.Background(), "noexiste", "jkanime:bleach:episode:1", false)
 	if err == nil || !strings.Contains(err.Error(), "proveedor desconocido") {
 		t.Fatalf("err = %v; quería el error claro de proveedor desconocido", err)
 	}

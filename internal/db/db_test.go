@@ -551,16 +551,11 @@ func TestCloseEsIdempotenteYLasOperacionesFallanDespues(t *testing.T) {
 	}
 }
 
-func TestRutaPorDefectoEsConfigDelUsuarioMasMiapp(t *testing.T) {
-	base, err := os.UserConfigDir()
-	if err != nil {
-		t.Skipf("os.UserConfigDir no disponible: %v", err)
-	}
-	donde, err := rutaPorDefecto()
-	if err != nil {
-		t.Fatalf("rutaPorDefecto: %v", err)
-	}
-	if esperado := filepath.Join(base, "miapp"); donde != esperado {
-		t.Errorf("rutaPorDefecto = %q; esperaba %q", donde, esperado)
+// TestOpenConDirectorioVacioFalla fija P3 (T37): db ya no decide la ruta por
+// defecto —eso es cosa de app.go—, así que Open("") es un error y no una
+// apertura en el perfil del usuario.
+func TestOpenConDirectorioVacioFalla(t *testing.T) {
+	if _, err := Open(""); !errors.Is(err, ErrDirectorioVacio) {
+		t.Errorf(`Open("") = %v; quería ErrDirectorioVacio`, err)
 	}
 }

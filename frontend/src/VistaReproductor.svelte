@@ -2,7 +2,7 @@
   import Hls from 'hls.js';
   import { onDestroy, onMount } from 'svelte';
   import { get } from 'svelte/store';
-  import type { models } from '../wailsjs/go/models';
+  import type { models } from './api';
   import { getProgress, getVideoSources, saveProgress } from './api';
   import type { VideoSourceView } from './api';
   import type { FiltroIdioma } from './etiquetas';

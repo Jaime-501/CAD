@@ -1,7 +1,9 @@
 // Package db persiste el historial de visualización (T22) en un archivo
-// JSON dentro de un directorio inyectable: por defecto
-// os.UserConfigDir()/miapp, y en los tests t.TempDir(). Abrir el almacén es
-// cosa del núcleo de la app (arrancar en startup, cerrar en shutdown).
+// JSON dentro de un directorio inyectable: lo elige quien llama —en la app,
+// app.go decide la ruta— y en los tests es t.TempDir(). Este paquete NO
+// consulta el sistema (P3: portabilidad Android, ver portabilidad_test).
+// Abrir el almacén es cosa del núcleo de la app (arrancar en startup,
+// cerrar en shutdown).
 //
 // Qué guarda: registros models.WatchProgress (un episodio dentro de un
 // anime), con IsWatched CALCULADO AQUÍ —no confíes en el que traiga el
@@ -47,6 +49,11 @@ const (
 // ErrCerrado es lo que devuelven SaveProgress/GetProgress después de Close.
 var ErrCerrado = errors.New("el historial de visualización está cerrado")
 
+// ErrDirectorioVacio es lo que devuelve Open cuando el directorio está
+// vacío: decidir la ruta por defecto es cosa de quien llama (P3: app.go),
+// nunca de este paquete.
+var ErrDirectorioVacio = errors.New("el historial necesita un directorio no vacío")
+
 // clave identifica un registro: un episodio dentro de un anime. Dos animes
 // distintos no pueden pisarse aunque compartan episodio.
 type clave struct {
@@ -70,8 +77,8 @@ type DB struct {
 }
 
 // Open abre el historial del directorio indicado, creando el directorio si
-// hace falta. dir vacío = directorio por defecto (os.UserConfigDir()/miapp):
-// la app production lo llama así y los tests inyectan t.TempDir().
+// hace falta. dir vacío no tiene significado especial (P3: este paquete no
+// decide rutas): devuelve ErrDirectorioVacio y quien llama resuelve la suya.
 //
 // Un archivo que no existe (primera ejecución) o vacío deja el almacén sin
 // registros; uno con contenido ilegible se respalda como .bak y se empieza
@@ -80,11 +87,7 @@ type DB struct {
 // inexistente...) devuelve error.
 func Open(dir string) (*DB, error) {
 	if dir == "" {
-		porDefecto, err := rutaPorDefecto()
-		if err != nil {
-			return nil, err
-		}
-		dir = porDefecto
+		return nil, ErrDirectorioVacio
 	}
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return nil, fmt.Errorf("no pude crear el directorio del historial %q: %w", dir, err)
@@ -99,16 +102,6 @@ func Open(dir string) (*DB, error) {
 		return nil, err
 	}
 	return d, nil
-}
-
-// rutaPorDefecto es el directorio de la app en la configuración del usuario:
-// os.UserConfigDir()/miapp. Solo se usa con Open("").
-func rutaPorDefecto() (string, error) {
-	base, err := os.UserConfigDir()
-	if err != nil {
-		return "", fmt.Errorf("no encuentro el directorio de configuración del usuario: %w", err)
-	}
-	return filepath.Join(base, "miapp"), nil
 }
 
 // SaveProgress guarda (o actualiza) el progreso de UN episodio y lo

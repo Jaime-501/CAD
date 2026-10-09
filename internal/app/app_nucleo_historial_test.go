@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"errors"
@@ -19,7 +19,7 @@ func TestHistorialSeAbreEnArrancarYSeCierraEnCerrar(t *testing.T) {
 	if h := e.n.historialAbierto(); h != nil {
 		t.Fatalf("antes de arrancar no debe haber historial abierto: %v", h)
 	}
-	if err := e.n.arrancar(e.emis.emitir); err != nil {
+	if err := e.n.Arrancar(e.emis.emitir); err != nil {
 		t.Fatalf("arrancar: %v", err)
 	}
 	if e.n.historialAbierto() == nil {
@@ -32,10 +32,10 @@ func TestHistorialSeAbreEnArrancarYSeCierraEnCerrar(t *testing.T) {
 		CurrentTime:   95,
 		TotalDuration: 100,
 	}
-	if err := e.n.guardarProgreso(progreso); err != nil {
+	if err := e.n.GuardarProgreso(progreso); err != nil {
 		t.Fatalf("guardarProgreso: %v", err)
 	}
-	registros, err := e.n.verProgreso("bleach")
+	registros, err := e.n.VerProgreso("bleach")
 	if err != nil {
 		t.Fatalf("verProgreso: %v", err)
 	}
@@ -46,13 +46,13 @@ func TestHistorialSeAbreEnArrancarYSeCierraEnCerrar(t *testing.T) {
 		t.Error("IsWatched debe venir calculado por el backend (95/100)")
 	}
 
-	if err := e.n.cerrar(); err != nil {
+	if err := e.n.Cerrar(); err != nil {
 		t.Fatalf("cerrar: %v", err)
 	}
-	if err := e.n.guardarProgreso(progreso); !errors.Is(err, db.ErrCerrado) {
+	if err := e.n.GuardarProgreso(progreso); !errors.Is(err, db.ErrCerrado) {
 		t.Errorf("guardar tras cerrar = %v; quería db.ErrCerrado", err)
 	}
-	if _, err := e.n.verProgreso("bleach"); !errors.Is(err, db.ErrCerrado) {
+	if _, err := e.n.VerProgreso("bleach"); !errors.Is(err, db.ErrCerrado) {
 		t.Errorf("leer tras cerrar = %v; quería db.ErrCerrado", err)
 	}
 
@@ -78,12 +78,12 @@ func TestGuardarProgresoSinHistorialDaErrorClaro(t *testing.T) {
 	e := nuevoEntorno(t)
 
 	progreso := models.WatchProgress{AnimeID: "bleach", EpisodeID: "jkanime:bleach:episode:1"}
-	if err := e.n.guardarProgreso(progreso); !errors.Is(err, ErrHistorialNoDisponible) {
+	if err := e.n.GuardarProgreso(progreso); !errors.Is(err, ErrHistorialNoDisponible) {
 		t.Errorf("guardarProgreso = %v; quería ErrHistorialNoDisponible", err)
 	} else if err.Error() != "El historial de visualización no está disponible" {
 		t.Errorf("mensaje = %q; debe estar pensado para la UI", err.Error())
 	}
-	if _, err := e.n.verProgreso("bleach"); !errors.Is(err, ErrHistorialNoDisponible) {
+	if _, err := e.n.VerProgreso("bleach"); !errors.Is(err, ErrHistorialNoDisponible) {
 		t.Errorf("verProgreso = %v; quería ErrHistorialNoDisponible", err)
 	}
 }
@@ -101,7 +101,7 @@ func TestFalloAlAbrirElHistorialNoTumbaElArrancar(t *testing.T) {
 	}
 	e.n.rutaHistorial = filepath.Join(bloque, "miapp")
 
-	if err := e.n.arrancar(e.emis.emitir); err != nil {
+	if err := e.n.Arrancar(e.emis.emitir); err != nil {
 		t.Fatalf("el fallo del historial no debe tumbar arrancar: %v", err)
 	}
 	if _, escuchadas, _ := e.proxy.contadores(); escuchadas != 1 {
@@ -110,7 +110,7 @@ func TestFalloAlAbrirElHistorialNoTumbaElArrancar(t *testing.T) {
 	if h := e.n.historialAbierto(); h != nil {
 		t.Errorf("historial = %v; con la ruta inaccesible no debe abrirse", h)
 	}
-	if err := e.n.guardarProgreso(models.WatchProgress{AnimeID: "bleach"}); !errors.Is(err, ErrHistorialNoDisponible) {
+	if err := e.n.GuardarProgreso(models.WatchProgress{AnimeID: "bleach"}); !errors.Is(err, ErrHistorialNoDisponible) {
 		t.Errorf("guardarProgreso = %v; quería ErrHistorialNoDisponible", err)
 	}
 }

@@ -5,8 +5,12 @@ Se aplican a TODAS las tareas. Léelas antes de empezar.
 ## Layout de paquetes (obligatorio)
 
 ```text
-app.go
+main.go                   entrada Wails; incrusta frontend/dist (//go:embed)
+app.go                    capa Wails: traduce llamadas ↔ núcleo           (T37)
 internal/
+  app/                    núcleo: orquestación testeable, sin Wails       (T37)
+    nucleo.go             registro, proxy, caché, historial, eventos
+    portabilidad_test.go  guardia P2/P3 con go/parser
   logx/                     # slog + redacción de secretos           (T01)
   httpx/                    # cliente HTTP, errores, reintentos      (T02)
   models/                   # modelos de dominio                     (T03, T05)
@@ -35,14 +39,29 @@ frontend/src/
 Regla de dependencias entre paquetes (sentido único, prohibido el ciclo):
 
 ```text
-models  ←  httpx  ←  scraper (interfaz)  ←  scraper/jkanime  ←  app.go
-                                          ←  scraper/jkanime/extractors
+models  ←  httpx  ←  scraper (interfaz)  ←  scraper/jkanime  ←  internal/app  ←  app.go
+                                           ←  scraper/jkanime/extractors
 logx ← (todos)
 ```
 
 - `extractors` no importa `jkanime`; recibe `httpx.HTTPDoer` por parámetro.
 - `jkanime` importa `extractors`.
 - `models` no importa a nadie del proyecto.
+- `internal/app` (el núcleo) importa scraper, cache, db, httpx y stream; **no** importa `github.com/wailsapp/*` (P2). `app.go` es la única capa que habla con Wails.
+
+---
+
+## Reglas de portabilidad (T37, aplican a todas las tareas futuras)
+
+1. **P1.** La lógica nueva va en `internal/**`, nunca en `package main`.
+2. **P2.** `internal/**` no importa `github.com/wailsapp/*`.
+3. **P3.** `os.UserConfigDir`/`os.UserHomeDir` solo se llaman en `app.go` (único punto); el núcleo recibe el directorio de datos por parámetro.
+4. **P4.** El frontend habla con el backend solo a través de `frontend/src/api.ts` (ningún otro archivo importa `wailsjs`).
+5. **P5.** El vídeo se entrega siempre como `VideoSource` (con `Headers`/`Referer`); el frontend no asume que exista el proxy.
+6. **P6.** UI nueva sin depender de hover ni de anchos fijos.
+7. **P7.** Funciones solo de escritorio (ventana, bandeja, diálogos) viven en `main.go`/`app.go`.
+
+P2 y P3 tienen guardia ejecutable: `internal/app/portabilidad_test.go` recorre `internal/**` con `go/parser` y falla si aparece un import de `github.com/wailsapp/` o una llamada a `os.UserConfigDir`/`os.UserHomeDir`.
 
 ---
 
