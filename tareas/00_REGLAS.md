@@ -11,6 +11,7 @@ internal/
   httpx/                    # cliente HTTP, errores, reintentos      (T02)
   models/                   # modelos de dominio                     (T03, T05)
   scraper/                  # SOLO interfaz Provider y registro      (T04)
+    animeav1/               #todo lo de AnimeAv1
     jkanime/                # todo lo de JKAnime (paquete jkanime)
       exceptions.go
       search.go

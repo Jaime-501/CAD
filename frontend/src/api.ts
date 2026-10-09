@@ -39,10 +39,12 @@ export interface VideoSourceView {
   type: string;
   quality: string;
   server: string;
+  /** SUB/DUB (T33); vacío si el proveedor no lo declara (p. ej. JKAnime). */
+  language: string;
   subtitles?: models.Subtitle[];
 }
 
-/** Búsqueda con fallback del backend (JKAnime primero, AnimeFLV después). */
+/** Búsqueda combinada del backend (T34): JKAnime y AnimeAV1 en paralelo, JKAnime primero. */
 export function searchAnime(query: string): Promise<models.Anime[]> {
   return SearchAnime(query);
 }
@@ -64,6 +66,7 @@ export async function getVideoSources(
     type: f.type,
     quality: f.quality,
     server: f.server,
+    language: f.language ?? '',
     subtitles: f.subtitles,
   }));
 }

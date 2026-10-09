@@ -7,6 +7,13 @@
  * Clave de la tarea: los lotes `episodes:update` llegan ANTES de que resuelva
  * `GetAnimeDetails`, así que `currentAnimeID` se fija antes de esa llamada y
  * todo lo que no coincida con él se descarta.
+ *
+ * T34 (aislamiento entre proveedores): `anime_id` es el slug, y un slug como
+ * "bleach" existe en JKAnime y en AnimeAV1. Además de `currentAnimeID` se
+ * fija `currentProvider` y se filtra por el prefijo de proveedor del
+ * `episode_id`, para que el progreso y los episodios de un proveedor nunca
+ * aparezcan ni influzan en la lista del otro. El historial NO se migra: la
+ * separación es una vista sobre los mismos registros.
  */
 import { get, writable } from 'svelte/store';
 import { EventsOff, EventsOn } from '../wailsjs/runtime/runtime.js';
@@ -21,6 +28,8 @@ export interface SearchState {
 }
 
 export const currentAnimeID = writable<string>('');
+/** Proveedor de la lista abierta ahora (jkanime, animeav1…). */
+export const currentProvider = writable<string>('');
 export const currentDetail = writable<models.AnimeDetail | null>(null);
 export const episodes = writable<models.Episode[]>([]);
 export const episodesComplete = writable<boolean>(false);
@@ -49,12 +58,36 @@ export function isCurrentBatch(currentID: string, payload: { anime_id: string })
   return currentID !== '' && payload.anime_id === currentID;
 }
 
-/** Historial → mapa indexado por `episode_id`. */
+/**
+ * ¿Pertenece este `episode_id` al proveedor indicado? El id siempre es
+ * `<proveedor>:<slug>…` (ver `models.ParseEpisodeID`), y un proveedor nunca
+ * lleva ':' dentro, así que el prefijo identifica sin ambigüedad.
+ */
+export function esDeProveedor(episodeID: string, proveedor: string): boolean {
+  return proveedor !== '' && episodeID.startsWith(proveedor + ':');
+}
+
+/** Filtra episodios por el prefijo de proveedor de su id (T34). */
+export function episodiosDeProveedor(
+  episodios: models.Episode[],
+  proveedor: string
+): models.Episode[] {
+  return episodios.filter((ep) => esDeProveedor(ep.id, proveedor));
+}
+
+/**
+ * Historial → mapa indexado por `episode_id`, SOLO con los registros del
+ * proveedor indicado: el historial se guarda por slug y un mismo slug puede
+ * tener progreso de dos proveedores (T34).
+ */
 export function progressToMap(
-  historial: models.WatchProgress[]
+  historial: models.WatchProgress[],
+  proveedor: string
 ): Record<string, models.WatchProgress> {
   const mapa: Record<string, models.WatchProgress> = {};
-  for (const p of historial) mapa[p.episode_id] = p;
+  for (const p of historial) {
+    if (esDeProveedor(p.episode_id, proveedor)) mapa[p.episode_id] = p;
+  }
   return mapa;
 }
 
@@ -84,14 +117,21 @@ export function initEvents(): void {
   EventsOn('episodes:update', (crudo: unknown) => {
     const payload = parsePayload<EpisodesUpdatePayload>(crudo);
     if (!payload) return;
-    // Lote de otro anime (o llegado tarde): se descarta.
+    // Lote de otro anime (o llegado tarde): se descarta. El slug por sí solo
+    // no basta (T34): existe en varios proveedores, así que también se
+    // descartan los episodios cuyo id no lleva el prefijo del proveedor abierto.
     if (!isCurrentBatch(get(currentAnimeID), payload)) return;
-    episodes.update((lista) => mergeEpisodes(lista, payload.episodes ?? []));
+    const propios = episodiosDeProveedor(payload.episodes ?? [], get(currentProvider));
+    if (propios.length === 0) return;
+    episodes.update((lista) => mergeEpisodes(lista, propios));
   });
 
   EventsOn('episodes:complete', (crudo: unknown) => {
     const payload = parsePayload<EpisodesCompletePayload>(crudo);
     if (!payload) return;
+    // `episodes:complete` solo lleva `anime_id` (modelo de Go, no tocable) y
+    // Go emite un único stream activo, cancelando los anteriores: con el
+    // slug no hay atribución por proveedor, pero tampoco stream concurrente.
     if (!isCurrentBatch(get(currentAnimeID), payload)) return;
     episodesComplete.set(true);
     episodesError.set(payload.error ?? '');
@@ -109,14 +149,18 @@ export function disposeEvents(): void {
 
 /**
  * Abre un anime. Orden importante:
- *  1. fija `currentAnimeID` ANTES de la llamada (los lotes empiezan a llegar enseguida);
+ *  1. fija `currentAnimeID` y `currentProvider` ANTES de la llamada (los lotes
+ *     empiezan a llegar enseguida y hay que poder filtrarlos por proveedor);
  *  2. limpia el estado del anime anterior (episodes/complete/error/progreso);
- *  3. mezcla los episodios que traiga la respuesta con los ya llegados (misma deduplicación);
- *  4. puebla `progressMap` con el historial.
+ *  3. mezcla los episodios que traiga la respuesta con los ya llegados (misma
+ *     deduplicación, y solo los del proveedor abierto);
+ *  4. puebla `progressMap` con el historial de ESE proveedor (el slug puede
+ *     tener progreso de otro).
  * Si el usuario cambia de anime mientras tanto, la respuesta vieja se descarta.
  */
 export async function openAnime(provider: string, animeID: string): Promise<void> {
   currentAnimeID.set(animeID);
+  currentProvider.set(provider);
   currentDetail.set(null);
   episodes.set([]);
   episodesComplete.set(false);
@@ -124,14 +168,18 @@ export async function openAnime(provider: string, animeID: string): Promise<void
   progressMap.set({});
 
   const res = await getAnimeDetails(provider, animeID);
-  if (get(currentAnimeID) !== animeID) return;
+  // El slug por sí solo no basta (T34): "bleach" existe en dos proveedores,
+  // así que la respuesta solo se acepta si sigue abierta ESA pareja.
+  if (get(currentAnimeID) !== animeID || get(currentProvider) !== provider) return;
   currentDetail.set(res.detail ?? null);
-  episodes.update((lista) => mergeEpisodes(lista, res.episodes ?? []));
+  episodes.update((lista) =>
+    mergeEpisodes(lista, episodiosDeProveedor(res.episodes ?? [], provider))
+  );
 
   try {
     const historial = await getProgress(animeID);
-    if (get(currentAnimeID) !== animeID) return;
-    progressMap.set(progressToMap(historial));
+    if (get(currentAnimeID) !== animeID || get(currentProvider) !== provider) return;
+    progressMap.set(progressToMap(historial, provider));
   } catch (e) {
     // Historial no disponible (T22): no es un fallo grave, queda vacío.
     console.warn('[stores] historial no disponible:', String(e));

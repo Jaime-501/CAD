@@ -313,96 +313,127 @@ func destinoProxy(t *testing.T, raw string) string {
 }
 
 // ---------------------------------------------------------------------------
-// Búsqueda con fallback.
+// Búsqueda combinada (T34): JKAnime y AnimeAV1 en paralelo.
 // ---------------------------------------------------------------------------
 
-func TestBusquedaJKAnimePrimeroSinLlamarAlFallback(t *testing.T) {
+// TestBusquedaCombinadaOrdenaJKAnimePrimeroAunqueRespondaElUltimo comprueba
+// a la vez las dos garantías de la búsqueda combinada: los dos proveedores
+// corren EN PARALELO (jkanime espera a que termine animeav1; si la búsqueda
+// fuera secuencial esto agotaría el tiempo) y la lista sale SIEMPRE con los
+// resultados de jkanime por delante, aunque animeav1 haya terminado antes.
+func TestBusquedaCombinadaOrdenaJKAnimePrimeroAunqueRespondaElUltimo(t *testing.T) {
+	av1Termino := make(chan struct{})
 	principal := &proveedorFalso{
 		nombre: "jkanime",
-		buscarF: func(context.Context, string) ([]models.Anime, error) {
-			return []models.Anime{{ID: "bleach", Title: "Bleach", Provider: "jkanime"}}, nil
+		buscarF: func(ctx context.Context, _ string) ([]models.Anime, error) {
+			select {
+			case <-av1Termino:
+			case <-time.After(2 * time.Second):
+				return nil, errors.New("animeav1 no terminó: la búsqueda no corre en paralelo")
+			}
+			return []models.Anime{
+				{ID: "bleach", Title: "Bleach", Provider: "jkanime"},
+				{ID: "bleach-movie", Title: "Bleach Movie", Provider: "jkanime"},
+			}, nil
 		},
 	}
-	fallback := &proveedorFalso{
-		nombre: "animeflv",
+	segundo := &proveedorFalso{
+		nombre: "animeav1",
 		buscarF: func(context.Context, string) ([]models.Anime, error) {
-			return []models.Anime{{ID: "no-deberia-llamarse"}}, nil
+			defer close(av1Termino)
+			return []models.Anime{{ID: "bleach", Title: "Bleach", Provider: "animeav1"}}, nil
 		},
 	}
-	e := nuevoEntorno(t, principal, fallback)
+	e := nuevoEntorno(t, principal, segundo)
 
 	resultados, err := e.n.buscar(context.Background(), "bleach")
 	if err != nil {
 		t.Fatalf("buscar: %v", err)
 	}
-	if len(resultados) != 1 || resultados[0].ID != "bleach" {
-		t.Fatalf("resultados = %+v; quería los de jkanime", resultados)
+	queria := []struct{ proveedor, id string }{
+		{"jkanime", "bleach"},
+		{"jkanime", "bleach-movie"},
+		{"animeav1", "bleach"},
 	}
-	if ops := fallback.operaciones(); len(ops) != 0 {
-		t.Errorf("el fallback no debe llamarse con resultados del principal; ops = %v", ops)
+	if len(resultados) != len(queria) {
+		t.Fatalf("resultados = %+v; quería %d en el orden combinado", resultados, len(queria))
 	}
-}
-
-func TestBusquedaFallbackCuandoElPrincipalNoDevuelveNada(t *testing.T) {
-	principal := &proveedorFalso{nombre: "jkanime"}
-	fallback := &proveedorFalso{
-		nombre: "animeflv",
-		buscarF: func(context.Context, string) ([]models.Anime, error) {
-			return []models.Anime{{ID: "bleach-sennen", Provider: "animeflv"}}, nil
-		},
+	for i, q := range queria {
+		if resultados[i].Provider != q.proveedor || resultados[i].ID != q.id {
+			t.Errorf("resultado[%d] = %+v; quería %s:%s", i, resultados[i], q.proveedor, q.id)
+		}
 	}
-	e := nuevoEntorno(t, principal, fallback)
-
-	resultados, err := e.n.buscar(context.Background(), "bleach")
-	if err != nil {
-		t.Fatalf("buscar: %v", err)
-	}
-	if len(resultados) != 1 || resultados[0].Provider != "animeflv" {
-		t.Fatalf("resultados = %+v; quería los de animeflv", resultados)
-	}
-	if ops := principal.operaciones(); len(ops) != 1 || ops[0] != "Search" {
-		t.Errorf("el principal debe buscarse una vez; ops = %v", ops)
+	// Los dos se consultan SIEMPRE (no hay fallback que salte).
+	for _, p := range []*proveedorFalso{principal, segundo} {
+		if ops := p.operaciones(); len(ops) != 1 || ops[0] != "Search" {
+			t.Errorf("%s: ops = %v; se esperaba una única Search", p.nombre, ops)
+		}
 	}
 }
 
-func TestBusquedaFallbackCuandoElPrincipalFalla(t *testing.T) {
-	principal := &proveedorFalso{
-		nombre: "jkanime",
-		buscarF: func(context.Context, string) ([]models.Anime, error) {
-			return nil, errors.New("jkanime caído")
-		},
+// TestBusquedaCombinadaToleraUnProveedorCaído: el fallo de uno se loguea y
+// la respuesta sale con los resultados del otro (en las dos direcciones).
+func TestBusquedaCombinadaToleraUnProveedorCaído(t *testing.T) {
+	resultadosSanos := func(nombre string) []models.Anime {
+		return []models.Anime{{ID: "bleach", Title: "Bleach", Provider: nombre}}
 	}
-	fallback := &proveedorFalso{
-		nombre: "animeflv",
-		buscarF: func(context.Context, string) ([]models.Anime, error) {
-			return []models.Anime{{ID: "bleach-sennen", Provider: "animeflv"}}, nil
-		},
+	casos := []struct {
+		nombreCaso string
+		caido      string
+	}{
+		{"jkanime cae, gana animeav1", "jkanime"},
+		{"animeav1 cae, gana jkanime", "animeav1"},
 	}
-	e := nuevoEntorno(t, principal, fallback)
+	for _, c := range casos {
+		t.Run(c.nombreCaso, func(t *testing.T) {
+			sano := "animeav1"
+			if c.caido == sano {
+				sano = "jkanime"
+			}
+			caido := &proveedorFalso{
+				nombre: c.caido,
+				buscarF: func(context.Context, string) ([]models.Anime, error) {
+					return nil, errors.New(c.caido + " caído")
+				},
+			}
+			proveedorSano := &proveedorFalso{
+				nombre: sano,
+				buscarF: func(context.Context, string) ([]models.Anime, error) {
+					return resultadosSanos(sano), nil
+				},
+			}
+			e := nuevoEntorno(t, caido, proveedorSano)
 
-	resultados, err := e.n.buscar(context.Background(), "bleach")
-	if err != nil {
-		t.Fatalf("el fallback debe tapar el fallo del principal: %v", err)
-	}
-	if len(resultados) != 1 || resultados[0].Provider != "animeflv" {
-		t.Fatalf("resultados = %+v", resultados)
+			resultados, err := e.n.buscar(context.Background(), "bleach")
+			if err != nil {
+				t.Fatalf("con un proveedor sano no debe fallar: %v", err)
+			}
+			if len(resultados) != 1 || resultados[0].Provider != sano {
+				t.Fatalf("resultados = %+v; quería los de %s", resultados, sano)
+			}
+			if ops := caido.operaciones(); len(ops) != 1 {
+				t.Errorf("el caído también debe consultarse (búsqueda combinada): ops = %v", ops)
+			}
+		})
 	}
 }
 
-func TestBusquedaAmbosFallanDevuelveErrorEnEspanol(t *testing.T) {
+// TestBusquedaCombinadaAmbosCaídosDevuelveErrorEnEspanol: solo entonces hay
+// error, y menciona a los dos proveedores con sus fallos.
+func TestBusquedaCombinadaAmbosCaídosDevuelveErrorEnEspanol(t *testing.T) {
 	principal := &proveedorFalso{
 		nombre: "jkanime",
 		buscarF: func(context.Context, string) ([]models.Anime, error) {
 			return nil, errors.New("fallo del principal")
 		},
 	}
-	fallback := &proveedorFalso{
-		nombre: "animeflv",
+	segundo := &proveedorFalso{
+		nombre: "animeav1",
 		buscarF: func(context.Context, string) ([]models.Anime, error) {
-			return nil, errors.New("fallo del fallback")
+			return nil, errors.New("fallo del complemento")
 		},
 	}
-	e := nuevoEntorno(t, principal, fallback)
+	e := nuevoEntorno(t, principal, segundo)
 
 	resultados, err := e.n.buscar(context.Background(), "bleach")
 	if err == nil {
@@ -411,17 +442,65 @@ func TestBusquedaAmbosFallanDevuelveErrorEnEspanol(t *testing.T) {
 	if resultados != nil {
 		t.Errorf("resultados = %+v; debía ser nil", resultados)
 	}
-	for _, texto := range []string{"jkanime", "animeflv", "fallo del principal", "fallo del fallback"} {
+	for _, texto := range []string{"jkanime", "animeav1", "fallo del principal", "fallo del complemento"} {
 		if !strings.Contains(err.Error(), texto) {
 			t.Errorf("el error no menciona %q: %v", texto, err)
 		}
 	}
 }
 
-func TestBusquedaSinResultadosNoEsError(t *testing.T) {
+// TestBusquedaCombinadaPropagaElCtxCancelado: el ctx (y su tiempo límite)
+// llega a los dos proveedores; cancelarlo a mitad hace fallar la búsqueda.
+func TestBusquedaCombinadaPropagaElCtxCancelado(t *testing.T) {
+	arrancados := make(chan string, 2)
+	bloqueado := func(nombre string) func(context.Context, string) ([]models.Anime, error) {
+		return func(ctx context.Context, _ string) ([]models.Anime, error) {
+			arrancados <- nombre
+			<-ctx.Done()
+			return nil, ctx.Err()
+		}
+	}
+	e := nuevoEntorno(t,
+		&proveedorFalso{nombre: "jkanime", buscarF: bloqueado("jkanime")},
+		&proveedorFalso{nombre: "animeav1", buscarF: bloqueado("animeav1")},
+	)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	errCh := make(chan error, 1)
+	go func() {
+		_, err := e.n.buscar(ctx, "bleach")
+		errCh <- err
+	}()
+
+	// Solo se cancela cuando los DOS proveedores están ya dentro de Search:
+	// así el ctx que recibe cada uno es el combinado.
+	for i := 0; i < 2; i++ {
+		select {
+		case <-arrancados:
+		case <-time.After(2 * time.Second):
+			t.Fatal("los proveedores no arrancaron: la búsqueda no es paralela")
+		}
+	}
+	cancel()
+
+	select {
+	case err := <-errCh:
+		if err == nil {
+			t.Fatal("con el ctx cancelado la búsqueda debe fallar")
+		}
+		if !errors.Is(err, context.Canceled) {
+			t.Errorf("err = %v; quería el context.Canceled propagado", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("buscar no devolvió tras cancelar el ctx")
+	}
+}
+
+func TestBusquedaCombinadaSinResultadosNoEsError(t *testing.T) {
 	e := nuevoEntorno(t,
 		&proveedorFalso{nombre: "jkanime"},
-		&proveedorFalso{nombre: "animeflv"},
+		&proveedorFalso{nombre: "animeav1"},
 	)
 
 	resultados, err := e.n.buscar(context.Background(), "zzz-no-existe")

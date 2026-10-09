@@ -1,6 +1,6 @@
 # Guía de desarrollo
 
-Aplicación de escritorio **Wails v2** (backend en Go, frontend en **Svelte 5 + TypeScript + Vite**) que hace scraping de **JKAnime** (proveedor principal: búsqueda, detalle, episodios y fuentes de vídeo) y **AnimeFLV** (solo fallback de búsqueda). Los textos de la interfaz, los comentarios del código y esta documentación están en español.
+Aplicación de escritorio **Wails v2** (backend en Go, frontend en **Svelte 5 + TypeScript + Vite**) que hace scraping de **JKAnime** y **AnimeAV1** (ambos proveedores completos: búsqueda, detalle, episodios y fuentes de vídeo) y reproduce HLS/MP4. Los textos de la interfaz, los comentarios del código y esta documentación están en español.
 
 ## Requisitos
 
@@ -51,7 +51,7 @@ internal/models          modelos de dominio (sin dependencias del proyecto)
 internal/scraper         interfaz Provider, registro y errores comunes
 internal/scraper/jkanime            JKAnime: búsqueda, detalle, episodios AJAX, página de episodio
 internal/scraper/jkanime/extractors extractores de vídeo (jkplayer, jk.php, var servers, MediaFire)
-internal/scraper/animeflv           AnimeFLV: solo búsqueda (fallback)
+internal/scraper/animeav1           AnimeAV1 (SvelteKit): __data.json + devalue, lotes de 50, HLS derivado
 internal/stream          proxy local de streaming (127.0.0.1) + reescritura de manifiestos
 internal/cache           caché de detalle/episodios con TTL
 internal/db              historial de visualización (JSON en disco)
@@ -64,6 +64,13 @@ AGENTS.md                guía para agentes de código
 
 Regla de dependencias: `models` no importa nada del proyecto; los extractores no importan `jkanime`; los providers implementan `scraper.Provider` y se registran en `scraper/registry.go`.
 
+## Los dos proveedores
+
+- **JKAnime** (`internal/scraper/jkanime/`): scraping con goquery sobre HTML crudo; episodios por AJAX con cookie de sesión + CSRF; extractores de vídeo (jkplayer, jk.php, var servers, MediaFire).
+- **AnimeAV1** (`internal/scraper/animeav1/`): sitio **SvelteKit SSR** sin cookies ni CSRF. La vía principal es **`GET <ruta>/__data.json`**, JSON en formato *devalue* (referencias por índice; se hidrata con `PageData` + `Unflatten`), no el `<script>` de hidratación. Búsqueda en `/catalogo/__data.json?search=…`, detalle en `/media/<slug>/__data.json` (con todos los episodios embebidos) y fuentes en `/media/<slug>/<n>/__data.json` (campo `embeds`, con idiomas `SUB`/`DUB`). Los episodios se reparten en **lotes de 50** (`tamLote`).
+- La búsqueda combina ambos **en paralelo** (JKAnime primero, timeout de 20 s por consulta) y tolera que uno esté caído.
+- **`Sec-Fetch-Site: same-origin`**: los segmentos HLS de `player.zilla-networks.com` responden **403 sin esa cabecera**. Las fuentes HLS de AnimeAV1 la declaran en `models.VideoSource.Headers` y `stream/reenvio.go` la inyecta desde la sesión del proxy local — nunca viaja en la URL ni cruza el puente de Wails hacia el frontend. El manifiesto se deriva sin petición (`/play/<id>` → `/m3u8/<id>`); `/play/*` jamás se pide.
+
 ## Tests y tags
 
 - **Sin red (por defecto):** `go test -race -count=1 ./...`. Todo corre sin internet (`httptest.Server` y fixtures en `testdata/`).
@@ -73,8 +80,8 @@ Regla de dependencias: `models` no importa nada del proyecto; los extractores no
   docker compose run --rm app go test -tags integration -count=1 ./...
   ```
 
-  Incluyen la búsqueda real de AnimeFLV y JKAnime y el **E2E completo** (`app_e2e_integration_test.go`: búsqueda → detalle con streaming → fuentes → manifiesto por el proxy → historial). Si un dominio cambia o el sitio cae, fallan **a propósito**.
-- El E2E **offline** (`TestE2EFlujoCompletoOffline`, en `app_e2e_test.go`) recorre el mismo flujo contra un sitio falso montado con los fixtures reales, exige que las peticiones sean exactamente las esperadas y que nada salga a la red.
+  Incluyen la búsqueda real de JKAnime y AnimeAV1 y los **E2E completos** (`app_e2e_integration_test.go`: `TestE2EFlujoCompletoRedReal` de JKAnime y `TestE2EAnimeAV1RedReal` de AnimeAV1: búsqueda → detalle con streaming → fuentes → manifiesto y un segmento con `Range` por el proxy → historial). Si un dominio cambia o el sitio cae, fallan **a propósito**.
+- Los E2E **offline** (`TestE2EFlujoCompletoOffline` y `TestE2EAnimeAV1FlujoCompletoOffline`, en `app_e2e_test.go`) recorren el mismo flujo contra un sitio falso montado con los fixtures reales, exigen que las peticiones sean exactamente las esperadas y que nada salga a la red. El de AnimeAV1 demuestra además que el proxy inyecta `Sec-Fetch-Site: same-origin` (segmento por el proxy → 206; directo sin cabecera → 403).
 - **Fixtures:** son la respuesta cruda del servidor, sanitizada (`TOKEN_DE_PRUEBA`, `E_PRUEBA`…), sin cookies ni tokens reales. Cápturalos con `curl.exe` y revísalos antes de subirlos.
 
 ## Regenerar los bindings de Wails
@@ -108,7 +115,7 @@ El ejecutable queda en `build/bin/miapp.exe` (ignorado por git). La compilación
 
 ## Limitaciones conocidas (técnicas)
 
-1. **AnimeFLV es solo búsqueda:** `GetAnimeDetails` devuelve `scraper.ErrNoDetails` y no expone fuentes de vídeo. Se descartó por ahora; hay un posible cambio de proveedor a futuro.
+1. **Algunos servidores son iframes sin resolver:** los embeds de AnimeAV1 que no son el reproductor propio (UPNShare, Voe, Byse, MP4Upload) y los iframes de JKAnime se publican tal cual: se ven, pero no guardan progreso.
 2. **"Continuar" sin marca de tiempo:** `WatchProgress` no guarda cuándo se guardó, así que el botón elige el episodio de mayor número con progreso. Arreglarlo exige un campo de fecha en `internal/models` + `internal/db` + bindings + frontend.
 3. **Proxy no alcanzable desde el navegador del host en Docker** (ver arriba). A propósito: es loopback y con anti-SSRF.
 4. No hay borrado de registros del historial.
@@ -117,7 +124,7 @@ El ejecutable queda en `build/bin/miapp.exe` (ignorado por git). La compilación
 
 - El proxy de streaming solo escucha en `127.0.0.1`, bloquea destinos privados/loopback/link-local por **IP resuelta** (anti-SSRF) y mantiene las cabeceras requeridas (`Referer`, etc.) en la sesión, **nunca** en la URL.
 - Los logs pasan por `internal/logx`: cookies, CSRF, `Authorization`/`Set-Cookie` y **URLs firmadas** (`?e=`, `?st=`, …) salen redactados.
-- `frontend/index.html` declara `<meta name="referrer" content="no-referrer">`: AnimeFLV devuelve 403 en las portadas si se envía `Referer`. No la quites.
+- `frontend/index.html` declara `<meta name="referrer" content="no-referrer">`: algunos orígenes devuelven 403 en las portadas si se envía `Referer` (se mantuvo al retirar AnimeFLV; el CDN de AnimeAV1 no lo exige). No la quites.
 
 ## Publicar una versión (release)
 
@@ -137,4 +144,4 @@ Versionado semántico (`vMAYOR.MENOR.PARCHE`).
 
 ## Trabajo con agentes
 
-El proyecto se construyó con un plan de 29 tareas (`tareas/`) ejecutadas por un agente de código. `AGENTS.md` resume las reglas para agentes, `PROGRESO.md` es la memoria entre sesiones y `docs/firmas/` contiene las firmas reales de cada paquete.
+El proyecto se construyó con un plan de tareas (`tareas/`) ejecutadas por un agente de código: T01–T29 en la v1.0 y T30–T35 (AnimeAV1, v1.1.0) en la rama `feature/animeav1`. `AGENTS.md` resume las reglas para agentes, `PROGRESO.md` es la memoria entre sesiones y `docs/firmas/` contiene las firmas reales de cada paquete.

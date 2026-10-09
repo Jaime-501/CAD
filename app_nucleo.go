@@ -16,18 +16,27 @@ import (
 	"miapp/internal/httpx"
 	"miapp/internal/models"
 	"miapp/internal/scraper"
-	"miapp/internal/scraper/animeflv"
+	"miapp/internal/scraper/animeav1"
 	"miapp/internal/scraper/jkanime"
 	"miapp/internal/scraper/jkanime/extractors"
 	"miapp/internal/stream"
 )
 
 const (
-	// proveedorPrincipal es el sitio que se consulta primero en la búsqueda.
+	// proveedorPrincipal encabeza la búsqueda combinada: sus resultados van
+	// primero en la lista que ve el frontend.
 	proveedorPrincipal = "jkanime"
-	// proveedorFallback solo se usa si el principal falla o no devuelve nada:
-	// AnimeFLV ofrece únicamente búsqueda (sin detalle ni fuentes, T18).
-	proveedorFallback = "animeflv"
+	// proveedorComplemento es el segundo proveedor de la búsqueda combinada
+	// (T34): AnimeAV1 se consulta EN PARALELO con JKAnime y sus resultados
+	// van a continuación. AnimeFLV dejó de registrarse (sigue existiendo
+	// como paquete hasta T35).
+	proveedorComplemento = "animeav1"
+
+	// tiempoLimiteBusqueda acota la búsqueda combinada completa. Cada
+	// proveedor ya va con el timeout por petición de httpx (15 s); este es
+	// la red de seguridad por si alguno se quedara colgado sin llegar a
+	// devolver su error.
+	tiempoLimiteBusqueda = 20 * time.Second
 
 	// ttlCacheDetalle es la vida de cada entrada de la caché local (T21). Es
 	// por deslizamiento: cada lote la renueva, así que una lista larga que
@@ -36,10 +45,11 @@ const (
 )
 
 // ErrDetalleNoDisponible es lo que ve el frontend cuando un proveedor no
-// ofrece página de detalle (scraper.ErrNoDetails de AnimeFLV). Se devuelve
-// como error tipado —no como fallo grave— con este mensaje ya pensado para
-// la UI; el sentinel interno de scraper NO se arrastra, porque Wails entrega
-// al frontend solo el texto y este dice algo útil.
+// ofrece página de detalle (scraper.ErrNoDetails). Se devuelve como error
+// tipado —no como fallo grave— con este mensaje ya pensado para la UI; el
+// sentinel interno de scraper NO se arrastra, porque Wails entrega al
+// frontend solo el texto y este dice algo útil. Ningún proveedor registrado
+// lo devuelve hoy (T34); se conserva para el flujo síncrono y para T35.
 var ErrDetalleNoDisponible = errors.New("Detalle no disponible para este proveedor")
 
 // ErrHistorialNoDisponible es lo que ven SaveProgress/GetProgress cuando no
@@ -150,8 +160,9 @@ func nuevoNucleo(reg RegistroProviders, px ProxyLocal, sel Resolutor, emis Emiso
 }
 
 // nuevoNucleoPorDefecto monta las dependencias reales de la app:
-//   - un único httpx.NewClient para JKAnime y AnimeFLV (mismo cookiejar y
-//     timeout; el jar separa por host, así que no se mezclan sesiones),
+//   - un único httpx.NewClient compartido por JKAnime y AnimeAV1 (mismo
+//     cookiejar y timeout; el jar separa por host, así que no se mezclan
+//     sesiones; AnimeAV1 además no necesita cookies, T31),
 //   - el ExceptionResolver de JKAnime queda compartido por el proceso dentro
 //     del propio JkAnime (la caché del mapa de excepciones es por instancia,
 //     T06: una sola descarga como mucho),
@@ -163,13 +174,16 @@ func nuevoNucleo(reg RegistroProviders, px ProxyLocal, sel Resolutor, emis Emiso
 //     su rutina de limpieza se arranca con arrancar y se para con cerrar,
 //   - el historial de visualización en el directorio por defecto de db
 //     (os.UserConfigDir()/miapp, T22): ahí se abre en arrancar.
+//
+// T34: se registra animeav1 y YA NO animeflv (el paquete sigue intacto hasta
+// T35); la búsqueda consulta jkanime y animeav1 en paralelo.
 func nuevoNucleoPorDefecto() *nucleo {
 	doer := httpx.NewClient(httpx.ClientOptions{})
 
 	reg := scraper.NewRegistry()
 	for _, p := range []scraper.Provider{
 		jkanime.New(doer, "", nil),
-		animeflv.New(doer, ""),
+		animeav1.New(doer, ""),
 	} {
 		if err := reg.Register(p); err != nil {
 			slog.Error("no se pudo registrar un proveedor", "provider", p.Name(), "err", err)
@@ -237,36 +251,68 @@ func (n *nucleo) cerrar() error {
 	return n.proxy.Cerrar()
 }
 
-// buscar resuelve la búsqueda con fallback: JKAnime primero y, si falla o
-// devuelve la lista vacía, AnimeFLV (solo búsqueda). Devuelve error solo si
-// NINGÚN proveedor pudo buscar; si al menos uno respondió y no hubo
-// resultados, devuelve lista vacía sin error.
+// buscar resuelve la búsqueda COMBINADA (T34): JKAnime y AnimeAV1 se
+// consultan EN PARALELO con un tiempo límite (tiempoLimiteBusqueda) sobre el
+// ctx recibido, y los resultados se devuelven JKAnime primero y AnimeAV1
+// después (cada uno ya trae su provider). Se tolera que uno falle: su fallo
+// se loguea con slog.Warn (nunca con URLs firmadas) y sigue habiendo
+// respuesta con lo del resto. Solo es error si fallan TODOS los proveedores
+// registrados; si al menos uno pudo buscar, la lista —aunque venga vacía— no
+// es error. Sin proveedores registrados devuelve lista vacía sin error.
 func (n *nucleo) buscar(ctx context.Context, query string) ([]models.Anime, error) {
-	var fallos []error
-	pudoBuscar := false
+	q := strings.TrimSpace(query)
+	nombres := []string{proveedorPrincipal, proveedorComplemento}
 
-	for _, nombre := range []string{proveedorPrincipal, proveedorFallback} {
+	// Cada proveedor escribe en su propia casilla: los índices no se pisan
+	// y WaitGroup espera a los dos antes de leer.
+	type respuesta struct {
+		resultados []models.Anime
+		err        error
+	}
+	respuestas := make([]respuesta, len(nombres))
+	registrado := make([]bool, len(nombres))
+
+	ctxBusqueda, cancel := context.WithTimeout(ctx, tiempoLimiteBusqueda)
+	defer cancel()
+
+	var wg sync.WaitGroup
+	for i, nombre := range nombres {
 		p, ok := n.registro.Get(nombre)
-		if !ok {
+		if !ok || p == nil {
+			continue // un proveedor no registrado no es un fallo
+		}
+		registrado[i] = true
+		wg.Add(1)
+		go func(i int, p scraper.Provider) {
+			defer wg.Done()
+			resultados, err := p.Search(ctxBusqueda, q)
+			respuestas[i] = respuesta{resultados: resultados, err: err}
+		}(i, p)
+	}
+	wg.Wait()
+
+	var fallos []error
+	salida := make([]models.Anime, 0, len(respuestas))
+	pudoBuscar := false
+	for i, nombre := range nombres {
+		if !registrado[i] {
 			continue
 		}
-		resultados, err := p.Search(ctx, strings.TrimSpace(query))
-		if err != nil {
-			fallos = append(fallos, fmt.Errorf("%s: %w", nombre, err))
-			slog.Warn("la búsqueda falló; se prueba el siguiente proveedor",
-				"provider", nombre, "err", err)
+		r := respuestas[i]
+		if r.err != nil {
+			fallos = append(fallos, fmt.Errorf("%s: %w", nombre, r.err))
+			slog.Warn("la búsqueda de un proveedor falló; se conservan los resultados del resto",
+				"provider", nombre, "err", r.err)
 			continue
-		}
-		if len(resultados) > 0 {
-			return resultados, nil
 		}
 		pudoBuscar = true
+		salida = append(salida, r.resultados...)
 	}
 
 	if pudoBuscar || len(fallos) == 0 {
-		return []models.Anime{}, nil
+		return salida, nil
 	}
-	return nil, fmt.Errorf("no se pudo buscar %q: %w", query, errors.Join(fallos...))
+	return nil, fmt.Errorf("no se pudo buscar %q: %w", q, errors.Join(fallos...))
 }
 
 // detalle devuelve el detalle de un anime y su primera tanda de episodios.

@@ -8,10 +8,9 @@ import (
 )
 
 // TestBusquedaRedReal es el smoke de T20: monta el núcleo con los proveedores
-// REALES (registro jkanime + animeflv) y busca en la red. Comprueba que el
-// registro está bien cableado y que gana el proveedor principal; el fallback
-// de AnimeFLV tiene su propio smoke en internal/scraper/animeflv. No se
-// descarga ningún vídeo (regla 13).
+// REALES (registro jkanime + animeav1, búsqueda combinada desde T34) y busca
+// en la red. Comprueba que el registro está bien cableado y que gana el
+// proveedor principal. No se descarga ningún vídeo (regla 13).
 func TestBusquedaRedReal(t *testing.T) {
 	n := nuevoNucleoPorDefecto()
 

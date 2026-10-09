@@ -9,11 +9,8 @@
   export let puente = true;
 
   const RETRASO_BUSQUEDA = 400;
-  /** AnimeFLV es solo búsqueda (T18): no tiene página de detalle, se decide por proveedor. */
-  const PROVEEDOR_SIN_DETALLE = 'animeflv';
 
   let texto = '';
-  let aviso = '';
   let temporizador: ReturnType<typeof setTimeout> | null = null;
 
   onMount(() => {
@@ -28,7 +25,6 @@
 
   /** Cada pulsación reinicia el *debounce* de ~400 ms. */
   function programar() {
-    aviso = '';
     if (temporizador !== null) clearTimeout(temporizador);
     if (!texto.trim()) {
       temporizador = null;
@@ -44,7 +40,6 @@
 
   /** Enter o botón "Buscar": salta el *debounce*. */
   function buscarAhora() {
-    aviso = '';
     if (temporizador !== null) {
       clearTimeout(temporizador);
       temporizador = null;
@@ -54,11 +49,8 @@
   }
 
   function abrir(anime: models.Anime) {
-    if (anime.provider === PROVEEDOR_SIN_DETALLE) {
-      aviso = 'Detalle no disponible para este proveedor';
-      return;
-    }
-    aviso = '';
+    // Todos los proveedores del registro tienen detalle (T34): toda tarjeta
+    // navega al detalle sin reglas especiales.
     const sel: SeleccionAnime = {
       provider: anime.provider,
       animeID: anime.id,
@@ -83,10 +75,6 @@
       {$searchState.loading ? 'Buscando...' : 'Buscar'}
     </button>
   </div>
-
-  {#if aviso}
-    <p class="aviso">{aviso}</p>
-  {/if}
 
   {#if $searchState.loading}
     <p class="estado">Buscando…</p>
@@ -155,13 +143,6 @@
   .error {
     color: #f87171;
   }
-  .aviso {
-    color: #fbbf24;
-    background: #2a2a35;
-    border-radius: 8px;
-    padding: 10px 14px;
-    margin-bottom: 1rem;
-  }
   .rejilla {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -197,7 +178,8 @@
   }
   .proveedor {
     padding-bottom: 10px;
-    font-size: 11px;
+    font-size: 12px;
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: #4ade80;

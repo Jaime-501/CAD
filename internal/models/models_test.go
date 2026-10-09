@@ -194,6 +194,53 @@ func TestVideoSourceOmiteSubtitlesVacios(t *testing.T) {
 	}
 }
 
+// TestVideoSourceIdioma cubre el campo estructurado Language (T33): las
+// constantes exportadas, la etiqueta exacta del JSON y su omisión cuando la
+// fuente no tiene idioma (JKAnime y cualquier proveedor que no lo declare).
+func TestVideoSourceIdioma(t *testing.T) {
+	if LanguageSub != "SUB" || LanguageDub != "DUB" {
+		t.Errorf("LanguageSub/LanguageDub = %q/%q, quería SUB/DUB", LanguageSub, LanguageDub)
+	}
+
+	con := VideoSource{
+		URL:      "https://player.zilla-networks.com/m3u8/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		Type:     ResourceHLS,
+		Server:   "HLS",
+		Language: LanguageSub,
+		Headers:  map[string]string{"Sec-Fetch-Site": "same-origin"},
+	}
+	var vuelta VideoSource
+	roundTrip(t, &con, &vuelta)
+	if vuelta.Language != LanguageSub {
+		t.Errorf("Language = %q, quería %q", vuelta.Language, LanguageSub)
+	}
+
+	raw, err := json.Marshal(con)
+	if err != nil {
+		t.Fatalf("json.Marshal: %v", err)
+	}
+	// El campo va tras server y con su propia etiqueta: el frontend lo lee
+	// como source.language (por eso T34 debe regenerar wailsjs).
+	if !strings.Contains(string(raw), `"server":"HLS","language":"SUB","headers"`) {
+		t.Errorf("JSON = %s, quería language entre server y headers", raw)
+	}
+
+	// Sin idioma la clave desaparece: la ida y vuelta sigue siendo exacta.
+	sin := VideoSource{URL: "https://cdn.example.test/v.m3u8", Type: ResourceHLS, Server: "jkplayer"}
+	rawSin, err := json.Marshal(sin)
+	if err != nil {
+		t.Fatalf("json.Marshal: %v", err)
+	}
+	if strings.Contains(string(rawSin), "language") {
+		t.Errorf("Language vacío no debería serializarse: %s", rawSin)
+	}
+	var vueltaSin VideoSource
+	roundTrip(t, &sin, &vueltaSin)
+	if vueltaSin.Language != "" {
+		t.Errorf("Language = %q, quería vacío", vueltaSin.Language)
+	}
+}
+
 func TestWatchProgressIdaYVuelta(t *testing.T) {
 	in := WatchProgress{
 		AnimeID:       "bleach",
