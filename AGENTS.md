@@ -2,7 +2,7 @@
 
 Aplicación de escritorio Wails v2 (módulo Go y nombre de la app: `miapp`): Backend en Go + Frontend en Svelte 5 / TypeScript / Vite en `frontend/`. Hace scraping de **JKAnime** y **AnimeAV1** (ambos proveedores completos: búsqueda, detalle, episodios y fuentes) y reproduce HLS/MP4. Los comentarios y los textos de la interfaz están en español — mantén esa coherencia.
 
-**Estado**: proyecto terminado (T1–T35, rama `feature/animeav1`, v1.1.0). Punto de entrada para una persona nueva: `README.md`. Estado de tareas y pendientes de producto: `PROGRESO.md`; decisiones históricas: `docs/BITACORA.md`; reglas de layout: `tareas/00_REGLAS.md`; firmas de API por paquete: `docs/firmas/*.md`. Si el código y la documentación discrepan, **manda el código** y corrige el documento.
+**Estado**: proyecto terminado (T1–T36, v1.1.0 publicada). Punto de entrada para una persona nueva: `README.md`. Estado de tareas y pendientes de producto: `PROGRESO.md`; historiales: `docs/PROGRESO_v1.0.md` (T01–T29 + T30) y `docs/PROGRESO_v1.1.md` (T30–T35, AnimeAV1); decisiones históricas: `docs/BITACORA.md`; reglas de layout: `tareas/00_REGLAS.md`; firmas de API por paquete: `docs/firmas/*.md`. Si el código y la documentación discrepan, **manda el código** y corrige el documento.
 
 ## Comandos
 

@@ -83,10 +83,11 @@ func (a *App) SearchAnime(query string) ([]models.Anime, error) {
 }
 
 // GetAnimeDetails devuelve el detalle y la primera tanda de episodios. Si el
-// provider emite episodios por lotes (jkanime), los siguientes llegan por
-// los eventos "episodes:update" y "episodes:complete". Un proveedor sin
-// detalle (animeflv) devuelve ErrDetalleNoDisponible; un nombre inexistente,
-// un error claro con los proveedores disponibles.
+// provider emite episodios por lotes (jkanime y animeav1), los siguientes
+// llegan por los eventos "episodes:update" y "episodes:complete". Un
+// proveedor sin página de detalle (scraper.ErrNoDetails) devuelve
+// ErrDetalleNoDisponible; un nombre inexistente, un error claro con los
+// proveedores disponibles.
 func (a *App) GetAnimeDetails(provider string, id string) (DetalleResultado, error) {
 	return a.core.detalle(a.contexto(), provider, id)
 }

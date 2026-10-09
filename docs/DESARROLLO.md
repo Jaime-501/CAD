@@ -144,4 +144,4 @@ Versionado semántico (`vMAYOR.MENOR.PARCHE`).
 
 ## Trabajo con agentes
 
-El proyecto se construyó con un plan de tareas (`tareas/`) ejecutadas por un agente de código: T01–T29 en la v1.0 y T30–T35 (AnimeAV1, v1.1.0) en la rama `feature/animeav1`. `AGENTS.md` resume las reglas para agentes, `PROGRESO.md` es la memoria entre sesiones y `docs/firmas/` contiene las firmas reales de cada paquete.
+El proyecto se construyó con un plan de tareas (`tareas/`) ejecutadas por un agente de código: T01–T29 en la v1.0 y T30–T36 (AnimeAV1, v1.1.0; T30–T35 en la rama `feature/animeav1`, ya fusionada en `main`) — T36 fue el cierre documental. `AGENTS.md` resume las reglas para agentes, `PROGRESO.md` es la memoria entre sesiones (los estados históricos, en `docs/PROGRESO_v1.0.md` y `docs/PROGRESO_v1.1.md`) y `docs/firmas/` contiene las firmas reales de cada paquete.

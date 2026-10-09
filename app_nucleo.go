@@ -28,8 +28,8 @@ const (
 	proveedorPrincipal = "jkanime"
 	// proveedorComplemento es el segundo proveedor de la búsqueda combinada
 	// (T34): AnimeAV1 se consulta EN PARALELO con JKAnime y sus resultados
-	// van a continuación. AnimeFLV dejó de registrarse (sigue existiendo
-	// como paquete hasta T35).
+	// van a continuación. AnimeFLV se retiró en T35 (histórico: ya no se
+	// registra).
 	proveedorComplemento = "animeav1"
 
 	// tiempoLimiteBusqueda acota la búsqueda combinada completa. Cada
@@ -49,7 +49,8 @@ const (
 // tipado —no como fallo grave— con este mensaje ya pensado para la UI; el
 // sentinel interno de scraper NO se arrastra, porque Wails entrega al
 // frontend solo el texto y este dice algo útil. Ningún proveedor registrado
-// lo devuelve hoy (T34); se conserva para el flujo síncrono y para T35.
+// lo devuelve hoy (jkanime y animeav1 sí ofrecen detalle); se conserva para
+// el flujo síncrono y para un proveedor futuro que no lo ofrezca.
 var ErrDetalleNoDisponible = errors.New("Detalle no disponible para este proveedor")
 
 // ErrHistorialNoDisponible es lo que ven SaveProgress/GetProgress cuando no
@@ -175,8 +176,8 @@ func nuevoNucleo(reg RegistroProviders, px ProxyLocal, sel Resolutor, emis Emiso
 //   - el historial de visualización en el directorio por defecto de db
 //     (os.UserConfigDir()/miapp, T22): ahí se abre en arrancar.
 //
-// T34: se registra animeav1 y YA NO animeflv (el paquete sigue intacto hasta
-// T35); la búsqueda consulta jkanime y animeav1 en paralelo.
+// Registro: jkanime + animeav1 (AnimeFLV se retiró en T35); la búsqueda
+// consulta los dos en paralelo.
 func nuevoNucleoPorDefecto() *nucleo {
 	doer := httpx.NewClient(httpx.ClientOptions{})
 
@@ -331,8 +332,9 @@ func (n *nucleo) buscar(ctx context.Context, query string) ([]models.Anime, erro
 // provider implementa scraper.EpisodeStreamer se usa ese flujo y los lotes
 // siguientes salen por episodes:update / episodes:complete; si no, se pide el
 // detalle completo de forma síncrona y NO se cachea (solo se cachea el flujo
-// por lotes). scraper.ErrNoDetails (AnimeFLV) no es un fallo grave: se
-// traduce en ErrDetalleNoDisponible y se registra a nivel info.
+// por lotes). scraper.ErrNoDetails no es un fallo grave (ningún proveedor
+// registrado lo devuelve hoy): se traduce en ErrDetalleNoDisponible y se
+// registra a nivel info.
 func (n *nucleo) detalle(ctx context.Context, proveedor, id string) (DetalleResultado, error) {
 	proveedor = strings.TrimSpace(proveedor)
 	p, err := n.proveedor(proveedor)
