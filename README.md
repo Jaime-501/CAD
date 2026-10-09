@@ -13,9 +13,9 @@ Aplicación de escritorio para Windows que te permite **buscar anime, ver la lis
  
 ## Qué puedes hacer
  
-- **Buscar** anime por nombre.
+- **Buscar** anime por nombre (busca a la vez en **JKAnime** y **AnimeAV1**, con los resultados de JKAnime primero).
 - **Ver el detalle y los episodios** de cada serie (la lista aparece poco a poco mientras carga).
-- **Reproducir** el episodio directamente en la app, con selector de servidor/calidad si el episodio tiene varias fuentes, y subtítulos cuando la fuente los incluye.
+- **Reproducir** el episodio directamente en la app, con selector de servidor/calidad e idioma (SUB/DUB) si el episodio tiene varias fuentes, y subtítulos cuando la fuente los incluye.
 - **Retomar donde lo dejaste:** la app recuerda el minuto de cada episodio, marca los vistos y tiene un botón **Continuar**.
 ## Instalación
  
@@ -47,13 +47,13 @@ No hay cuentas ni registro, y la app no envía tus datos a ningún servidor prop
 | **No aparecen resultados** | Prueba con otro nombre o espera un momento: los sitios de origen pueden estar caídos o haber cambiado. |
 | **El episodio no carga** | Elige otro servidor en el selector. Si ninguno funciona, vuelve a intentarlo más tarde. |
 | **Un servidor aparece como "iframe"** | Es un reproductor externo incrustado: funciona, pero **no guarda tu progreso**. |
-| **AnimeFLV no muestra detalle** | Es normal: AnimeFLV solo se usa como respaldo para la búsqueda. |
 | **"Continuar" no abre el último que vi** | Elige el episodio de mayor número con progreso, no el más reciente. Es una limitación conocida. |
  
 ## Limitaciones conocidas
  
 - Solo para **Windows**.
-- **JKAnime** es el proveedor principal. **AnimeFLV** se usa únicamente como respaldo de búsqueda (sin episodios ni vídeo).
+- Hay dos fuentes de contenido: **JKAnime** y **AnimeAV1**, que se buscan a la vez (los resultados de JKAnime van primero). Si uno de los sitios cae, sigue funcionando el otro.
+- Algunos servidores de vídeo son **iframes sin resolver**: se ven, pero no guardan tu progreso.
 - Si un sitio cambia su estructura, la búsqueda o la reproducción pueden dejar de funcionar hasta que se actualice la app.
 - No hay opción para borrar entradas individuales del historial.
 ## Aviso legal

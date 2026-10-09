@@ -49,8 +49,8 @@
   }
 
   function abrir(anime: models.Anime) {
-    // Todos los proveedores del registro tienen detalle (T34): la regla
-    // especial de AnimeFLV desapareció con la búsqueda combinada.
+    // Todos los proveedores del registro tienen detalle (T34): toda tarjeta
+    // navega al detalle sin reglas especiales.
     const sel: SeleccionAnime = {
       provider: anime.provider,
       animeID: anime.id,

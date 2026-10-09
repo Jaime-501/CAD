@@ -1281,7 +1281,7 @@ func TestE2EAnimeAV1FlujoCompletoOffline(t *testing.T) {
 				slug = "bleach"
 			}
 		default:
-			t.Errorf("resultado del proveedor desconido %q", r.Provider)
+			t.Errorf("resultado del proveedor desconocido %q", r.Provider)
 		}
 	}
 	if jk != 10 || av1 != 11 {
