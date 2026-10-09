@@ -59,13 +59,26 @@ type Subtitle struct {
 	Lang string `json:"lang"`
 }
 
+// Idiomas estructurados de una fuente. No es un enum: un proveedor sin
+// idioma (JKAnime) o uno cuyo sitio no lo declara deja Language vacío.
+const (
+	LanguageSub = "SUB"
+	LanguageDub = "DUB"
+)
+
 // VideoSource es una fuente reproducible. Las URLs son temporales:
 // nunca se cachean ni se persisten (regla general 9).
+//
+// Language es el dato estructurado del idioma (SUB/DUB), la fuente de
+// verdad para la interfaz y para cualquier filtro futuro: la etiqueta
+// visible la compone el frontend a partir de Server + Language y nadie
+// debe parsearla (T33).
 type VideoSource struct {
 	URL       string            `json:"url"`
 	Type      ResourceType      `json:"type"`
 	Quality   string            `json:"quality"`
 	Server    string            `json:"server"`
+	Language  string            `json:"language,omitempty"`
 	Headers   map[string]string `json:"headers"`
 	Referer   string            `json:"referer"`
 	Subtitles []Subtitle        `json:"subtitles,omitempty"`

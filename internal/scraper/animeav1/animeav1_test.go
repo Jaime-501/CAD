@@ -8,15 +8,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"reflect"
 	"strings"
 	"sync/atomic"
 	"testing"
 
 	"miapp/internal/httpx"
 	"miapp/internal/logx"
-	"miapp/internal/models"
-	"miapp/internal/scraper"
 )
 
 func TestMain(m *testing.M) {
@@ -358,40 +355,5 @@ func TestSearchCuerpoDemasiadoGrande(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "máximo") {
 		t.Errorf("err = %v, quería el límite de tamaño mencionado", err)
-	}
-}
-
-// TestMetodosPendientes cubre los dos métodos que T31 deja para después:
-// devuelven un error descriptivo (sin panic) y no confundibles con
-// scraper.ErrNoDetails, que es el que usan los proveedores sin detalle.
-func TestMetodosPendientes(t *testing.T) {
-	a := New(nil, "")
-
-	detalle, episodios, err := a.GetAnimeDetails(context.Background(), "bleach")
-	if err == nil {
-		t.Error("GetAnimeDetails debía devolver el error pendiente de T32")
-	}
-	if !strings.Contains(err.Error(), "no implementado todavía: T32") {
-		t.Errorf("err = %v, quería el aviso de T32", err)
-	}
-	if errors.Is(err, scraper.ErrNoDetails) {
-		t.Error("err no debe ser scraper.ErrNoDetails: animeav1 sí ofrecerá detalle")
-	}
-	if episodios != nil {
-		t.Errorf("episodios = %#v, quería nil", episodios)
-	}
-	if !reflect.DeepEqual(detalle, models.AnimeDetail{}) {
-		t.Errorf("detalle = %+v, quería el valor cero", detalle)
-	}
-
-	fuentes, err := a.GetVideoSources(context.Background(), "animeav1:bleach:episode:1", scraper.SourceOpts{})
-	if err == nil {
-		t.Error("GetVideoSources debía devolver el error pendiente de T33")
-	}
-	if !strings.Contains(err.Error(), "no implementado todavía: T33") {
-		t.Errorf("err = %v, quería el aviso de T33", err)
-	}
-	if fuentes != nil {
-		t.Errorf("fuentes = %#v, quería nil", fuentes)
 	}
 }

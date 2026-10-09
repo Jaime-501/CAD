@@ -4,10 +4,11 @@
 // formato devalue; esa es la vía principal de este paquete (T31), más robusta
 // que extraer el literal JavaScript del <script> de hidratación.
 //
-// Alcance de T31: búsqueda (GET /catalogo/__data.json?search=…) y el
-// desempaquetador devalue. El detalle llega en T32 y las fuentes de vídeo en
-// T33; por eso GetAnimeDetails y GetVideoSources devuelven un error
-// descriptivo todavía.
+// Alcance: T31 = búsqueda (GET /catalogo/__data.json?search=…) y el
+// desempaquetador devalue; T32 = detalle y episodios (GET
+// /media/<slug>/__data.json, detail.go y episodes.go); T33 = fuentes de
+// vídeo (GET /media/<slug>/<n>/__data.json, sources.go). El proveedor
+// queda completo: búsqueda, detalle y fuentes.
 package animeav1
 
 import (
@@ -114,19 +115,6 @@ func (a *AnimeAV1) Search(ctx context.Context, query string) ([]models.Anime, er
 	return resultadosAnime(datos)
 }
 
-// GetAnimeDetails se implementa en T32 (detalle de /media/<slug> con los
-// episodios embebidos). Devuelve un error descriptivo, no scraper.ErrNoDetails
-// (el proveedor sí ofrecerá detalle).
-func (a *AnimeAV1) GetAnimeDetails(_ context.Context, id string) (models.AnimeDetail, []models.Episode, error) {
-	return models.AnimeDetail{}, nil, fmt.Errorf("animeav1: no implementado todavía: T32 (detalle de %q)", id)
-}
-
-// GetVideoSources se implementa en T33 (página /media/<slug>/<n>). Devuelve
-// un error descriptivo; opts no llega a usarse mientras no haya extracción.
-func (a *AnimeAV1) GetVideoSources(_ context.Context, episodeID string, _ scraper.SourceOpts) ([]models.VideoSource, error) {
-	return nil, fmt.Errorf("animeav1: no implementado todavía: T33 (fuentes de vídeo de %q)", episodeID)
-}
-
 // resultadosAnime convierte los datos de la página en models.Anime. Cada
 // entrada de results debe ser un objeto con slug y título; las entradas
 // incompletas o de otro tipo se descartan (mismo criterio que JKAnime y
@@ -165,17 +153,24 @@ func resultadosAnime(datos map[string]any) ([]models.Anime, error) {
 // results trae como string ("195"). Un id que no se pueda leer deja la
 // portada vacía en lugar de romper la búsqueda.
 func portada(id any) string {
-	texto := ""
-	switch t := id.(type) {
-	case string:
-		texto = t
-	case float64:
-		texto = strconv.FormatFloat(t, 'f', -1, 64)
-	}
+	texto := idTexto(id)
 	if texto == "" {
 		return ""
 	}
 	return portadaCDN + texto + ".jpg"
+}
+
+// idTexto lee el id del sitio tal como llega en el payload: string en los
+// resultados de búsqueda ("195") y número en el detalle (195). Lo que no
+// sea ni una cosa ni la otra deja la cadena vacía.
+func idTexto(id any) string {
+	switch t := id.(type) {
+	case string:
+		return t
+	case float64:
+		return strconv.FormatFloat(t, 'f', -1, 64)
+	}
+	return ""
 }
 
 // siteURL devuelve la URL base sin barra final; con el valor cero (o en

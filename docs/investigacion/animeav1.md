@@ -374,3 +374,68 @@ fixtures de este informe.
 - No se comprobó la app con el `.exe` ni se reprodujo el HLS de AnimeAV1 end-to-end.
 - No se muestran ni se resuelven Mega/1Fichier/MP4Upload (quedan como iframe).
 - No se probó el comportamiento con VPN/proxy ni la existencia de rate-limit a largo plazo.
+
+## Muestreo T32
+
+Verificación sobre el `__data.json` real del detalle al implementar `GetAnimeDetails`
+(8 fixtures nuevos en `internal/scraper/animeav1/testdata/`, capturados con `curl.exe` +
+`httpx.DefaultUserAgent`; todas las respuestas `200 application/json`, sin cookies, sin
+CSRF, sin rate-limit y con escaneo de tokens → **0 coincidencias**).
+
+**`status` (confirmado contra el HTML de la propia ficha)**
+
+| `media.status` | Texto que pinta la página |
+|---|---|
+| `0` | Finalizado (`ajin-ova`, `gintama-season-1`, `girls-band-cry-movie`) |
+| `1` | **Próximamente** (`one-piece`) |
+| `2` | En emisión (`battle-spirits-re-zekkai-no-kuu`) |
+
+Cualquier otro número, fracción o `null` no se encuentra en las muestras → "Desconocido".
+
+**Tipos y variantes reales de `category.slug`**
+
+- `tv-anime` (Bleach, One Piece, Gintama), `ova` (Ajin OVA,
+  `one-piece-film-strong-world-episode-0`), `especial` (`boku-no-hero-academia-more`,
+  1 episodio), `pelicula`.
+- **Películas de más de un episodio**: `girls-band-cry-movie` declara `episodesCount=2`
+  → el id `animeav1:<slug>:movie` (sin número) no sirve ahí; con 1 episodio es movie,
+  con 2+ son episodios normales.
+- Un slug que acaba en `episode-0` **no** es el episodio 0: su par es `{number: 1}`.
+  No se encontró ningún `number: 0` real, ni decimales, ni `relativeNumber`/`season`
+  (siguen viniendo `null`).
+
+**Numeración con huecos (riesgo 5 del informe, parcialmente cerrado)**
+
+- `gintama-season-1`: `episodesCount = 201` pero la lista trae **200** pares y salta del
+  1 al 3 (no existe el 2), terminando en el 201 → `TotalEpisodes` sale del contador del
+  sitio y la lista manda para los episodios (los tests lo cubren).
+- No se vieron numeraciones duplicadas dentro de una misma lista.
+
+**Esquema del detalle (corrige la nota de T31)**
+
+- `media.episodes[i]` es el **objeto** `{"id":n,"number":n}` (referencias por índice en el
+  array plano), **no** el array `[id, n]` que decía la nota inicial de `docs/firmas/animeav1.md`.
+- `media.id` es **numérico** en el detalle (string en la búsqueda): de ahí salen la
+  portada `covers/<id>.jpg` y la miniatura `screenshots/<id>/<n>.jpg`.
+- `episodesCount` y `len(episodes)` **no siempre coinciden** (Gintama) → el campo del sitio
+  es el total de la ficha y la lista es lo que se reproduce.
+- Slug inexistente: el sitio contesta **HTTP 200** con `{"type":"error","error":{…},
+  "status":404}` en el `__data.json` (no un 404 real) → se traduce al error tipado de
+  `httpx.ErrNotFound`.
+
+**`aka` (títulos alternativos)**
+
+Mapa **por locale → cadena** (no lista), con claves `ja-jp` siempre presente y `en-us`
+cuando el sitio lo trae; no se observó `es-419` en las muestras de detalle (T30 lo vio en
+la búsqueda). Ejemplos reales:
+
+| fixture | `aka` |
+|---|---|
+| `detail_data.json` (Bleach) | `{"ja-jp": "BLEACH - ブリーチ -"}` |
+| `detail_one-piece_data.json` | `{"ja-jp": "ONE PIECE"}` |
+| `detail_movie_data.json` | `{"en-us": "Bleach the Movie: Memories of Nobody", "ja-jp": "劇場版 BLEACH MEMORIES OF NOBODY"}` |
+| `detail_ajin-ova_data.json` | `{"ja-jp": "亜人"}` |
+
+`models.AnimeDetail` **no tiene campo para alias** → se descarta por ahora (la tarea manda
+usarlo solo si el modelo tiene dónde); si en el futuro se añade, la fuente ya está aquí.
+
