@@ -3,9 +3,11 @@
   import { get } from 'svelte/store';
   import type { models } from '../wailsjs/go/models';
   import { getProgress } from './api';
+  import { etiquetaTipo } from './etiquetas';
   import {
     currentAnimeID,
     currentDetail,
+    currentProvider,
     episodes,
     episodesComplete,
     episodesError,
@@ -29,9 +31,15 @@
     // Vuelta desde el reproductor: el detalle y los episodios siguen en los
     // stores, se conservan tal cual (y con ellos la lista y su scroll); solo
     // se refresca el historial, que puede haber cambiado en el reproductor.
-    if (get(currentAnimeID) === sel.animeID && get(currentDetail)) {
+    // El slug NO identifica al anime (T34): "bleach" es jkanime y animeav1,
+    // así que hace falta coincidir también el proveedor.
+    if (
+      get(currentAnimeID) === sel.animeID &&
+      get(currentProvider) === sel.provider &&
+      get(currentDetail)
+    ) {
       cargando = false;
-      refrescarProgreso(sel.animeID);
+      refrescarProgreso(sel.animeID, sel.provider);
       return;
     }
     openAnime(sel.provider, sel.animeID)
@@ -44,11 +52,13 @@
   });
 
   /** Recarga `progressMap` sin vaciar la lista (mismo criterio de descarte que `openAnime`). */
-  async function refrescarProgreso(animeID: string): Promise<void> {
+  async function refrescarProgreso(animeID: string, proveedor: string): Promise<void> {
     try {
       const historial = await getProgress(animeID);
-      if (get(currentAnimeID) !== animeID) return;
-      progressMap.set(progressToMap(historial));
+      if (get(currentAnimeID) !== animeID || get(currentProvider) !== proveedor) return;
+      // Solo el progreso del proveedor abierto: el slug puede ser compartido
+      // y el historial trae registros de todos (T34).
+      progressMap.set(progressToMap(historial, proveedor));
     } catch (e) {
       console.warn('[VistaDetalle] historial no disponible:', String(e));
     }
@@ -57,6 +67,9 @@
   // Los episodios llegan deduplicados por T24 (y con lotes que pueden llegar
   // desordenados o antes de resolver la llamada): aquí solo se ordenan.
   $: episodios = [...$episodes].sort((a, b) => a.number - b.number || a.id.localeCompare(b.id));
+
+  /** Tipo del detalle en texto amable (T34): `tv-anime` → `TV`; vacío si no hay. */
+  $: tipoEtiqueta = etiquetaTipo($currentDetail?.type ?? '');
 
   // "Continuar": el episodio de mayor número con progreso; si ya está visto,
   // el siguiente de la lista (si existe).
@@ -114,7 +127,7 @@
       <div class="datos">
         <p class="linea">
           {$currentDetail.provider}
-          {#if $currentDetail.type !== ''}· {$currentDetail.type}{/if}
+          {#if tipoEtiqueta !== ''}· {tipoEtiqueta}{/if}
           {#if $currentDetail.status !== ''}· {$currentDetail.status}{/if}
           · {$currentDetail.total_episodes}
           {$currentDetail.total_episodes === 1 ? 'episodio' : 'episodios'}

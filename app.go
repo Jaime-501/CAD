@@ -74,8 +74,9 @@ func (a *App) contexto() context.Context {
 	return a.ctx
 }
 
-// SearchAnime busca anime y conserva la firma que ya usa App.svelte:
-// JKAnime primero y, si falla o no devuelve nada, AnimeFLV (solo búsqueda).
+// SearchAnime busca anime y conserva la firma que ya usa App.svelte: la
+// búsqueda es COMBINADA (T34) —JKAnime y AnimeAV1 en paralelo, con los
+// resultados del primero por delante— y solo falla si fallan los dos.
 // No hay método Search: no cambies este nombre sin avisar a T25.
 func (a *App) SearchAnime(query string) ([]models.Anime, error) {
 	return a.core.buscar(a.contexto(), query)

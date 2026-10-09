@@ -122,6 +122,7 @@ export namespace models {
 	    type: string;
 	    quality: string;
 	    server: string;
+	    language?: string;
 	    headers: Record<string, string>;
 	    referer: string;
 	    subtitles?: Subtitle[];
@@ -136,6 +137,7 @@ export namespace models {
 	        this.type = source["type"];
 	        this.quality = source["quality"];
 	        this.server = source["server"];
+	        this.language = source["language"];
 	        this.headers = source["headers"];
 	        this.referer = source["referer"];
 	        this.subtitles = this.convertValues(source["subtitles"], Subtitle);

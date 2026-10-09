@@ -5,6 +5,7 @@
   import type { models } from '../wailsjs/go/models';
   import { getProgress, getVideoSources, saveProgress } from './api';
   import type { VideoSourceView } from './api';
+  import type { FiltroIdioma } from './etiquetas';
   import { progressMap } from './stores';
   import { atras, seleccion, type SeleccionAnime } from './views';
   import SelectorFuente from './SelectorFuente.svelte';
@@ -18,6 +19,13 @@
   /** Fuentes tal y como las devuelve el backend: la primera es la preferida. */
   let fuentes: VideoSourceView[] = [];
   let indice = 0;
+  /**
+   * Filtro visual de idioma del selector (T34): `null` = sin filtro, que es
+   * lo que hay hoy (se ven SUB y DUB por igual). Cambiar este valor a
+   * `'SUB'`/`'DUB'` activa el filtro sin tocar nada más (la lógica vive en
+   * `fuentesVisibles`).
+   */
+  let filtroIdioma: FiltroIdioma = null;
   /** Fuentes ya probadas: índice de la siguiente a intentar tras un fallo fatal. */
   let intentos = 0;
   let modo: 'nada' | 'video' | 'iframe' = 'nada';
@@ -212,9 +220,19 @@
     ocupado = false;
   }
 
+  /**
+   * Cambio manual de fuente (p. ej. SUB → DUB): se guarda la posición ANTES
+   * de soltar el `<video>`, y al cargar los metadatos de la nueva fuente
+   * `alMetadatos` la restaura, así que se reanuda en el mismo segundo.
+   * Límites: si la fuente nueva es un iframe no hay metadatos (seguirá en la
+   * posición guardada al volver a un vídeo), y si el episodio ya está visto
+   * arranca en cero.
+   */
   function elegirFuente(nuevo: number): void {
     if (ocupado || cargando) return;
     if (nuevo < 0 || nuevo >= fuentes.length) return;
+    if (nuevo === indice) return;
+    guardarProgreso(true);
     error = '';
     indice = nuevo;
     if (intentos <= nuevo) intentos = nuevo + 1;
@@ -233,7 +251,12 @@
     void fallarFuente('el navegador no pudo cargar el recurso');
   }
 
-  /** Restaura la posición guardada cuando el recurso ya tiene metadatos. */
+  /**
+   * Restaura la posición guardada cuando el recurso ya tiene metadatos.
+   * Vale tanto al abrir como al cambiar de fuente (`elegirFuente` guarda
+   * justo antes): si la nueva fuente no llega a metadatos (iframe, error de
+   * red) se queda en 0 y la posición sigue guardada para el próximo intento.
+   */
   function alMetadatos(): void {
     const v = videoEl;
     const p = progresoPrevio;
@@ -389,7 +412,7 @@
   {/if}
 
   {#if fuenteActual}
-    <SelectorFuente {fuentes} actual={indice} elegir={elegirFuente} />
+    <SelectorFuente {fuentes} filtro={filtroIdioma} actual={indice} elegir={elegirFuente} />
   {/if}
 </main>
 

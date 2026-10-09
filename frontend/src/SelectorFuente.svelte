@@ -1,37 +1,38 @@
 <script lang="ts">
   import type { VideoSourceView } from './api';
+  import { etiquetaFuente, fuentesVisibles, type FiltroIdioma } from './etiquetas';
 
   /**
-   * Selector manual de servidor/calidad (T27): lista TODAS las fuentes tal
-   * como las devuelve `getVideoSources` (la primera es la preferida) y marca
-   * la que se está usando. El nombre sale del servidor real del extractor y,
-   * si lo hay, de la calidad; sin servidor se usa el tipo de recurso.
+   * Selector manual de servidor/idioma/calidad (T27/T34): lista TODAS las
+   * fuentes tal como las devuelve `getVideoSources` (la primera es la
+   * preferida) y marca la que se está usando. Cada botón es texto
+   * (`Servidor · Idioma · Calidad`, ver `etiquetaFuente`), nunca solo color.
+   *
+   * `filtro` queda a `null` (sin filtro, SUB y DUB a la vista) hasta que haya
+   * un control de idioma: cambiarlo filtra sin tocar el resto.
    */
   export let fuentes: VideoSourceView[] = [];
+  export let filtro: FiltroIdioma = null;
   export let actual = 0;
+  /** Recibe el índice en la lista COMPLETA, aunque se muestre filtrada. */
   export let elegir: (indice: number) => void;
 
-  function etiqueta(f: VideoSourceView): string {
-    const tipo =
-      f.type === 'hls'
-        ? 'HLS'
-        : f.type === 'mp4'
-          ? 'MP4'
-          : f.type === 'iframe'
-            ? 'Iframe'
-            : 'Fuente';
-    const servidor = f.server.trim() !== '' ? f.server.trim() : tipo;
-    const calidad = f.quality.trim();
-    return calidad !== '' ? `${servidor} · ${calidad}` : servidor;
-  }
+  $: visibles = fuentesVisibles(fuentes, filtro).map((f) => ({
+    fuente: f,
+    indice: fuentes.indexOf(f),
+  }));
 </script>
 
 <div class="selector">
-  <span class="titulo">Servidor / calidad</span>
+  <span class="titulo">Servidor · Idioma</span>
   <div class="botones">
-    {#each fuentes as fuente, i}
-      <button type="button" class:activa={i === actual} on:click={() => elegir(i)}>
-        {etiqueta(fuente)}
+    {#each visibles as fila (fila.indice)}
+      <button
+        type="button"
+        class:activa={fila.indice === actual}
+        on:click={() => elegir(fila.indice)}
+      >
+        {etiquetaFuente(fila.fuente)}
       </button>
     {/each}
   </div>
