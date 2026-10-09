@@ -6,8 +6,8 @@
 
 **Bloques de este archivo y tarea que los creó:**
 
-- `### T22 — internal/db` → creado por **T22** (Persistencia del historial).
-- `### T22 — integración en el núcleo` → creado por **T22** (documentada también en `docs/firmas/app.md`).
+- `### T22 — internal/db` → creado por **T22** (Persistencia del historial); corregido en **T38** (contrato T37 de `Open(dir)`: `dir == ""` ⇒ `ErrDirectorioVacio`, sin `rutaPorDefecto`).
+- `### T22 — integración en el núcleo` → creado por **T22** (documentada también en `docs/firmas/app.md`); actualizado en **T38** (el núcleo vive desde T37 en `internal/app/nucleo.go`, `package app`).
 
 ---
 
@@ -17,7 +17,8 @@ Historial de visualización persistido en un archivo **JSON** dentro de un direc
 
 - `const UmbralIsWatched = 0.90` — umbral del criterio "visto": `CurrentTime/TotalDuration >= 0.90`. **Único punto donde se decide** (constante configurable en el código).
 - `var ErrCerrado = errors.New("el historial de visualización está cerrado")` — para `errors.Is`; lo devuelven `SaveProgress`/`GetProgress` después de `Close`.
-- `func Open(dir string) (*DB, error)` — **entregable de T22**. Crea el directorio si falta (`MkdirAll`). **`dir == ""` ⇒ directorio por defecto: `os.UserConfigDir()/miapp`** (la app production pasa vacío; los tests inyectan `t.TempDir()`). Carga el archivo `historial.json` del directorio:
+- `var ErrDirectorioVacio = errors.New("el historial necesita un directorio no vacío")` — lo que devuelve `Open` con `dir == ""` (símbolo nuevo en **T37**: este paquete **no** decide rutas — P3; la ruta por defecto la calcula el llamador).
+- `func Open(dir string) (*DB, error)` — **entregable de T22** (contrato **T37**: el directorio lo elige quien llama). Crea el directorio si falta (`MkdirAll`). **`dir == ""` ⇒ `ErrDirectorioVacio`** (no hay directorio por defecto: la app production pasa `os.UserConfigDir()/miapp`, calculado en `app.go`; los tests inyectan `t.TempDir()`). Carga el archivo `historial.json` del directorio:
   - no existe (primera ejecución) o **vacío** ⇒ almacén vacío, **sin `.bak`**;
   - **no parseable como JSON** ⇒ se renombra a `historial.json.bak` (sustituye a un `.bak` previo) y se empieza **vacío sin devolver error** (un corrupto nunca hace fallar el arranque); si el renombrado falla, solo `slog.Warn`;
   - error de E/S real (permisos, ruta inaccesible) ⇒ sí devuelve error.
@@ -39,21 +40,21 @@ Historial de visualización persistido en un archivo **JSON** dentro de un direc
 - **`IsWatched`**: `esVisto(current, total)` = `total > 0 && current/total >= UmbralIsWatched`. `TotalDuration <= 0` ⇒ **nunca** visto. `NaN`/`±Inf` (el `<video>` los produce; JSON no los admite) se sanean a `0` antes de guardar.
 - **No hay `time.Sleep`, goroutines ni reloj**: los tests usan `t.TempDir()` y cierres explícitos.
 
-**Tests** (`internal/db/db_test.go`, 13 tests con subtests, sin red; logs descartados con `TestMain`): guardar/recibir con orden y filtros · actualizar sin duplicar ni mover · copia devuelta · sin identificadores falla · umbral de `IsWatched` (7 subtests: justo en el umbral, por debajo, completado, sin empezar, `TotalDuration` 0/negativa, `CurrentTime` negativo) · `esVisto` con el umbral (`Nextafter`) · `NaN`/`Inf` · **corrupto ⇒ `.bak` con la basura + historial nuevo** · inexistente/vacío sin `.bak` · **persistencia tras reabrir** · **escrituras concurrentes** (8 goroutines × 25 guardadas + 4 peleando por el mismo episodio + lectoras, y relectura desde disco) · `Close` idempotente y bloqueante · ruta por defecto.
+**Tests** (`internal/db/db_test.go`, 13 tests con subtests, sin red; logs descartados con `TestMain`): guardar/recibir con orden y filtros · actualizar sin duplicar ni mover · copia devuelta · sin identificadores falla · umbral de `IsWatched` (7 subtests: justo en el umbral, por debajo, completado, sin empezar, `TotalDuration` 0/negativa, `CurrentTime` negativo) · `esVisto` con el umbral (`Nextafter`) · `NaN`/`Inf` · **corrupto ⇒ `.bak` con la basura + historial nuevo** · inexistente/vacío sin `.bak` · **persistencia tras reabrir** · **escrituras concurrentes** (8 goroutines × 25 guardadas + 4 peleando por el mismo episodio + lectoras, y relectura desde disco) · `Close` idempotente y bloqueante · `Open` con `dir == ""` ⇒ `ErrDirectorioVacio` (`TestOpenConDirectorioVacioFalla`, desde T37).
 
 ---
 
 ### T22 — integración en el núcleo
 
-(`app_nucleo.go` + `app.go`; el detalle de los métodos Wails está en `docs/firmas/app.md`.)
+(Actualizado en **T38**: desde **T37** el núcleo vive en `internal/app/nucleo.go` (`package app`); los nombres exportados de abajo son los actuales. El detalle de los métodos Wails está en `docs/firmas/app.md`, cuyo bloque **T37** manda para el estado actual del núcleo.)
 
-- `ErrHistorialNoDisponible = errors.New("El historial de visualización no está disponible")` — error tipado con mensaje para la UI (mismo criterio que `ErrDetalleNoDisponible`). Aparece cuando **no hay almacén abierto**: antes de `arrancar`, o si su apertura falló.
-- `type nucleo` gana dos campos: **`rutaHistorial string`** (directorio inyectado; `""` = el por defecto de `db`) y **`historial *db.DB`** (nil hasta abrirse).
-- `func nuevoNucleo(reg, px, sel, emis, c *cache.Cache, rutaHistorial string) *nucleo` — **6º parámetro nuevo** (los tests pasan `t.TempDir()`); `nuevoNucleoPorDefecto()` pasa `""` (→ `os.UserConfigDir()/miapp`).
-- `func (n *nucleo) arrancar(emis Emisor) error` — además de emisor, caché y proxy, **abre el historial**. Si `db.Open` falla **NO se devuelve error**: solo `slog.Warn("la app sigue sin historial de visualización")` y la app continúa sin historial (el proxy y la reproducción no dependen de él).
-- `func (n *nucleo) cerrar() error` — además de lo de T21, **cierra el historial** (idempotente). **No borra el puntero**: tras el shutdown, `SaveProgress`/`GetProgress` devuelven `db.ErrCerrado` (no hay carrera con un `arrancar` posterior).
-- `func (n *nucleo) guardarProgreso(progress models.WatchProgress) error` / `func (n *nucleo) verProgreso(animeID string) ([]models.WatchProgress, error)` — toman el almacén con `historialAbierto()` (mutex) y delegan; sin almacén ⇒ `ErrHistorialNoDisponible`.
-- `func (n *nucleo) historialAbierto() *db.DB` — lectura del puntero bajo `n.mu`.
+- `app.ErrHistorialNoDisponible = errors.New("El historial de visualización no está disponible")` — error tipado con mensaje para la UI (mismo criterio que `ErrDetalleNoDisponible`). Aparece cuando **no hay almacén abierto**: antes de `Arrancar`, o si su apertura falló.
+- `type Nucleo` gana dos campos: **`rutaHistorial string`** (directorio inyectado por el llamador; **vacío no es un valor especial** desde T37: `db.Open` devuelve `ErrDirectorioVacio`) y **`historial *db.DB`** (nil hasta abrirse).
+- `func NuevoNucleo(reg RegistroProviders, px ProxyLocal, sel Resolutor, emis Emisor, c *cache.Cache, rutaHistorial string) *Nucleo` — el **6º argumento** es el directorio (los tests pasan `t.TempDir()`); `NuevoNucleoPorDefecto(rutaHistorial)` monta el resto con las dependencias reales y recibe el mismo directorio (`app.go` calcula `os.UserConfigDir()/miapp`).
+- `func (n *Nucleo) Arrancar(emis Emisor) error` — además de emisor, caché y proxy, **abre el historial**. Si `db.Open` falla **NO se devuelve error**: solo `slog.Warn("la app sigue sin historial de visualización")` y la app continúa sin historial (el proxy y la reproducción no dependen de él).
+- `func (n *Nucleo) Cerrar() error` — además de lo de T21, **cierra el historial** (idempotente). **No borra el puntero**: tras el shutdown, `GuardarProgreso`/`VerProgreso` devuelven `db.ErrCerrado` (no hay carrera con un `Arrancar` posterior).
+- `func (n *Nucleo) GuardarProgreso(progress models.WatchProgress) error` / `func (n *Nucleo) VerProgreso(animeID string) ([]models.WatchProgress, error)` — toman el almacén con `historialAbierto()` (mutex) y delegan; sin almacén ⇒ `ErrHistorialNoDisponible`.
+- `func (n *Nucleo) historialAbierto() *db.DB` — lectura del puntero bajo `n.mu`.
 - `app.go` solo delega: **`func (a *App) SaveProgress(progress models.WatchProgress) error`** (un único retorno: `binding.BoundMethod.Call` admite 1 o 2) y **`func (a *App) GetProgress(animeID string) ([]models.WatchProgress, error)`**.
 
-**Tests** (`app_nucleo_historial_test.go`, 3 tests, sin red): abrir en `arrancar` + guardar/leer + cerrar y relectura desde disco con otro `db.Open` · sin arrancar ⇒ `ErrHistorialNoDisponible` con su mensaje de UI · ruta inaccesible ⇒ `arrancar` sigue funcionando (proxy escucha) y el historial queda nil.
+**Tests** (`internal/app/app_nucleo_historial_test.go`, 3 tests, sin red): abrir en `Arrancar` + guardar/leer + cerrar y relectura desde disco con otro `db.Open` · sin arrancar ⇒ `ErrHistorialNoDisponible` con su mensaje de UI · ruta inaccesible ⇒ `Arrancar` sigue funcionando (proxy escucha) y el historial queda nil.

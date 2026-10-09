@@ -104,8 +104,9 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha y verificada
 | [x] | T35 | E2E de AnimeAV1, retirada de AnimeFLV y release v1.1.0 | T34 |
 | [x] | T36 | Cierre de la v1.1.0 y limpieza de documentación y comentarios | T35 |
 | [x] | T37 | Preparación para Android (refactor sin cambio de comportamiento) 🔒 | T36 |
+| [x] | T38 | Cierre documental de T37 | T37 |
 
-T01–T29 = v1.0 (`docs/PROGRESO_v1.0.md`) · T30–T35 = v1.1.0 AnimeAV1 (`docs/PROGRESO_v1.1.md`) · T36 = cierre documental de la v1.1.0.
+T01–T29 = v1.0 (`docs/PROGRESO_v1.0.md`) · T30–T35 = v1.1.0 AnimeAV1 (`docs/PROGRESO_v1.1.md`) · T36 = cierre documental de la v1.1.0 · T37 = portabilidad Android · T38 = cierre documental de T37.
 
 ## Auditoría de portabilidad (T37)
 
@@ -192,15 +193,30 @@ T01–T29 = v1.0 (`docs/PROGRESO_v1.0.md`) · T30–T35 = v1.1.0 AnimeAV1 (`docs
 - **Normalización LF** de `app.go`/`internal/app/nucleo.go` (el CRLF fantasma que ya señaló T36): `gofmt -l .` queda limpio, pero el diff de esos dos archivos muestra las líneas completas.
 - **`db.ErrDirectorioVacio`** es un símbolo nuevo exportado (no es de la ficha, pero la firma `Open("")` lo exige para no devolver un error anónimo).
 
+---
+
+## T38 — cierre documental de T37
+
+Solo `.md`, sin tocar código. Contraste con `go doc ./internal/db`, `go doc ./internal/cache` y `go doc -all ./internal/app`:
+
+- **`docs/firmas/db.md`**: `Open(dir)` ya **no** tiene directorio por defecto — con `dir == ""` devuelve **`db.ErrDirectorioVacio`** (símbolo nuevo de T37); añadido `ErrDirectorioVacio` a las firmas del paquete y corregido el test de "ruta por defecto" → `TestOpenConDirectorioVacioFalla` (13 tests, igual que antes). Bloque de integración reescrito al núcleo actual: `internal/app/nucleo.go` (`package app`), `type Nucleo`, `NuevoNucleo(reg, px, sel, emis, c, rutaHistorial)`, `NuevoNucleoPorDefecto(rutaHistorial)`, métodos exportados `Arrancar`/`Cerrar`/`GuardarProgreso`/`VerProgreso` y tests en `internal/app/`.
+- **`docs/firmas/cache.md`**: el bloque de paquete **ya coincidía** con `go doc ./internal/cache` (sin cambios); corregidas las referencias al núcleo (título, nota de bloques, ruta `app_nucleo.go` → `internal/app/nucleo.go`, `nuevoNucleo` → `NuevoNucleo` con el 6º argumento de T22, nombres exportados de los métodos y ruta de los tests). `nuevoEntornoConCache` es helper de test, no firma: se conserva tal cual.
+- **`README.md`, `AGENTS.md`, `docs/DESARROLLO.md`, `tareas/00_REGLAS.md`**: 0 referencias obsoletas a `app_nucleo.go` ni al núcleo en `package main` (los "package main" que aparecen son el `DetalleResultado` de `app.go` y la regla P1, ambos vigentes). **No se tocaron.**
+- **`docs/firmas/app.md`**: **fuera de "Puedes tocar"**; sus bloques T20–T34 ya llevan la nota de que el bloque **T37** manda, así que no desinforman. No se tocó.
+- **Identificadores en minúscula en "Desviaciones…"**: `nucleo.fuentes`→`Nucleo.Fuentes`, `nuevoNucleoPorDefecto()`→`NuevoNucleoPorDefecto(dir)`, `nucleo.buscar`→`Nucleo.Buscar` (discrepancia real con el código, en archivo tocable).
+- Sin desviaciones de alcance: ningún archivo tocado fuera de la lista.
+
+**Reporte (regla 15, NO tocado por estar fuera del alcance de T38):** `tareas/00_REGLAS.md` → el diagrama de layout sigue listando **`animeflv/ # paquete animeflv (T18)`** (línea 29) y la regla de dependencias no menciona `scraper/animeav1`; el paquete se retiró en T35. Cambio propuesto: quitar esa línea del árbol y añadir `animeav1` a la dependencia `scraper → internal/app`. Lo dejo para una tarea con `00_REGLAS.md` en "Puedes tocar" con ese objetivo explícito.
+
 
 ## Desviaciones que afectan a tareas futuras (resumen)
 
 > Solo lo que sigue vigente; el texto completo (por tarea) está en `docs/PROGRESO_v1.0.md` (T01–T29) y `docs/PROGRESO_v1.1.md` (T30–T35).
 
 - **Modelos (T03)**: `ResourceType` en **minúsculas** (`hls`, `mp4`, `iframe`); `omitempty` solo en `VideoSource.Subtitles`; `Headers`/`Referer` vacíos serializan `null`/`""`. Cualquier fuente nueva debe emitir esos strings.
-- **Normalización y selección (T16/T17)**: `Normalize` corre **dentro** de `Resolver.Resolve` (dedup por recurso sin query pero con fragmento; preserva `Referer`/`Headers`/`Subtitles`) y `SelectBestSource` jerarquiza **HLS > MP4 > iframe > `Type` vacío**, desempate por `Quality` y gana la primera. Consumidor real: `nucleo.fuentes` (mejor primero).
+- **Normalización y selección (T16/T17)**: `Normalize` corre **dentro** de `Resolver.Resolve` (dedup por recurso sin query pero con fragmento; preserva `Referer`/`Headers`/`Subtitles`) y `SelectBestSource` jerarquiza **HLS > MP4 > iframe > `Type` vacío**, desempate por `Quality` y gana la primera. Consumidor real: `Nucleo.Fuentes` (mejor primero; nombre desde T37).
 - **Proxy (T19/T20/T29)**: `NewProxy(nil)` con anti-SSRF, `Register` **solo** con `Type` `hls|mp4` y **sin** `Referer`/`Headers` hacia el frontend (viven en la sesión); `stream.esManifiesto` detecta el manifiesto por el **cuerpo**, no por la extensión. `Sec-Fetch-Site: same-origin` (HLS de AnimeAV1) se declara en `VideoSource.Headers` y `stream/reenvio.go` la inyecta — **nunca** debe limpiarse `Headers` en `Register` (403 en los segmentos).
-- **Registro y búsqueda (T20/T34/T35)**: `nuevoNucleoPorDefecto()` registra **`jkanime` + `animeav1`** y `nucleo.buscar` los consulta **en paralelo** (timeout 20 s, salida JKAnime primero; error solo si fallan todos). `animeflv` **ya no existe** (retirado en T35); `scraper.ErrNoDetails` → `ErrDetalleNoDisponible` se conserva como flujo genérico. El string `"animeflv"` en algunos tests es un provider falso arbitrario, sigue siendo válido.
+- **Registro y búsqueda (T20/T34/T35)**: `NuevoNucleoPorDefecto(dir)` registra **`jkanime` + `animeav1`** y `Nucleo.Buscar` los consulta **en paralelo** (timeout 20 s, salida JKAnime primero; error solo si fallan todos; nombres desde T37). `animeflv` **ya no existe** (retirado en T35); `scraper.ErrNoDetails` → `ErrDetalleNoDisponible` se conserva como flujo genérico. El string `"animeflv"` en algunos tests es un provider falso arbitrario, sigue siendo válido.
 - **Caché (T21)**: detalle/episodios en memoria con TTL de **10 min**; `GetVideoSources` **nunca** se cachea (regla 9) y `noCache` solo fuerza repetir la extracción.
 - **AnimeAV1 (T31–T33)**: vía principal **`GET <ruta>/__data.json`** (devalue: `PageData` + `Unflatten`), `models.Anime.ID` = slug, **lotes de 50** (`tamLote`), dedup de fuentes por **recurso base + idioma** (SUB y DUB son fuentes distintas), HLS derivado **sin petición** (`/play/<32hex>` → `/m3u8/<32hex>`, `/play/*` nunca se pide) con `Type: "hls"` y sus `Headers`; los embeds ajenos (UPNShare/Voe/Byse/MP4Upload) salen **iframe sin resolver**.
 - **Progreso (T34)**: `anime_id` es slug compartido entre proveedores → `episode_id` lleva prefijo `<proveedor>:` y toda comprobación de "sigue abierto" compara **proveedor + slug** (no solo el slug).
@@ -211,5 +227,5 @@ T01–T29 = v1.0 (`docs/PROGRESO_v1.0.md`) · T30–T35 = v1.1.0 AnimeAV1 (`docs
 > Solo lo que una tarea futura debe resolver. Los cerrados/históricos están en `docs/BITACORA.md`; los de T01–T29 en `docs/PROGRESO_v1.0.md`; los de T30–T35 en `docs/PROGRESO_v1.1.md`.
 
 - **Heredados de la v1.0, sin tarea asignada** (detalle en `docs/PROGRESO_v1.0.md` → "Pendientes activos"): (1) título de la ventana (`main.go:20` es el técnico `miapp`); (2) marca de tiempo en `WatchProgress` ("Continuar" elige por número, no por recencia); (3) borrado de registros del historial (`internal/db` no lo expone); (4) verificación visual de los avisos de error que ningún test provoca (hoy: el aviso `episodesError` con un fallo real del backend).
-- **Firmas desfasadas por T37** (fuera de "Puedes tocar", pendientes de actualizar): **`docs/firmas/db.md`** (describe `Open("")` con el directorio por defecto y `rutaPorDefecto`, ya inexistentes: ahora `Open(dir)` exige ruta y devuelve `db.ErrDirectorioVacio`) y **`docs/firmas/cache.md`** (menciona `app_nucleo.go`/`nuevoNucleo` en la raíz; el núcleo vive en `internal/app` con `NuevoNucleo`). También hay referencias históricas a `app_nucleo.go` en `docs/BITACORA.md` y en `docs/PROGRESO_v1.0.md`/`v1.1.md`, que **no se tocan** (históricos).
+- **Cerrados en T38** (cierre documental de T37, ver sección "T38" arriba): ~~firmas desfasadas de **`docs/firmas/db.md`** y **`docs/firmas/cache.md`**~~ → **corregidas**: `db.Open(dir)` con `ErrDirectorioVacio` (sin `rutaPorDefecto` ni `os.UserConfigDir` en el paquete) y el núcleo documentado como `internal/app` con `NuevoNucleo`/`NuevoNucleoPorDefecto(dir)`. Las referencias a `app_nucleo.go` que siguen en `docs/BITACORA.md`, `docs/PROGRESO_v1.0.md`/`v1.1.md`, `docs/investigacion/animeav1.md` y en los bloques T20–T34 de `docs/firmas/app.md` **son históricas o ya llevan la nota del bloque T37**: no se tocan.
 - **Cerrados en T36** (documentados, sin acción pendiente): ~~comentarios de `app.go`/`app_nucleo.go` que presentaban a AnimeFLV como proveedor registrado o fallback~~ → **corregidos** (solo comentarios; ahora describen `jkanime` + `animeav1` con búsqueda combinada en paralelo). ~~Reproducir el HLS de AnimeAV1 end-to-end~~ → **cerrado**: E2E offline + real en verde y **prueba manual con el `.exe` en Windows correcta** (HLS SUB/DUB, SUB/DUB e iframes, búsqueda combinada, mismo slug en ambos proveedores, progreso, JKAnime intacto, sin consola); **release v1.1.0 publicada**.
