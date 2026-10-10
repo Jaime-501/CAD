@@ -155,6 +155,43 @@ func TestFuentesRedReal(t *testing.T) {
 		len(fuentes), hls, iframe, conIdioma, urlRecortada(manifiesto.URL))
 }
 
+// Smoke del Home (T44): pide las dos secciones al sitio real y comprueba
+// que siguen existiendo (el catálogo filtrado por estado y el latestMedia
+// de la portada). Requiere conectividad.
+//
+//	go test -tags integration ./internal/scraper/animeav1/ -run HomeRedReal -v
+func TestHomeRedReal(t *testing.T) {
+	a := New(clientePrueba(), "")
+
+	got, err := a.Home(context.Background())
+	if err != nil {
+		t.Fatalf("Home falló: %v", err)
+	}
+	if len(got) == 0 {
+		t.Fatal("Home devolvió 0 secciones en el sitio real")
+	}
+	var conItems int
+	for _, s := range got {
+		if len(s.Items) == 0 {
+			t.Errorf("sección %q sin items", s.ID)
+			continue
+		}
+		conItems++
+		for i, item := range s.Items {
+			if item.ID == "" || strings.Contains(item.ID, "/") {
+				t.Errorf("sección %s item %d: id %q sin formato de slug", s.ID, i, item.ID)
+			}
+			if item.Provider != providerName {
+				t.Errorf("sección %s item %d: Provider = %q, quería %q", s.ID, i, item.Provider, providerName)
+			}
+		}
+		t.Logf("sección %q (%s): %d items, primero: %+v", s.ID, s.Title, len(s.Items), s.Items[0])
+	}
+	if conItems == 0 {
+		t.Fatal("ninguna sección del Home trajo items en el sitio real")
+	}
+}
+
 // urlRecortada recorta la última posición del path (el id de 32 caracteres
 // del reproductor) para no imprimir ids completos en la salida.
 func urlRecortada(u string) string {
