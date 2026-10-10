@@ -105,8 +105,36 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha y verificada
 | [x] | T36 | Cierre de la v1.1.0 y limpieza de documentación y comentarios | T35 |
 | [x] | T37 | Preparación para Android (refactor sin cambio de comportamiento) 🔒 | T36 |
 | [x] | T38 | Cierre documental de T37 | T37 |
+| [x] | T39 | Investigación del Home (informe + fixtures) | — |
+| [ ] | T40 | `models`: progreso ampliado, Favorite, HomeSection, ResumeInfo, NextEpisode | — |
+| [ ] | T41 | `db`: historial con fecha, listado reciente y borrados 🔒 | T40 |
+| [ ] | T42 | `db`: favoritos 🔒 | T40 |
+| [ ] | T43 | `HomeProvider` + Home de JKAnime | T39, T40 |
+| [ ] | T44 | Home de AnimeAV1 | T39, T43 |
+| [ ] | T45 | `Nucleo` + `app.go`: Home, favoritos, borrados 🔒 | T41–T44 |
+| [ ] | T46 | `Nucleo.Retomar` y `SiguienteEpisodio` 🔒 | T45 |
+| [ ] | T47 | Regenerar bindings + `api.ts` | T46 |
+| [ ] | T48 | UI: shell con barra lateral | T47 |
+| [ ] | T49 | UI: barra lateral con historial por proveedor | T48 |
+| [ ] | T50 | UI: retomar con un clic | T49 |
+| [ ] | T51 | UI: borrado individual (✕, deslizar, Deshacer) | T50 |
+| [ ] | T52 | UI: borrar por proveedor y borrar todo | T51 |
+| [ ] | T53 | UI: Home "Descubrir" | T48 |
+| [ ] | T54 | UI: favoritos | T53 |
+| [ ] | T55 | UI: botón "Siguiente ▸" | T46, T50 |
+| [ ] | T56 | Cierre v1.2.0: título CAD, docs, firmas, prueba manual, release | todas |
 
 T01–T29 = v1.0 (`docs/PROGRESO_v1.0.md`) · T30–T35 = v1.1.0 AnimeAV1 (`docs/PROGRESO_v1.1.md`) · T36 = cierre documental de la v1.1.0 · T37 = portabilidad Android · T38 = cierre documental de T37.
+T39–T56 = v1.2.0 (Home, historial lateral, favoritos, "Siguiente"); plan en `tareas/v1.2_PLAN.md`.
+
+## Notas v1.2 (T39–T56)
+
+### T39 — Investigación del Home (informe + fixtures)
+
+- **Resultado**: solo investigación, sin código. Comprobaciones reales: `gofmt -l .` → **sin salida**; `go test -race -count=1 ./...` → **11 paquetes `ok`**, **303 `--- PASS`** (mismo recuento antes → después: nada de Go cambió). `git status` muestra solo los archivos permitidos (más los `tareas/T*.md`/`v1.2_PLAN.md` que ya estaban sin confirmar **antes** de empezar la sesión y no se tocaron). Evidencia de la investigación: ~11 peticiones a JKAnime + 3 al CDN y ~24 a AnimeAV1 (máx. 40 por sitio), selectores verificados con regex/perl sobre el HTML **crudo**, Playwright solo para abrir los menús de orden/filtros de `/catalogo` (no están en el crudo) y para observar la URL del filtro de estado.
+- **Archivos tocados**: `docs/investigacion/home.md` (informe nuevo) · fixtures nuevos: `internal/scraper/jkanime/testdata/home_portada.html`, `home_directorio.html`, `home_directorio_emision.html`, `home_directorio_popularidad.html`, `home_estrenos.html` · `internal/scraper/animeav1/testdata/home_portada.html`, `home_portada_data.json`, `home_catalogo.html`, `home_catalogo_data.json`, `home_catalogo_emision.html`, `home_catalogo_emision_data.json` · `PROGRESO.md` (esta nota).
+- **Desviaciones**: ninguna respecto a la ficha (ningún archivo tocado fuera de "Puedes tocar"). Sanitizado: los 5 fixtures de JKAnime traían **un CSRF real** en `<meta name="csrf-token" content="…">` (1 aparición cada uno) → sustituido por `TOKEN_DE_PRUEBA`; tras el escaneo solo queda el nombre del meta, 0 valores reales. AnimeAV1: 0 tokens. Sin HTML ni datos artificiales. Hallazgos clave para T43/T44 (detalle en el informe): el directorio de JKAnime pinta tarjetas con JS pero el listado vive como **JSON estricto `var animes`** dentro de un `<script>` (25848 B, 0 `<` internos) → extraíble sin XHR; filtros exactos `estado=emision|finalizados|estrenos`, `filtro=popularidad|nombre`, `?p=`; la portada de JKAnime ofrece "Animes recientes" (32 tarjetas SSR), "Top animes" (10) y "Programación" (32+32+8 enlaces de episodio), y "Continuar mirando" **exige sesión** → no usable. AnimeAV1: `/` trae `latestEpisodes` (20) y `latestMedia` (20) en SSR y `/__data.json`; el catálogo filtra por **slug** (`?status=emision|finalizado|proximamente`, el número **no** filtra) y ordena con `order=default|score|popular|title|latest_added|latest_released` (los 3 primeros slugs por orden documentados); `?status=emision` → 58 títulos. Slugs del Home = formato de `Anime.ID`; 0 coincidencias con `excepciones.json`; portadas JKAnime (`cdn.jkdesa.com`) 200 sin Referer.
+- **Pendientes**: T43 (Home de JKAnime: `HomeProvider` + parsers contra estos fixtures; decidir si "En emisión" va con el JSON del directorio o con la portada) y T44 (Home de AnimeAV1: usar `home_catalogo_emision_data.json`/`home_portada_data.json`; la guarda de `filters.status` evita que un slug de status mal renombrado devuelva todo el catálogo sin error). TTL de caché sugerido en el informe: 10 min (`home:<proveedor>`), coherente con el plan.
 
 ## Auditoría de portabilidad (T37)
 
