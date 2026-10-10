@@ -3,6 +3,7 @@ package models
 import (
 	"encoding/json"
 	"reflect"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -254,8 +255,11 @@ func TestWatchProgressIdaYVuelta(t *testing.T) {
 	roundTrip(t, &in, &out)
 
 	raw, _ := json.Marshal(in)
+	// T40 añadió cinco campos a WatchProgress (sin omitempty): el JSON de un
+	// registro con los nuevos vacíos los incluye en cero.
 	want := `{"anime_id":"bleach","episode_id":"jkanime:bleach:episode:12",` +
-		`"current_time":734.25,"total_duration":1420.5,"is_watched":true}`
+		`"current_time":734.25,"total_duration":1420.5,"is_watched":true,` +
+		`"provider":"","anime_title":"","cover_url":"","episode_number":0,"updated_at":0}`
 	if string(raw) != want {
 		t.Errorf("JSON = %s, quería %s", raw, want)
 	}
@@ -284,5 +288,140 @@ func TestEpisodeBatchIdaYVuelta(t *testing.T) {
 	}
 	if out.AnimeID != in.AnimeID || out.Batch != in.Batch || !out.Done {
 		t.Errorf("EpisodeBatch no sobrevive: %+v", out)
+	}
+}
+
+// clavesJSON devuelve ordenadas las claves del objeto JSON que produce v.
+func clavesJSON(t *testing.T, v any) []string {
+	t.Helper()
+
+	raw, err := json.Marshal(v)
+	if err != nil {
+		t.Fatalf("json.Marshal(%+v): %v", v, err)
+	}
+	var objeto map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &objeto); err != nil {
+		t.Fatalf("json.Unmarshal(%s): %v", raw, err)
+	}
+	claves := make([]string, 0, len(objeto))
+	for clave := range objeto {
+		claves = append(claves, clave)
+	}
+	sort.Strings(claves)
+	return claves
+}
+
+// TestWatchProgressJSONAntiguoSinCamposNuevos (T40): un historial.json escrito
+// antes de ampliar el modelo sigue cargando; los campos nuevos quedan en cero
+// y ProviderName() se infiere del prefijo de EpisodeID.
+func TestWatchProgressJSONAntiguoSinCamposNuevos(t *testing.T) {
+	crudo := `{"anime_id":"bleach","episode_id":"jkanime:bleach:episode:1","current_time":10,"total_duration":1400,"is_watched":false}`
+
+	var p WatchProgress
+	if err := json.Unmarshal([]byte(crudo), &p); err != nil {
+		t.Fatalf("json.Unmarshal(%s): %v", crudo, err)
+	}
+
+	if p.AnimeID != "bleach" || p.EpisodeID != "jkanime:bleach:episode:1" {
+		t.Errorf("los campos antiguos cambian: %+v", p)
+	}
+	if p.UpdatedAt != 0 {
+		t.Errorf("UpdatedAt = %d, quería 0 (registro antiguo sin fecha)", p.UpdatedAt)
+	}
+	if p.Provider != "" {
+		t.Errorf("Provider = %q, quería vacío", p.Provider)
+	}
+	if got := p.ProviderName(); got != "jkanime" {
+		t.Errorf("ProviderName() = %q, quería %q", got, "jkanime")
+	}
+}
+
+// TestWatchProgressJSONRoundTripCamposNuevos (T40): los cinco campos nuevos
+// sobreviven intactos a la ida y vuelta por JSON.
+func TestWatchProgressJSONRoundTripCamposNuevos(t *testing.T) {
+	in := WatchProgress{
+		AnimeID:       "bleach",
+		EpisodeID:     "animeav1:bleach:episode:12",
+		CurrentTime:   734.25,
+		TotalDuration: 1420.5,
+		IsWatched:     true,
+		Provider:      "animeav1",
+		AnimeTitle:    "Bleach",
+		CoverURL:      "https://cdn.example.test/bleach.jpg",
+		EpisodeNumber: 12,
+		UpdatedAt:     1728000000,
+	}
+
+	var out WatchProgress
+	roundTrip(t, &in, &out)
+
+	if out.Provider != in.Provider || out.AnimeTitle != in.AnimeTitle ||
+		out.CoverURL != in.CoverURL || out.EpisodeNumber != in.EpisodeNumber ||
+		out.UpdatedAt != in.UpdatedAt {
+		t.Errorf("los campos nuevos no sobreviven:\n entran: %#v\n salen: %#v", in, out)
+	}
+}
+
+// TestWatchProgressProviderName (T40): tabla de la inferencia del proveedor.
+func TestWatchProgressProviderName(t *testing.T) {
+	casos := []struct {
+		nombre string
+		p      WatchProgress
+		want   string
+	}{
+		{
+			nombre: "Provider gana sobre el prefijo",
+			p:      WatchProgress{Provider: "animeav1", EpisodeID: "jkanime:bleach:episode:1"},
+			want:   "animeav1",
+		},
+		{
+			nombre: "sin Provider usa el prefijo de EpisodeID",
+			p:      WatchProgress{EpisodeID: "jkanime:bleach:episode:1"},
+			want:   "jkanime",
+		},
+		{
+			nombre: "sin EpisodeID ni Provider",
+			p:      WatchProgress{},
+			want:   "",
+		},
+		{
+			nombre: "EpisodeID sin dos puntos",
+			p:      WatchProgress{EpisodeID: "bleach-1"},
+			want:   "",
+		},
+	}
+
+	for _, c := range casos {
+		t.Run(c.nombre, func(t *testing.T) {
+			if got := c.p.ProviderName(); got != c.want {
+				t.Errorf("ProviderName() = %q, quería %q", got, c.want)
+			}
+		})
+	}
+}
+
+// TestWatchProgressTagsJSON (T40): el JSON lleva exactamente las claves
+// antiguas más las cinco nuevas (sin omitempty).
+func TestWatchProgressTagsJSON(t *testing.T) {
+	p := WatchProgress{
+		AnimeID:       "bleach",
+		EpisodeID:     "jkanime:bleach:episode:12",
+		CurrentTime:   734.25,
+		TotalDuration: 1420.5,
+		IsWatched:     true,
+		Provider:      "jkanime",
+		AnimeTitle:    "Bleach",
+		CoverURL:      "https://cdn.example.test/bleach.jpg",
+		EpisodeNumber: 12,
+		UpdatedAt:     1728000000,
+	}
+
+	want := []string{
+		"anime_id", "anime_title", "cover_url", "current_time",
+		"episode_id", "episode_number", "is_watched", "provider",
+		"total_duration", "updated_at",
+	}
+	if got := clavesJSON(t, p); !reflect.DeepEqual(got, want) {
+		t.Errorf("claves del JSON = %v, quería %v", got, want)
 	}
 }

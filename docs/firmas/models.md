@@ -9,6 +9,7 @@
 - `### T03 — internal/models` → creado por **T03** (Modelos de dominio; `models.go`).
 - `### T05 — internal/models (ids.go)` → creado por **T05** (Referencia de episodio; `ids.go`).
 - `### T33 — internal/models (VideoSource.Language)` → creado por **T33** (idioma estructurado de una fuente; `models.go`).
+- `### T40 — models` → creado por **T40** (progreso ampliado, `Favorite`, `HomeSection`, `ResumeInfo`, `NextEpisode`; `models.go` + `v12.go`).
 
 ---
 
@@ -41,3 +42,17 @@
 - Con `omitempty`, un proveedor sin idioma serializa `VideoSource` igual que antes → JSON y payloads de eventos **retrocompatibles**; el modelo TS solo cambia al regenerarlo.
 - Tests: `TestVideoSourceIdioma` (9 tests en `internal/models/models_test.go`, red de nada): constantes `SUB`/`DUB`, ida y vuelta con `Language` informado, etiqueta exacta en el JSON (`…"server":"HLS","language":"SUB","headers"…`) y omisión cuando es `""`.
 - Consumidor: `animeav1.GetVideoSources` (T33) rellena el campo en todas sus fuentes. **Pendiente de T34**: regenerar `frontend/wailsjs/**` con `docker compose run --rm app wails generate module` (nunca a mano) para que el modelo TS lleve `language`.
+
+### T40 — models
+
+Modelos de la v1.2 (home, historial lateral, favoritos y "retomar"). Sin lógica de negocio más allá de dos getters. Archivos: `models.go` (solo `WatchProgress`) y `v12.go` (nuevo).
+
+- `WatchProgress` **ampliado** (los 5 campos van **después** de los existentes, sin reordenarlos ni tocar sus tags; **sin `omitempty`**): `Provider string json:"provider"`, `AnimeTitle string json:"anime_title"`, `CoverURL string json:"cover_url"`, `EpisodeNumber int json:"episode_number"`, `UpdatedAt int64 json:"updated_at"` (Unix segundos; **0 = registro antiguo sin fecha**). Un `historial.json` anterior sigue cargando (campos en cero).
+- **`EpisodeNumber` es `int`**: exactamente el tipo de `Episode.Number`.
+- `func (p WatchProgress) ProviderName() string` — receptor por valor: `Provider` si no está vacío; si no, el prefijo de `EpisodeID` antes del primer `:`; si no hay `:` → `""`.
+- `type Favorite struct { Provider, AnimeID, Title, CoverURL string; AddedAt int64 }` — tags `provider`, `anime_id`, `title`, `cover_url`, `added_at`. `func (f Favorite) Key() string` → `Provider + ":" + AnimeID`.
+- `type HomeSection struct { ID, Title string; Items []Anime }` — tags `id`, `title`, `items`.
+- Constantes de acción (strings, no enum): `ResumeActionResume = "resume"`, `ResumeActionNext = "next"`, `ResumeActionCompleted = "completed"`, `ResumeActionUpToDate = "up_to_date"`.
+- `type ResumeInfo struct { Provider, AnimeID, Action, EpisodeID string; EpisodeNumber int; StartAt float64 }` — tags `provider`, `anime_id`, `action`, `episode_id`, `episode_number`, `start_at`; `EpisodeID`/`EpisodeNumber` en cero cuando la acción es `completed`/`up_to_date`.
+- `type NextEpisode struct { Found bool; EpisodeID string; Number int }` — tags `found`, `episode_id`, `number`.
+- Tests: `internal/models/ids_test.go` (5) + `internal/models/models_test.go` (13) + `internal/models/v12_test.go` (6) = **24** (eran 14; +10 de T40). Nuevos: `TestWatchProgressJSONAntiguoSinCamposNuevos`, `TestWatchProgressJSONRoundTripCamposNuevos`, `TestWatchProgressProviderName`, `TestWatchProgressTagsJSON`, `TestFavoriteKey`, `TestFavoriteJSONTags`, `TestHomeSectionJSONTags`, `TestResumeInfoJSONTags`, `TestNextEpisodeJSONTags`, `TestResumeActionConstantes`. Helper compartido `clavesJSON` (en `models_test.go`). `TestWatchProgressIdaYVuelta` actualizó su JSON esperado a las 10 claves (ver desviación en `PROGRESO.md`).

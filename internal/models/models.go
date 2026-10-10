@@ -91,6 +91,15 @@ type WatchProgress struct {
 	CurrentTime   float64 `json:"current_time"`
 	TotalDuration float64 `json:"total_duration"`
 	IsWatched     bool    `json:"is_watched"`
+	// Campos de T40: permiten pintar la barra lateral y resolver "retomar"
+	// sin pedir el detalle de cada anime; un registro antiguo de
+	// historial.json los trae en cero y sigue cargando igual. Sin omitempty,
+	// por convención del proyecto.
+	Provider      string `json:"provider"`
+	AnimeTitle    string `json:"anime_title"`
+	CoverURL      string `json:"cover_url"`
+	EpisodeNumber int    `json:"episode_number"`
+	UpdatedAt     int64  `json:"updated_at"`
 }
 
 // EpisodeBatch es un lote de episodios emitido por streaming (T09/T20).
