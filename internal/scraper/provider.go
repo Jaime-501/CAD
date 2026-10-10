@@ -39,3 +39,10 @@ type EpisodeStreamer interface {
 	StreamAnimeDetails(ctx context.Context, id string,
 		onBatch func(models.EpisodeBatch)) (models.AnimeDetail, []models.Episode, error)
 }
+
+// HomeProvider es la interfaz opcional de Home (T43). Un provider que la
+// implementa ofrece secciones para la vista de inicio; es opcional al estilo
+// de EpisodeStreamer: Registry y Provider no cambian y nadie la exige.
+type HomeProvider interface {
+	Home(ctx context.Context) ([]models.HomeSection, error)
+}
