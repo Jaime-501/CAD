@@ -8,6 +8,7 @@
 
 - `### T22 — internal/db` → creado por **T22** (Persistencia del historial); corregido en **T38** (contrato T37 de `Open(dir)`: `dir == ""` ⇒ `ErrDirectorioVacio`, sin `rutaPorDefecto`).
 - `### T22 — integración en el núcleo` → creado por **T22** (documentada también en `docs/firmas/app.md`); actualizado en **T38** (el núcleo vive desde T37 en `internal/app/nucleo.go`, `package app`).
+- `### T41 — db` → creado por **T41** (historial con fecha, `LastPerAnime` y borrados por anime/proveedor/todo).
 
 ---
 
@@ -58,3 +59,19 @@ Historial de visualización persistido en un archivo **JSON** dentro de un direc
 - `app.go` solo delega: **`func (a *App) SaveProgress(progress models.WatchProgress) error`** (un único retorno: `binding.BoundMethod.Call` admite 1 o 2) y **`func (a *App) GetProgress(animeID string) ([]models.WatchProgress, error)`**.
 
 **Tests** (`internal/app/app_nucleo_historial_test.go`, 3 tests, sin red): abrir en `Arrancar` + guardar/leer + cerrar y relectura desde disco con otro `db.Open` · sin arrancar ⇒ `ErrHistorialNoDisponible` con su mensaje de UI · ruta inaccesible ⇒ `Arrancar` sigue funcionando (proxy escucha) y el historial queda nil.
+
+---
+
+### T41 — db
+
+Historial con fecha, listado reciente y borrados (la barra lateral de la v1.2). Todo sigue en el mismo `*DB` de T22: un único mutex, escritura atómica, sin goroutines nuevas. Símbolos y comportamientos nuevos:
+
+- `DB` gana el campo **no exportado `now func() time.Time`** —reloj inyectable; `time.Now` por defecto, fijado en `Open`—. Los tests del paquete lo sustituyen antes de arrancar goroutines.
+- **`SaveProgress` (comportamiento añadido; el resto del método no cambia)**: después del normalizado de T22, si **`UpdatedAt == 0` ⇒ `now().Unix()`**; si trae otra fecha **se conserva** (así un "Deshacer" restaura el orden original). Si **`Provider == ""` ⇒ `ProviderName()`** (el prefijo de `EpisodeID`). Solo al **guardar**: `cargar` no toca esos campos, así que un `historial.json` anterior a T41 se lee con los nuevos en cero (`UpdatedAt == 0` = "registro sin fecha"). Sin cambios en: exige `AnimeID`/`EpisodeID`, `IsWatched` calculado aquí, no-reescritura si el registro sale idéntico, escritura atómica, `.bak` ante corruptos y `ErrCerrado`.
+- `func (d *DB) LastPerAnime() []models.WatchProgress` — el **último** registro de cada anime, lo que pinta la barra lateral: un registro por **`(ProviderName(), AnimeID)`**; gana el de mayor `UpdatedAt` y, con empate, el de mayor `EpisodeNumber` y después el de `EpisodeID` **descendente** lexicográfico. El conjunto sale ordenado por `UpdatedAt` **descendente**, con empate por proveedor y `anime_id` **ascendentes**; los `UpdatedAt == 0` quedan al final. El proveedor se compara con `ProviderName()` (cubre los registros antiguos sin el campo). **Nunca nil** (lista vacía sin registros) y sus elementos son **copias**. **Cerrado ⇒ lista vacía sin error** (la firma no admite `error`: quien necesite distinguirlo mira `GetProgress`).
+- `func (d *DB) DeleteAnime(provider, animeID string) (int, error)` — borra **todos** los episodios de ese anime de ese proveedor y devuelve el nº de registros eliminados. Proveedor comparado con `ProviderName()`. No existe ⇒ `0, nil`.
+- `func (d *DB) DeleteProvider(provider string) (int, error)` — borra todos los registros del proveedor; mismas reglas.
+- `func (d *DB) Clear() (int, error)` — borra el historial entero y devuelve cuántos registros había.
+- Los tres van por el privado `borrar(predicado)`: rehacen el índice (`reindexar`), **persisten con la misma escritura atómica que `SaveProgress`** y, si no se borra **nada**, **no reescriben** el archivo. Si la escritura falla, los borrados ya no están en memoria (el próximo guardado los persiste) y se devuelve `(borrados, err)`. `cerrado` ⇒ `(0, ErrCerrado)`.
+- El formato del `historial.json` **no cambia**: sigue siendo el array plano de `models.WatchProgress` con sus 10 claves.
+- Tests: **`internal/db/historial_reciente_test.go`** (16 tests nuevos; `internal/db/db_test.go` **sin tocar**): `TestSaveAsignaUpdatedAtConRelojInyectado` · `TestSaveConservaUpdatedAtNoCero` · `TestSaveNormalizaProviderDesdeEpisodeID` · `TestSaveUpdatedAtPersisteTrasReabrir` · `TestLastPerAnimeUnoPorAnimeYProveedor` (mismo slug en 2 proveedores ⇒ 2 entradas) · `TestLastPerAnimeOrdenPorRecencia` (y copias) · `TestLastPerAnimeDesempate` · `TestLastPerAnimeRegistrosAntiguosSinFechaAlFinal` · `TestLastPerAnimeVacioEsSliceNoNil` · `TestDeleteAnimeBorraTodosLosEpisodiosYDevuelveCuenta` · `TestDeleteAnimeNoAfectaOtroProveedorConMismoSlug` · `TestDeleteAnimeInexistenteDevuelveCeroSinError` · `TestDeleteProveedor` · `TestClear` · `TestBorradosPersistenAlReabrir` · `TestBorradoConcurrenteConSave` (🔒, con `-race`). Los registros "antiguos" (sin fecha ni provider) se fabrican **escribiendo el JSON a mano** (`escribirHistorialViejo`): `Save` ya no los admite. `internal/db`: **13 → 29** tests.

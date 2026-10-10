@@ -17,6 +17,11 @@
 //
 // Tolerancia: un archivo ilegible como JSON no rompe nada: se respalda como
 // .bak y se empieza con el historial vacío.
+//
+// T41: cada guardada sella UpdatedAt (si el registro viene sin fecha) y
+// rellena Provider; LastPerAnime da el último registro por anime ordenado
+// por recencia —lo que pinta la barra lateral— y DeleteAnime /
+// DeleteProvider / Clear borran registros con la misma escritura atómica.
 package db
 
 import (
@@ -27,7 +32,9 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"sort"
 	"sync"
+	"time"
 
 	"miapp/internal/models"
 )
@@ -61,6 +68,14 @@ type clave struct {
 	episodio string
 }
 
+// claveAnime identifica un anime del historial: su proveedor —con
+// ProviderName(), que cubre los registros antiguos guardados sin el campo
+// provider— más el slug (el slug se comparte entre proveedores).
+type claveAnime struct {
+	proveedor string
+	anime     string
+}
+
 // DB es el almacén del historial. Cero valor no es válido: usa Open. Es
 // segura para concurrencia (un único sync.Mutex) y no crea goroutines.
 type DB struct {
@@ -68,10 +83,11 @@ type DB struct {
 	dir     string // directorio del archivo (mismo dir que el temporal)
 	ruta    string // ruta completa del historial
 	cerrado bool
+	now     func() time.Time // reloj inyectable; por defecto time.Now (T41)
 
 	// registros es el historial en memoria, en orden de PRIMERA guardada;
-	// indice ubica cada (anime, episodio) dentro de ese orden. No hay
-	// borrado: las posiciones son estables.
+	// indice ubica cada (anime, episodio) dentro de ese orden. Tras un
+	// borrado las posiciones se rehacen (reindexar).
 	registros []models.WatchProgress
 	indice    map[clave]int
 }
@@ -96,6 +112,7 @@ func Open(dir string) (*DB, error) {
 	d := &DB{
 		dir:    dir,
 		ruta:   filepath.Join(dir, nombreArchivo),
+		now:    time.Now,
 		indice: make(map[clave]int),
 	}
 	if err := d.cargar(); err != nil {
@@ -115,6 +132,12 @@ func Open(dir string) (*DB, error) {
 // archivo (guardar en pausa no gasta I/O). Si la escritura falla, el dato
 // se conserva en memoria —el próximo guardado lo reintentará— y se devuelve
 // el error.
+//
+// T41: además del sello de tiempo —si UpdatedAt viene 0 se pone
+// now().Unix(); si trae otra fecha se conserva, para que un "Deshacer"
+// restaure el orden original— y del proveedor —si Provider viene vacío se
+// rellena con ProviderName(), el prefijo de EpisodeID—. Solo al guardar: un
+// archivo antiguo cargado conserva sus campos en cero.
 func (d *DB) SaveProgress(progress models.WatchProgress) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -126,6 +149,12 @@ func (d *DB) SaveProgress(progress models.WatchProgress) error {
 		return errors.New("el progreso necesita anime_id y episode_id")
 	}
 	progress = normalizar(progress)
+	if progress.UpdatedAt == 0 {
+		progress.UpdatedAt = d.now().Unix()
+	}
+	if progress.Provider == "" {
+		progress.Provider = progress.ProviderName()
+	}
 
 	k := clave{anime: progress.AnimeID, episodio: progress.EpisodeID}
 	if i, ok := d.indice[k]; ok && d.registros[i] == progress {
@@ -153,6 +182,76 @@ func (d *DB) GetProgress(animeID string) ([]models.WatchProgress, error) {
 		}
 	}
 	return salida, nil
+}
+
+// LastPerAnime devuelve el ÚLTIMO registro de cada anime (T41), que es lo
+// que pinta la barra lateral: un registro por (proveedor, anime_id) —el de
+// mayor UpdatedAt; con empate, el de mayor EpisodeNumber y después el de
+// EpisodeID descendente lexicográfico— y el conjunto ordenado por UpdatedAt
+// descendente, con empate por proveedor y anime_id ascendentes. Los
+// registros antiguos sin fecha (UpdatedAt == 0) quedan al final.
+//
+// El proveedor se compara con ProviderName(), que cubre los registros
+// guardados antes de T41 sin el campo provider. El resultado nunca es nil
+// (lista vacía sin registros) y sus elementos son copias: mutarlos no toca
+// el almacén. Cerrado ⇒ lista vacía (sin error: la firma no lo admite; el
+// llamador comprueba antes con GetProgress si necesita distinguirlo).
+func (d *DB) LastPerAnime() []models.WatchProgress {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	salida := make([]models.WatchProgress, 0, len(d.indice))
+	if d.cerrado {
+		return salida
+	}
+
+	ganadores := make(map[claveAnime]int, len(d.indice))
+	for i, r := range d.registros {
+		k := claveAnime{proveedor: r.ProviderName(), anime: r.AnimeID}
+		if j, ok := ganadores[k]; ok && !mejorQue(r, d.registros[j]) {
+			continue
+		}
+		ganadores[k] = i
+	}
+	for _, i := range ganadores {
+		salida = append(salida, d.registros[i]) // copia: WatchProgress es todo valor
+	}
+	sort.Slice(salida, func(i, j int) bool {
+		a, b := salida[i], salida[j]
+		if a.UpdatedAt != b.UpdatedAt {
+			return a.UpdatedAt > b.UpdatedAt
+		}
+		if pa, pb := a.ProviderName(), b.ProviderName(); pa != pb {
+			return pa < pb
+		}
+		return a.AnimeID < b.AnimeID
+	})
+	return salida
+}
+
+// DeleteAnime borra TODOS los registros de un anime (todos sus episodios) de
+// un proveedor y devuelve cuántos han sido (T41). El proveedor se compara
+// con ProviderName(), así que también alcanza a los registros antiguos sin
+// el campo provider. No existe ⇒ 0 sin error. Cerrado ⇒ ErrCerrado.
+func (d *DB) DeleteAnime(provider, animeID string) (int, error) {
+	return d.borrar(func(r models.WatchProgress) bool {
+		return r.AnimeID == animeID && r.ProviderName() == provider
+	})
+}
+
+// DeleteProvider borra todos los registros de un proveedor y devuelve cuántos
+// han sido (T41). Mismas reglas que DeleteAnime (ProviderName, 0 sin error,
+// ErrCerrado).
+func (d *DB) DeleteProvider(provider string) (int, error) {
+	return d.borrar(func(r models.WatchProgress) bool {
+		return r.ProviderName() == provider
+	})
+}
+
+// Clear borra el historial entero y devuelve cuántos registros había (T41).
+// Ya vacío ⇒ 0 sin error. Cerrado ⇒ ErrCerrado.
+func (d *DB) Clear() (int, error) {
+	return d.borrar(func(models.WatchProgress) bool { return true })
 }
 
 // Close deja el almacén cerrado: las llamadas posteriores devuelven
@@ -204,6 +303,47 @@ func (d *DB) guardarEnMemoria(progress models.WatchProgress) {
 	}
 	d.indice[k] = len(d.registros)
 	d.registros = append(d.registros, progress)
+}
+
+// borrar quita los registros que cumplan el predicado, conserva el orden de
+// los que quedan, lo persiste con la MISMA escritura atómica que SaveProgress
+// y devuelve el número de borrados. Si no se borra nada no se reescribe el
+// archivo; si la escritura falla, los borrados ya no están en memoria —el
+// próximo guardado los persistirá— y se devuelve el error junto al conteo.
+func (d *DB) borrar(predicado func(models.WatchProgress) bool) (int, error) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	if d.cerrado {
+		return 0, ErrCerrado
+	}
+	restantes := make([]models.WatchProgress, 0, len(d.registros))
+	borrados := 0
+	for _, r := range d.registros {
+		if predicado(r) {
+			borrados++
+			continue
+		}
+		restantes = append(restantes, r)
+	}
+	if borrados == 0 {
+		return 0, nil
+	}
+	d.registros = restantes
+	d.reindexar()
+	if err := d.escribir(); err != nil {
+		return borrados, err
+	}
+	return borrados, nil
+}
+
+// reindexar reconstruye el índice tras un borrado (las posiciones dentro del
+// orden de primera guardada cambian). Llamar con el mutex puesto.
+func (d *DB) reindexar() {
+	d.indice = make(map[clave]int, len(d.registros))
+	for i, r := range d.registros {
+		d.indice[clave{anime: r.AnimeID, episodio: r.EpisodeID}] = i
+	}
 }
 
 // respaldar renombra el archivo corrupto a .bak (si ya existía otro .bak, se
@@ -277,6 +417,19 @@ func esVisto(currentTime, totalDuration float64) bool {
 		return false
 	}
 	return currentTime/totalDuration >= UmbralIsWatched
+}
+
+// mejorQue decide si a gana a b para ser el último registro de su anime
+// (T41): UpdatedAt mayor; con empate, EpisodeNumber mayor; a igual número,
+// EpisodeID descendente lexicográfico.
+func mejorQue(a, b models.WatchProgress) bool {
+	if a.UpdatedAt != b.UpdatedAt {
+		return a.UpdatedAt > b.UpdatedAt
+	}
+	if a.EpisodeNumber != b.EpisodeNumber {
+		return a.EpisodeNumber > b.EpisodeNumber
+	}
+	return a.EpisodeID > b.EpisodeID
 }
 
 // fino devuelve 0 para NaN e infinitos (positivos o negativos): JSON no los
