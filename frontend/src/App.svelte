@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onDestroy, onMount, tick } from 'svelte';
   import BarraLateral from './BarraLateral.svelte';
+  import { cargarHistorial } from './historial';
   import { disposeEvents, initEvents } from './stores';
   import { drawerOpen, isNarrow } from './ui';
   import {
@@ -19,12 +20,15 @@
 
   let puente = true;
   let vistaPrevia: VistaNombre = 'busqueda';
+  /** Para refrescar el historial al salir del reproductor (T49). */
+  let vistaPreviaHistorial: VistaNombre = 'busqueda';
 
   onMount(() => {
     // window.go solo lo inyecta el dev server de Wails (:34115),
     // no el servidor de Vite (:5173)
     puente = typeof window !== 'undefined' && Boolean((window as any).go);
     initEvents();
+    void cargarHistorial();
   });
 
   onDestroy(() => {
@@ -42,6 +46,19 @@
     vistaPrevia = destino;
     await tick();
     window.scrollTo(0, recuperarScroll(claveScroll(destino)));
+  }
+
+  // El historial se refresca al salir del reproductor (T49): `tick` deja que
+  // el reproductor se desmonte y lance su guardado final antes de leer.
+  $: refrescarHistorialAlSalir($vista);
+
+  async function refrescarHistorialAlSalir(destino: VistaNombre) {
+    if (destino === vistaPreviaHistorial) return;
+    const saliaDelReproductor = vistaPreviaHistorial === 'reproductor';
+    vistaPreviaHistorial = destino;
+    if (!saliaDelReproductor) return;
+    await tick();
+    await cargarHistorial();
   }
 
   function abrirHistorial() {

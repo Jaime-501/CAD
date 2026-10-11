@@ -6,7 +6,7 @@
   import { getProgress, getVideoSources, saveProgress } from './api';
   import type { VideoSourceView } from './api';
   import type { FiltroIdioma } from './etiquetas';
-  import { progressMap } from './stores';
+  import { currentDetail, progressMap } from './stores';
   import { atras, seleccion, type SeleccionAnime } from './views';
   import SelectorFuente from './SelectorFuente.svelte';
 
@@ -306,11 +306,27 @@
       is_watched: false,
       provider: sel.provider,
       anime_title: sel.title,
-      cover_url: progresoPrevio?.cover_url ?? '',
-      episode_number: sel.episodeNumber ?? 0,
+      cover_url: portadaDe(sel),
+      episode_number: numeroDe(sel.episodeID),
       updated_at: 0,
     };
     void saveProgress(progresoPrevio);
+  }
+
+  /**
+   * Portada del anime abierto en la app (T49): sale del detalle que ya cargó
+   * `VistaDetalle` para este (proveedor, slug); '' si no está disponible.
+   */
+  function portadaDe(sel: SeleccionAnime): string {
+    const detalle = get(currentDetail);
+    if (!detalle || detalle.id !== sel.animeID) return '';
+    return detalle.cover ?? '';
+  }
+
+  /** Número del episodio parseado del id (`…:episode:N` / `…:special:N`); 0 en película. */
+  function numeroDe(episodeID: string): number {
+    const coincidencia = /:(?:episode|special):(\d+)$/.exec(episodeID);
+    return coincidencia ? Number.parseInt(coincidencia[1], 10) : 0;
   }
 
   /** Limpia hls.js, el `<video>` y el listener de error de la fuente actual. */
