@@ -199,3 +199,44 @@ El paquete, su formato y sus tests están en **`docs/firmas/db.md`**. Aquí, lo 
 
 - **302 tests de paquete antes → 303 después** (los mismos 302, más `TestNucleoPortableSinWailsNiRutasDeUsuario`): `miapp` 33 → `miapp/internal/app` 33+1; el resto de paquetes intactos (`db` 13, `extractors` 68…).
 - Los E2E ahora llaman al núcleo (`n.Buscar`, `n.Detalle`, `n.Fuentes`, `n.GuardarProgreso`, `n.VerProgreso` con `context.Background()`) porque `&App{core: n}` ya no compila en `internal/app` (`App` es de `package main`); sus fixtures pasan a rutas relativas `../scraper/…` (el cwd del test ahora es `internal/app/`).
+
+---
+
+### T45 — app (Home, favoritos, borrados de historial)
+
+Integra T41 (db historial), T42 (db favoritos), T43 (Home JKAnime) y T44 (Home AnimeAV1) en el núcleo y en la capa Wails. Archivos: `internal/app/nucleo.go`, `app.go`, tests nuevos `nucleo_home_test.go`, `nucleo_favoritos_test.go`, `nucleo_historial_test.go` y los dos E2E (`app_e2e_test.go`, `app_e2e_integration_test.go`, solo ampliados). Sin cambios en `main.go`, `internal/{db,models,scraper,cache}/**` ni en `frontend/**` (`git diff frontend/` vacío).
+
+#### Núcleo (`internal/app`) — firmas nuevas
+
+- Sentinels: `ErrHomeNoDisponible = errors.New("El Home no está disponible para este proveedor")` · `ErrFavoritosNoDisponible = errors.New("Los favoritos no están disponibles")` (`ErrSinHistorial` es de T46, no existe aún).
+- `func (n *Nucleo) Home(ctx context.Context, proveedor string, noCache bool) ([]models.HomeSection, error)` — busca el provider en el registro y aplica aserción de tipo a `scraper.HomeProvider` (T43); si no lo implementa devuelve `ErrHomeNoDisponible` (los errores no se cachean). Orden de secciones y errores siguen los del provider (`emision` primero, luego `recientes`).
+- Caché de Home: `map[string]entradaHome` (`entradaHome{secciones []models.HomeSection; caducaEn time.Time}`) protegida por `muHome`, clave `cache.Clave("home", proveedor)` = `home:<proveedor>`, TTL `ttlCacheDetalle` (10 min). `noCache == true` salta la lectura (pero rellena); los errores jamás se guardan; las secciones se devuelven con **copia defensiva** (deep copy de items).
+  - **Desviación de la ficha**: el plan decía reusar `internal/cache`, pero ese paquete solo admite `Entrada{Detail, Episodes, Complete}` y está fuera de "Puedes tocar". La caché vive en `nucleo.go` con la misma clave y TTL; queda anotado aquí y en `PROGRESO.md`.
+- Favoritos (sobre `*db.Favorites`, abierto en `Arrancar` con `db.OpenFavorites(n.rutaHistorial)`, el MISMO directorio que el historial; si `OpenFavorites` falla, `slog.Warn("la app sigue sin favoritos", ...)` y la app sigue sin ellos): `AgregarFavorito(f models.Favorite) error` · `QuitarFavorito(proveedor, animeID string) error` · `ListarFavoritos() ([]models.Favorite, error)` · `EsFavorito(proveedor, animeID string) (bool, error)`. Sin almacén (`favoritos == nil`, antes de `Arrancar` o directorio vacío) → `ErrFavoritosNoDisponible`. `db.Favorites` no tiene `Close`: `Cerrar()` no la cierra. `AgregarFavorito` valida `f.Provider` y `f.AnimeID` no vacíos.
+- Historial reciente y borrados (delegan 1:1 en `db`, T41; todos exigen `historialAbierto`, si no → `ErrHistorialNoDisponible`): `HistorialReciente() ([]models.WatchProgress, error)` → `LastPerAnime` · `BorrarHistorialAnime(proveedor, animeID string) (int, error)` → `DeleteAnime` · `BorrarHistorialProveedor(proveedor string) (int, error)` → `DeleteProvider` · `BorrarHistorialTodo() (int, error)` → `Clear`. La validación de argumentos vacíos (error en español con "proveedor") va ANTES de tocar db, para no borrar registros sin proveedor.
+- `GuardarProgreso` no cambia de firma: pasa el registro tal cual; el sellado de `UpdatedAt` lo hace `db.Save` (regla T41: 0 → now, ≠0 se conserva; clave del Deshacer de T46).
+
+#### Wails (`app.go`) — firmas nuevas
+
+Los 9 métodos delegan tal cual en el núcleo, con retorno `(valor, error)` como el resto; `GetHomeSection` pasa `a.contexto()`. Para que Wails siga generando todo en `main`, no hay tipos nuevos en `app.go` (se usan directamente `models.HomeSection` y `models.Favorite`):
+
+- `func (a *App) GetHomeSection(provider string, noCache bool) ([]models.HomeSection, error)`
+- `func (a *App) AddFavorite(f models.Favorite) error`
+- `func (a *App) RemoveFavorite(provider string, animeID string) error`
+- `func (a *App) ListFavorites() ([]models.Favorite, error)`
+- `func (a *App) IsFavorite(provider string, animeID string) (bool, error)`
+- `func (a *App) GetRecentProgress() ([]models.WatchProgress, error)`
+- `func (a *App) DeleteProgressAnime(provider string, animeID string) (int, error)`
+- `func (a *App) DeleteProviderProgress(provider string) (int, error)`
+- `func (a *App) ClearProgress() (int, error)`
+
+`frontend/wailsjs/**` **no se regeneró** (prohibido en esta tarea): los bindings de estos 9 métodos llegan en T47.
+
+#### Tests
+
+- Nuevos en `internal/app` (16): `nucleo_home_test.go` (6: devuelve secciones del provider con el orden `emision`→`recientes` · provider desconocido · provider sin `HomeProvider` ⇒ `ErrHomeNoDisponible` · caché: 1 llamada al provider en 2 invocaciones y `noCache` la salta · el error no se cachea · copia defensiva) con el doble `homeFalso` (embebe `proveedorFalso`, cuenta `llamadas`) · `nucleo_favoritos_test.go` (5: agregar/listar/quitar · proveedor inexistente falla · sin directorio ⇒ `ErrFavoritosNoDisponible` · persisten entre arranques con un segundo `Nucleo` sobre el mismo dir · mismo slug en dos proveedores coexisten) · `nucleo_historial_test.go` (5: `HistorialReciente` delega en `LastPerAnime` con orden por `UpdatedAt` · los tres borrados con sus recuentos · sin directorio ⇒ `ErrHistorialNoDisponible` · `UpdatedAt ≠ 0` se conserva / `== 0` lo sella db · argumentos vacíos rechazados en español sin tocar db).
+- E2E offline ampliados (`app_e2e_test.go`, solo pasos nuevos + fixtures/rutas/listas de peticiones):
+  - JKAnime: paso `1b` (Home tras la búsqueda; 2 secciones, 30 y 32 items de los fixtures `home_directorio_emision.html`/`home_portada.html`) y paso `6b` (ciclo de favorito + borrados con 2 progresos de fechas fijas). Nuevas rutas del fake `GET /directorio` y `GET /`; la lista de peticiones exactas sube de 11 a 13 y **no** aparece una segunda petición de `excepciones.json` (el mapa ya se descargó en la búsqueda, T43).
+  - AnimeAV1: paso `1b` (Home; 2 secciones de 20 items, fixtures `home_catalogo_emision_data.json` distinguido por `?status=emision` y `home_portada_data.json` en `GET /__data.json`) y paso `5b` (favoritos/borrados con A = animeav1 y B = jkanime). La lista sube de 9 a 11 peticiones (`/catalogo/__data.json` ×2: `search=bleach` y `status=emision`; `/__data.json` ×1) y la aserción de query acepta las dos claves.
+- E2E de red real ampliados (`app_e2e_integration_test.go`): paso Home **tolerante** (T28) tras la búsqueda en `TestE2EFlujoCompletoRedReal` (`proveedorPrincipal`) y `TestE2EAnimeAV1RedReal` (`proveedorComplemento`): solo exige ≥1 sección con ≥1 item y ningún item con `ID`/`Title` vacíos. Ambos en verde contra el sitio real (JKAnime 15 s, AnimeAV1 3 s; 2 secciones con items cada uno).
+- Verificación: `gofmt -l .` sin salida · `go vet ./...` y `go vet -tags integration ./...` limpios · `go build ./...` OK · `go test -race -count=1 ./...` en verde (**366 → 382** `--- PASS`; `internal/app`: **34 → 50**) · guardia `portabilidad_test.go` en verde · `go list -deps ./internal/app | grep wailsapp` sin resultados · `git diff frontend/` vacío.
