@@ -304,6 +304,11 @@
       current_time: actual,
       total_duration: total,
       is_watched: false,
+      provider: sel.provider,
+      anime_title: sel.title,
+      cover_url: progresoPrevio?.cover_url ?? '',
+      episode_number: sel.episodeNumber ?? 0,
+      updated_at: 0,
     };
     void saveProgress(progresoPrevio);
   }
