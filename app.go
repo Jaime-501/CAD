@@ -190,6 +190,24 @@ func (a *App) GetRecentProgress() ([]models.WatchProgress, error) {
 	return a.core.HistorialReciente()
 }
 
+// ResumeAnime resuelve el clic de "Retomar" sobre una tarjeta del historial
+// (T46): resume, salta al siguiente, o abre el detalle porque no hay
+// siguiente (completed si terminó o es película, up_to_date si sigue en
+// emisión). Sin registro para ese (proveedor, anime) ⇒ ErrSinHistorial; sin
+// almacén abierto ⇒ ErrHistorialNoDisponible.
+func (a *App) ResumeAnime(provider string, animeID string) (models.ResumeInfo, error) {
+	return a.core.Retomar(a.contexto(), provider, animeID)
+}
+
+// GetNextEpisode devuelve el episodio siguiente al dado (T46/T55): el de
+// menor número estrictamente mayor (tolera huecos). Una película no tiene
+// siguiente (found=false). Si la lista completa de episodios no pudo
+// completarse, o el proveedor es desconocido, se devuelve el error (la UI
+// oculta el botón "Siguiente").
+func (a *App) GetNextEpisode(provider string, animeID string, episodeID string) (models.NextEpisode, error) {
+	return a.core.SiguienteEpisodio(a.contexto(), provider, animeID, episodeID)
+}
+
 // DeleteProgressAnime borra todo el progreso guardado de un anime y
 // devuelve el nº de registros eliminados (0 si no había).
 func (a *App) DeleteProgressAnime(provider string, animeID string) (int, error) {

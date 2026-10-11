@@ -13,6 +13,8 @@
 - `### T22 — historial de visualización` → creado por **T22** (Persistencia del historial).
 - `### T34 — búsqueda combinada + AnimeAV1 en la app` → creado por **T34**; sus cambios de firma también están anotados *in situ* en el bloque T20.
 - `### T37 — portabilidad del núcleo` → creado por **T37** (núcleo en `internal/app`, directorio de datos por parámetro).
+- `### T45 — app` → creado por **T45** (Home, favoritos, borrados de historial).
+- `### T46 — app` → creado por **T46** (`Nucleo.Retomar` y `Nucleo.SiguienteEpisodio`).
 
 ---
 
@@ -240,3 +242,45 @@ Los 9 métodos delegan tal cual en el núcleo, con retorno `(valor, error)` como
   - AnimeAV1: paso `1b` (Home; 2 secciones de 20 items, fixtures `home_catalogo_emision_data.json` distinguido por `?status=emision` y `home_portada_data.json` en `GET /__data.json`) y paso `5b` (favoritos/borrados con A = animeav1 y B = jkanime). La lista sube de 9 a 11 peticiones (`/catalogo/__data.json` ×2: `search=bleach` y `status=emision`; `/__data.json` ×1) y la aserción de query acepta las dos claves.
 - E2E de red real ampliados (`app_e2e_integration_test.go`): paso Home **tolerante** (T28) tras la búsqueda en `TestE2EFlujoCompletoRedReal` (`proveedorPrincipal`) y `TestE2EAnimeAV1RedReal` (`proveedorComplemento`): solo exige ≥1 sección con ≥1 item y ningún item con `ID`/`Title` vacíos. Ambos en verde contra el sitio real (JKAnime 15 s, AnimeAV1 3 s; 2 secciones con items cada uno).
 - Verificación: `gofmt -l .` sin salida · `go vet ./...` y `go vet -tags integration ./...` limpios · `go build ./...` OK · `go test -race -count=1 ./...` en verde (**366 → 382** `--- PASS`; `internal/app`: **34 → 50**) · guardia `portabilidad_test.go` en verde · `go list -deps ./internal/app | grep wailsapp` sin resultados · `git diff frontend/` vacío.
+
+---
+
+### T46 — app (`Nucleo.Retomar` y `Nucleo.SiguienteEpisodio`)
+
+Implementa la lógica testeable del clic sobre una tarjeta del historial y del botón "Siguiente ▸" (tabla de acciones de `tareas/v1.2_PLAN.md`). `Detalle`, `lote`, `iniciarStream`, `soltarStreamDistinto` y `borrarSiIncompleta` **quedan intactos**; el código nuevo vive en `internal/app/retomar.go` (nuevo) y solo añade dos métodos a `app.go`.
+
+#### Núcleo (`internal/app/retomar.go`)
+
+- Sentinels y variables de espera:
+  - `var ErrSinHistorial = errors.New("No hay registros de ese anime en el historial")` — no hay ningún registro para ese (proveedor, anime) en el historial (o el almacén no está abierto ⇒ `ErrHistorialNoDisponible`).
+  - `var errListaEpisodios = errors.New("no se pudo completar la lista de episodios")` — la lista completa de episodios no pudo completarse (stream fallido, cancelado por otro anime, caducado o se agotó la espera). El mensaje es el que ve la UI; nunca se decide `completed`/`up_to_date` ni se devuelve la lista parcial con este error.
+  - `var (intervaloEsperaEpisodios = 50 * time.Millisecond; esperaMaximaEpisodios = 60 * time.Second)` — cadencia y tope de la espera en `episodiosCompletos`; variables para que los tests las reduzcan (restauran con `t.Cleanup`). El temporizador solo gobierna la ESPERA, no el contexto de `Detalle`.
+- `func (n *Nucleo) episodiosCompletos(ctx context.Context, proveedor, animeID string) (models.AnimeDetail, []models.Episode, error)` — devuelve el detalle y la lista **COMPLETA** de episodios; **nunca** una lista parcial. Secuencia:
+  1. `proveedor`/`animeID` con `strings.TrimSpace`; `clave := cache.Clave(proveedor, animeID)`.
+  2. `res, err := n.Detalle(ctx, proveedor, animeID)` — el `ctx` se pasa **recibido tal cual** (no se deriva con `timeout`/`cancel`: el contexto del stream nace del que se pasa a `Detalle` y cancelarlo mataría los lotes que el frontend necesita después). Si `err != nil`, se devuelve sin reenvolver.
+  3. Si `n.proveedor(proveedor)` **no** implementa `scraper.EpisodeStreamer`: `Detalle` ya devolvió la lista completa y síncrona (sin cachear) ⇒ se devuelve `res.Detail` y `res.Episodes`.
+  4. Si lo implementa: se comprueba `n.cacheLocal.Get(clave)` **antes** del primer tick y luego cada `intervaloEsperaEpisodios`. Desenlaces: entrada con `Complete == true` ⇒ se devuelven **copias** de `e.Detail`/`e.Episodes`; entrada ausente (stream fallido, cancelado por otro anime o caducado) ⇒ `errListaEpisodios` sin lista parcial; `ctx.Done()` ⇒ `ctx.Err()` (cumple `errors.Is`); se agota `esperaMaximaEpisodios` ⇒ `errListaEpisodios`. **No se leen `st.fallo` ni otros internos del stream**: la única señal de "terminó" es la caché.
+- `func (n *Nucleo) Retomar(ctx context.Context, provider, animeID string) (models.ResumeInfo, error)` — decide el clic sobre la tarjeta (tabla de acciones):
+  1. Último registro del par desde `LastPerAnime()` filtrando por `AnimeID`/`ProviderName()` (sin él ⇒ `ErrSinHistorial`; sin almacén ⇒ `ErrHistorialNoDisponible`).
+  2. `!IsWatched` ⇒ `resume` con el `EpisodeID` del registro, el número de `ParseEpisodeID` y `StartAt = CurrentTime`, **sin pedir episodios**.
+  3. `IsWatched` y película (`KindMovie`) ⇒ `completed` sin pedir episodios.
+  4. `IsWatched` y serie ⇒ `episodiosCompletos` y `siguienteDe`: encontrado ⇒ `next` desde 0; no encontrado ⇒ `up_to_date` si `estaEnEmision(detalle.Status)`, si no `completed`. Si `episodiosCompletos` falla ⇒ se devuelve ese error (la UI lo muestra como «No se pudo retomar»); nunca se decide `completed`/`up_to_date` con una lista no completa.
+- `func (n *Nucleo) SiguienteEpisodio(ctx context.Context, provider, animeID, episodeID string) (models.NextEpisode, error)` — `ParseEpisodeID` del episodio; película ⇒ `NextEpisode{Found:false}` sin pedir episodios; si no, `episodiosCompletos` y `siguienteDe` ⇒ `Found:true`, `EpisodeID`, `Number`; sin siguiente ⇒ `Found:false`. Si `episodiosCompletos` falla ⇒ se devuelve el error (la UI oculta el botón). Proveedor desconocido ⇒ el mismo error que `Detalle`.
+- `func decidirRetomar(proveedor, animeID string, registro models.WatchProgress, kind models.EpisodeKind, numero int, episodios []models.Episode, status string) models.ResumeInfo` — función pura que aplica la tabla de acciones; el "número actual" sale de `ParseEpisodeID` del `EpisodeID` del registro (canónico; película ⇒ 0), **nunca** de `EpisodeNumber`.
+- `func siguienteDe(episodes []models.Episode, actual int) (models.Episode, bool)` — el episodio de **menor `Number` estrictamente mayor** que `actual`; no depende del orden de entrada ni asume números consecutivos (tolera huecos) e ignora los de `Kind == KindMovie`.
+- `func estaEnEmision(status string) bool` — normaliza (minúsculas, sin acentos, `TrimSpace`) y devuelve `true` **solo** si el resultado es exactamente `en emision`; cubre `En emision` (JKAnime, sin tilde) y `En emisión` (AnimeAV1, con tilde). Todo lo demás (`Concluido`, `Finalizado`, `Por estrenar`, `Próximamente`, `Desconocido`, vacío) ⇒ `false`. Con `quitarTildes` (`strings.NewReplacer`).
+- Los enlaces de vídeo no se tocan ni se cachean.
+
+#### Wails (`app.go`) — firmas nuevas
+
+Los 2 métodos delegan tal cual en el núcleo, con retorno `(valor, error)` como el resto, y pasan `a.contexto()`:
+
+- `func (a *App) ResumeAnime(provider string, animeID string) (models.ResumeInfo, error)`
+- `func (a *App) GetNextEpisode(provider string, animeID string, episodeID string) (models.NextEpisode, error)`
+
+`frontend/wailsjs/**` **no se regeneró** (prohibido en esta tarea): los bindings de estos 2 métodos llegan en T47.
+
+#### Tests
+
+- Nuevos en `internal/app/retomar_test.go` (25, reutilizando `proveedorFalso`/`streamerFalso`/`nuevoEntorno`/`emisorFalso.esperar` sin modificarlos): `TestSiguienteDeMenorNumeroMayor` · `TestSiguienteDeToleraHuecos` (1,2,4 ⇒ siguiente de 2 es 4) · `TestSiguienteDeListaDesordenada` · `TestSiguienteDeUltimoNoTieneSiguiente` · `TestSiguienteDeListaVacia` · `TestSiguienteDeIgnoraPeliculas` · `TestEstaEnEmisionConEstadosReales` (true: `En emision`, `En emisión`, `  EN EMISIÓN `; false: `Concluido`, `Finalizado`, `Por estrenar`, `Próximamente`, `Desconocido`, vacío) · `TestDecidirRetomarResume` · `TestDecidirRetomarNext` · `TestDecidirRetomarCompletedSerieFinalizada` · `TestDecidirRetomarUpToDateEnEmision` · `TestDecidirRetomarPeliculaVistaEsCompleted` · `TestRetomarSinRegistroDevuelveErrSinHistorial` · `TestRetomarUsaCacheSinPeticionesNuevas` (entrada completa en caché ⇒ 0 llamadas al proveedor) · `TestRetomarSinCacheObtieneDetalleUnaVez` (1 sola llamada a `StreamAnimeDetails`) · `TestRetomarTomaElRegistroMasRecienteDelAnime` · `TestRetomarMismoSlugOtroProveedorNoInterfiere` · `TestSiguienteEpisodioEncuentraSiguiente` · `TestSiguienteEpisodioPeliculaNoTiene` · `TestSiguienteEpisodioProveedorDesconocido` · `TestEpisodiosCompletosEsperaALosLotes` (primera tanda 1,2; lotes 3,4 y 5 con `Done` desde goroutine ⇒ devuelve 5 episodios y **no** retorna antes del `Done`) · `TestEpisodiosCompletosNoDevuelveListaParcialSiElStreamFalla` (lote final `Done` con `Err` ⇒ error y 0 episodios) · `TestEpisodiosCompletosSinStreamerUsaLaListaSincrona` · `TestEpisodiosCompletosCtxCanceladoDevuelveError` (`errors.Is(err, context.Canceled)`) · `TestEpisodiosCompletosTiempoMaximo` (fake que nunca envía `Done`; `esperaMaximaEpisodios` reducida ⇒ error en español).
+- Verificación: `gofmt -l .` sin salida · `go vet ./...` y `go vet -tags integration ./...` limpios · `go build ./...` OK · `go test -race -count=3 ./internal/app/` en verde · `go test -race -count=1 ./...` en verde (**382 → 407** `--- PASS`; `internal/app`: **50 → 75**) · guardia `portabilidad_test.go` en verde · `go list -deps ./internal/app | grep wailsapp` sin resultados · `git diff frontend/` vacío · `git diff internal/app/nucleo.go` y `git diff --stat` de `app_test.go`/`app_nucleo_cache_test.go`/`app_nucleo_animeav1_test.go` vacíos.
