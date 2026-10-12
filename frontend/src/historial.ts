@@ -6,7 +6,14 @@
  * agrupa y se formatea, sin reordenar dentro de cada grupo.
  */
 import { writable, type Writable } from 'svelte/store';
-import { getRecentProgress, type models } from './api';
+import {
+  deleteProgressAnime,
+  getProgress,
+  getRecentProgress,
+  saveProgress,
+  type models,
+} from './api';
+import { cerrarToast, mostrarToast } from './toasts';
 
 export const historial: Writable<models.WatchProgress[]> = writable([]);
 export const historialEstado: Writable<'idle' | 'loading' | 'ready' | 'error'> =
@@ -127,4 +134,46 @@ export function fraccionProgreso(p: models.WatchProgress): number {
   const fraccion = p.current_time / total;
   if (!Number.isFinite(fraccion)) return 0;
   return Math.min(1, Math.max(0, fraccion));
+}
+
+/**
+ * Borra el historial de **un anime** (todos sus episodios) de un proveedor
+ * (T51): guarda copia de sus registros, borra en el backend, recarga la
+ * lista y ofrece "Deshacer" durante 5 s. Sin diálogo de confirmación.
+ * Si no hay registros de ese (proveedor, anime) no se borra ni se avisa.
+ */
+export async function borrarAnime(provider: string, animeID: string): Promise<void> {
+  try {
+    const registros = (await getProgress(animeID)).filter((r) => proveedorDe(r) === provider);
+    if (registros.length === 0) return;
+    await deleteProgressAnime(provider, animeID);
+    await cargarHistorial();
+    const titulo = tituloVisible(registros[0]);
+    mostrarToast(`Historial de “${titulo}” borrado`, {
+      accion: { etiqueta: 'Deshacer', fn: () => void deshacerBorrado(registros) },
+    });
+  } catch (e) {
+    console.warn('[historial] no se pudo borrar el anime:', String(e));
+    mostrarToast('No se pudo borrar el historial');
+  }
+}
+
+/**
+ * Deshace el borrado de `borrarAnime` (T51): vuelve a guardar cada registro
+ * tal cual (los que traen `updated_at ≠ 0` conservan su fecha y con ella su
+ * orden original), recarga la lista y cierra el toast.
+ */
+export async function deshacerBorrado(registros: models.WatchProgress[]): Promise<void> {
+  let fallo = false;
+  for (const registro of registros) {
+    // `saveProgress` no lanza: devuelve false si el backend rechazó el guardado.
+    const guardado = await saveProgress(registro);
+    if (!guardado) fallo = true;
+  }
+  await cargarHistorial();
+  if (fallo) {
+    mostrarToast('No se pudo deshacer el borrado');
+    return;
+  }
+  cerrarToast();
 }

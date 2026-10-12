@@ -14,10 +14,21 @@
    * aquí vive el estado local del clic (`resolviendoId`, `mensajes`) —una
    * resolución a la vez—, el mapeo de resultados a mensajes y el cierre del
    * cajón al navegar en modo estrecho.
+   *
+   * T51 (borrado individual): cada tarjeta recibe `onBorrar`, que limpia el
+   * mensaje de esa tarjeta y llama a `borrarAnime(proveedor, anime_id)` (el
+   * backend borra solo ese proveedor; el toast ofrece "Deshacer").
    */
   import { onDestroy, tick } from 'svelte';
   import { get } from 'svelte/store';
-  import { agruparPorProveedor, cargarHistorial, historial, historialEstado, proveedorDe } from './historial';
+  import {
+    agruparPorProveedor,
+    borrarAnime,
+    cargarHistorial,
+    historial,
+    historialEstado,
+    proveedorDe,
+  } from './historial';
   import type { RetomarResultado } from './retomar';
   import { drawerOpen, isNarrow, sidebarCollapsed } from './ui';
   import TarjetaHistorial from './TarjetaHistorial.svelte';
@@ -81,6 +92,12 @@
     delete temporizadores[clave];
     if (!(clave in mensajes)) return;
     mensajes = Object.fromEntries(Object.entries(mensajes).filter(([k]) => k !== clave));
+  }
+
+  /** ✕ / deslizar / Delete (T51): borra el anime de SU proveedor, sin diálogo. */
+  function alBorrar(item: models.WatchProgress): void {
+    borrarMensaje(claveDe(item));
+    void borrarAnime(proveedorDe(item), item.anime_id);
   }
 
   // Al abrir el cajón el foco va al botón de cerrar/contraer (regla de
@@ -186,6 +203,7 @@
                 <TarjetaHistorial
                   {item}
                   onOpen={alRetomar}
+                  onBorrar={() => alBorrar(item)}
                   resolviendo={resolviendoId === claveDe(item)}
                   mensaje={mensajes[claveDe(item)] ?? ''}
                 />

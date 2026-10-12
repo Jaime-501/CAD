@@ -4,6 +4,7 @@
   import { cargarHistorial } from './historial';
   import { retomar } from './retomar';
   import { disposeEvents, initEvents } from './stores';
+  import Toast from './Toast.svelte';
   import { drawerOpen, isNarrow } from './ui';
   import {
     claveScroll,
@@ -103,6 +104,9 @@
     {/if}
   </main>
 </div>
+
+<!-- Toast de una ranura (T51): montado una sola vez, fijo abajo-centro. -->
+<Toast />
 
 <style>
   .app-shell {
