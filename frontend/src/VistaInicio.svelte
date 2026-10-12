@@ -1,14 +1,19 @@
 <script lang="ts">
   /**
-   * Home "Descubrir" (T53): página "Novedades" con una fila por sección de
-   * cada proveedor. Cada proveedor se pinta según SU estado (`home.ts`):
-   * skeletons mientras carga, bloque con "Reintentar" si falla (el otro sigue
-   * visible) y sus filas cuando responde.
+   * Home "Descubrir" (T53, pulido en T53b): página "Novedades" con una fila
+   * por sección de cada proveedor. Cada proveedor se pinta según SU estado
+   * (`home.ts`): skeletons mientras carga, bloque con "Reintentar" si falla
+   * (el otro sigue visible) y sus filas cuando responde.
    *
    * La carga es una vez por sesión: al montar solo se pide lo que aún no tiene
-   * estado, así que volver del detalle o vaciar la búsqueda no repete la
+   * estado, así que volver del detalle o vaciar la búsqueda no repite la
    * petición. El clic de cada tarjeta lo recibe por `onAbrir` desde
    * `VistaBusqueda` (la misma función de "abrir anime" de los resultados).
+   *
+   * T53b: el contenido va en un único `<section class="inicio">` sin padding
+   * propio, así buscador, "Novedades" y las filas comparten borde (el padding
+   * vive solo en el `main.contenedor` de `VistaBusqueda`). T54 puede envolver
+   * este contenido en un `tabpanel` sin rehacer estilos.
    */
   import { onMount } from 'svelte';
   import { get } from 'svelte/store';
@@ -33,7 +38,7 @@
   });
 </script>
 
-<main class="inicio">
+<section class="inicio">
   <div class="cabecera">
     <h2>Novedades</h2>
     <button
@@ -50,7 +55,9 @@
     {@const estado = $home[proveedor.id]}
     {#if estado === undefined || estado.estado === 'loading'}
       <section class="fila-fantasma" aria-label="{proveedor.nombre} · cargando">
-        <span class="titulo-fantasma">{proveedor.nombre}</span>
+        <div class="cabecera-fantasma">
+          <span class="proveedor-fantasma">{proveedor.nombre}</span>
+        </div>
         <div class="carrusel-fantasma">
           {#each [0, 1, 2, 3, 4, 5, 6, 7] as indice (indice)}
             <div class="esqueleto" aria-hidden="true"></div>
@@ -71,11 +78,7 @@
       </div>
     {:else}
       {#each estado.secciones as seccion (seccion.id)}
-        <FilaAnimes
-          titulo="{proveedor.nombre} · {seccion.title}"
-          items={seccion.items}
-          {onAbrir}
-        />
+        <FilaAnimes proveedor={proveedor.nombre} titulo={seccion.title} items={seccion.items} {onAbrir} />
       {/each}
     {/if}
   {/each}
@@ -83,25 +86,24 @@
   {#if sinContenido}
     <p class="vacio">Sin novedades por ahora.</p>
   {/if}
-</main>
+</section>
 
 <style>
+  /* Sin padding ni max-width propios (T53b): el ancho lo fija el
+     `main.contenedor` de `VistaBusqueda`, con el que comparten borde. */
   .inicio {
-    padding: 2rem;
     text-align: left;
-    max-width: 1100px;
-    margin: 0 auto;
   }
   .cabecera {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
     gap: 12px;
     margin-bottom: 1.5rem;
   }
   h2 {
     margin: 0;
-    text-align: center;
+    text-align: left;
   }
   .actualizar {
     padding: 8px 16px;
@@ -123,7 +125,7 @@
     outline-offset: 2px;
   }
   .error-proveedor {
-    margin: 0 0 18px;
+    margin: 0 0 28px;
     padding: 12px;
     background: var(--cad-superficie);
     border: 1px solid var(--cad-borde);
@@ -158,26 +160,31 @@
     color: var(--cad-texto-suave);
     text-align: center;
   }
-  /* Fila de carga (T53): mismas medidas que la fila real (8 tarjetas 140×210). */
+  /* Fila de carga (T53b): mismas medidas que la fila real (8 tarjetas
+     140×264: portada 210 + bloque de título de 2 líneas). */
   .fila-fantasma {
-    margin: 0 0 18px;
+    margin: 0 0 28px;
   }
-  .titulo-fantasma {
-    display: block;
-    margin: 0 0 8px;
-    font-size: 16px;
-    font-weight: bold;
+  .cabecera-fantasma {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin: 0 0 10px;
+    min-height: 22px;
+  }
+  .proveedor-fantasma {
+    font-size: 12px;
+    color: var(--cad-texto-suave);
   }
   .carrusel-fantasma {
     display: flex;
     gap: 12px;
     overflow: hidden;
-    padding-bottom: 6px;
   }
   .esqueleto {
     flex: 0 0 140px;
     width: 140px;
-    height: 210px;
+    height: 264px;
     border-radius: 10px;
     background: linear-gradient(
       100deg,
