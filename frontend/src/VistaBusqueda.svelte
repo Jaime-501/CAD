@@ -4,6 +4,7 @@
   import type { models } from './api';
   import { search, searchResults, searchState } from './stores';
   import { navegarA, type SeleccionAnime } from './views';
+  import VistaInicio from './VistaInicio.svelte';
 
   /** false = no hay puente `window.go` (Vite puro en :5173); lo decide App.svelte. */
   export let puente = true;
@@ -93,7 +94,10 @@
   {:else if $searchState.query !== ''}
     <p class="estado">No se encontraron resultados para “{$searchState.query}”.</p>
   {:else}
-    <p class="estado">Escribe el nombre de un anime para empezar a buscar.</p>
+    <!-- Home "Descubrir" (T53): consulta vacía y sin resultados → Novedades.
+         Al escribir se vuelve a buscar; al vaciar, se vuelve aquí (el estado
+         de `home` se conserva: no se repite la petición). -->
+    <VistaInicio onAbrir={abrir} />
   {/if}
 </main>
 
