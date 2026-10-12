@@ -18,16 +18,25 @@
    * T51 (borrado individual): cada tarjeta recibe `onBorrar`, que limpia el
    * mensaje de esa tarjeta y llama a `borrarAnime(proveedor, anime_id)` (el
    * backend borra solo ese proveedor; el toast ofrece "Deshacer").
+   *
+   * T52 (borrado masivo): papelera en el encabezado de cada grupo
+   * (`borrarProveedor`, con Deshacer en el toast) y pie fijo con
+   * "Borrar todo el historial" bajo doble confirmación local (6 s, sin
+   * `window.confirm`, sin Deshacer; `Escape` cancela y el foco cae en
+   * "Cancelar").
    */
   import { onDestroy, tick } from 'svelte';
   import { get } from 'svelte/store';
   import {
     agruparPorProveedor,
     borrarAnime,
+    borrarProveedor,
+    borrarTodo,
     cargarHistorial,
     historial,
     historialEstado,
     proveedorDe,
+    type GrupoHistorial,
   } from './historial';
   import type { RetomarResultado } from './retomar';
   import { drawerOpen, isNarrow, sidebarCollapsed } from './ui';
@@ -39,16 +48,24 @@
 
   /** Duración del mensaje de tarjeta ("Completado"…) antes de borrarlo (T50). */
   const MENSAJE_MS = 4000;
+  /** Espera de la confirmación de "borrar todo" antes de cancelarse sola (T52). */
+  const CONFIRMACION_MS = 6000;
 
   let boton: HTMLButtonElement | null = null;
   /** Clave `proveedor:anime_id` que se está resolviendo; null = ninguna. */
   let resolviendoId: string | null = null;
   let mensajes: Record<string, string> = {};
   let temporizadores: Record<string, ReturnType<typeof setTimeout>> = {};
+  /** Confirmación del "borrar todo" en curso (T52). */
+  let confirmando = false;
+  let temporizadorConfirmacion: ReturnType<typeof setTimeout> | null = null;
+  let botonCancelar: HTMLButtonElement | null = null;
 
   onDestroy(() => {
     for (const temporizador of Object.values(temporizadores)) clearTimeout(temporizador);
     temporizadores = {};
+    if (temporizadorConfirmacion !== null) clearTimeout(temporizadorConfirmacion);
+    temporizadorConfirmacion = null;
   });
 
   function claveDe(item: models.WatchProgress): string {
@@ -100,6 +117,31 @@
     void borrarAnime(proveedorDe(item), item.anime_id);
   }
 
+  /** Papelera del encabezado de grupo (T52): borra el proveedor; hay Deshacer. */
+  function alBorrarProveedor(grupo: GrupoHistorial): void {
+    void borrarProveedor(grupo.provider, grupo.nombre);
+  }
+
+  /** Entra en la confirmación del "borrar todo" y enfoca "Cancelar" (T52). */
+  async function entrarConfirmacion(): Promise<void> {
+    confirmando = true;
+    if (temporizadorConfirmacion !== null) clearTimeout(temporizadorConfirmacion);
+    temporizadorConfirmacion = setTimeout(() => cancelarConfirmacion(), CONFIRMACION_MS);
+    await tick();
+    botonCancelar?.focus();
+  }
+
+  function cancelarConfirmacion(): void {
+    if (temporizadorConfirmacion !== null) clearTimeout(temporizadorConfirmacion);
+    temporizadorConfirmacion = null;
+    confirmando = false;
+  }
+
+  function confirmarBorrado(): void {
+    cancelarConfirmacion();
+    void borrarTodo();
+  }
+
   // Al abrir el cajón el foco va al botón de cerrar/contraer (regla de
   // teclado de T48): con `tick` el `bind:this` ya está aplicado.
   $: enfocarCajon($isNarrow, $drawerOpen);
@@ -123,7 +165,13 @@
   }
 
   function alTeclar(e: KeyboardEvent) {
-    if (e.key === 'Escape' && get(isNarrow) && get(drawerOpen)) {
+    if (e.key !== 'Escape') return;
+    // Escape con la confirmación abierta la cancela (T52); si no, cierra el cajón.
+    if (confirmando) {
+      cancelarConfirmacion();
+      return;
+    }
+    if (get(isNarrow) && get(drawerOpen)) {
       drawerOpen.set(false);
     }
   }
@@ -198,6 +246,21 @@
               <h2 class="grupo-titulo">
                 <span>{grupo.nombre}</span>
                 <span class="grupo-contador">{grupo.items.length}</span>
+                <button
+                  type="button"
+                  class="papelera"
+                  aria-label="Borrar historial de {grupo.nombre}"
+                  on:click={() => alBorrarProveedor(grupo)}
+                >
+                  <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">
+                    <path
+                      d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V4h6v3"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      fill="none"
+                    />
+                  </svg>
+                </button>
               </h2>
               {#each grupo.items as item (claveDe(item))}
                 <TarjetaHistorial
@@ -213,6 +276,25 @@
         {/if}
       {/if}
     </div>
+    {#if ($isNarrow || !$sidebarCollapsed) && $historial.length > 0}
+      <div class="pie">
+        {#if !confirmando}
+          <button type="button" class="borrar-todo" on:click={() => void entrarConfirmacion()}>
+            Borrar todo el historial
+          </button>
+        {:else}
+          <p class="confirmar-texto">¿Borrar todo el historial?</p>
+          <div class="confirmar-acciones">
+            <button type="button" class="si-borrar" on:click={confirmarBorrado}>
+              Sí, borrar todo
+            </button>
+            <button type="button" class="cancelar" bind:this={botonCancelar} on:click={cancelarConfirmacion}>
+              Cancelar
+            </button>
+          </div>
+        {/if}
+      </div>
+    {/if}
   </aside>
 {/if}
 
@@ -300,7 +382,6 @@
   .grupo-titulo {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: 8px;
     margin: 0 0 8px;
     font-size: 12px;
@@ -311,6 +392,94 @@
   }
   .grupo-contador {
     color: var(--cad-texto-suave);
+  }
+  /* Papelera del grupo (T52): siempre visible (regla P6), al final de la fila. */
+  .papelera {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-left: auto;
+    padding: 4px;
+    background: transparent;
+    border: 1px solid var(--cad-borde);
+    border-radius: var(--cad-radio);
+    color: var(--cad-texto-suave);
+    cursor: pointer;
+  }
+  .papelera:hover {
+    color: var(--cad-peligro);
+    border-color: var(--cad-peligro);
+  }
+  .papelera:focus-visible {
+    outline: 2px solid var(--cad-acento);
+    outline-offset: 2px;
+  }
+  /* Pie fijo con el "borrar todo" (T52): solo con historial y barra expandida. */
+  .pie {
+    box-sizing: border-box;
+    padding: 12px;
+    border-top: 1px solid var(--cad-borde);
+  }
+  .borrar-todo {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 6px 12px;
+    background: transparent;
+    border: 1px solid var(--cad-borde);
+    border-radius: var(--cad-radio);
+    color: var(--cad-texto-suave);
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .borrar-todo:hover {
+    border-color: var(--cad-peligro);
+    color: var(--cad-peligro);
+  }
+  .borrar-todo:focus-visible {
+    outline: 2px solid var(--cad-acento);
+    outline-offset: 2px;
+  }
+  .confirmar-texto {
+    margin: 0 0 8px;
+    font-size: 13px;
+    color: var(--cad-texto);
+  }
+  .confirmar-acciones {
+    display: flex;
+    gap: 8px;
+  }
+  .si-borrar {
+    box-sizing: border-box;
+    flex: 1;
+    min-width: 0;
+    padding: 6px 8px;
+    background: transparent;
+    border: 1px solid var(--cad-peligro);
+    border-radius: var(--cad-radio);
+    color: var(--cad-peligro);
+    font-family: inherit;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  .cancelar {
+    box-sizing: border-box;
+    flex: 1;
+    min-width: 0;
+    padding: 6px 8px;
+    background: transparent;
+    border: 1px solid var(--cad-borde);
+    border-radius: var(--cad-radio);
+    color: var(--cad-texto);
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .si-borrar:focus-visible,
+  .cancelar:focus-visible {
+    outline: 2px solid var(--cad-acento);
+    outline-offset: 2px;
   }
   /* Fantasmas de carga (T49): mismas medidas que la tarjeta real. */
   .esqueleto {

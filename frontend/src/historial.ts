@@ -7,7 +7,9 @@
  */
 import { writable, type Writable } from 'svelte/store';
 import {
+  clearProgress,
   deleteProgressAnime,
+  deleteProviderProgress,
   getProgress,
   getRecentProgress,
   saveProgress,
@@ -176,4 +178,40 @@ export async function deshacerBorrado(registros: models.WatchProgress[]): Promis
     return;
   }
   cerrarToast();
+}
+
+/**
+ * Borra el historial de **un proveedor** (T52): guarda copia de todos sus
+ * registros, borra en el backend, recarga la lista y ofrece "Deshacer"
+ * durante 5 s (reutiliza `deshacerBorrado`). Sin diálogo de confirmación.
+ * Si no hay registros de ese proveedor no se borra ni se avisa.
+ */
+export async function borrarProveedor(provider: string, nombre: string): Promise<void> {
+  try {
+    const registros = (await getProgress('')).filter((r) => proveedorDe(r) === provider);
+    if (registros.length === 0) return;
+    await deleteProviderProgress(provider);
+    await cargarHistorial();
+    mostrarToast(`Historial de ${nombre} borrado (${registros.length})`, {
+      accion: { etiqueta: 'Deshacer', fn: () => void deshacerBorrado(registros) },
+    });
+  } catch (e) {
+    console.warn('[historial] no se pudo borrar el historial del proveedor:', String(e));
+    mostrarToast('No se pudo borrar el historial');
+  }
+}
+
+/**
+ * Borra el historial **entero** (T52): sin Deshacer (la confirmación vive en
+ * la barra) y con aviso breve "Historial borrado".
+ */
+export async function borrarTodo(): Promise<void> {
+  try {
+    await clearProgress();
+    await cargarHistorial();
+    mostrarToast('Historial borrado');
+  } catch (e) {
+    console.warn('[historial] no se pudo borrar todo el historial:', String(e));
+    mostrarToast('No se pudo borrar el historial');
+  }
 }
