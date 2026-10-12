@@ -2,6 +2,7 @@
   import { onDestroy, onMount, tick } from 'svelte';
   import BarraLateral from './BarraLateral.svelte';
   import { cargarHistorial } from './historial';
+  import { retomar } from './retomar';
   import { disposeEvents, initEvents } from './stores';
   import { drawerOpen, isNarrow } from './ui';
   import {
@@ -75,7 +76,7 @@
 -->
 <div class="app-shell" class:sin-barra={$vista === 'reproductor' || $isNarrow}>
   {#if $vista !== 'reproductor'}
-    <BarraLateral />
+    <BarraLateral onOpen={retomar} />
   {/if}
 
   <main class="area-principal">

@@ -39,6 +39,13 @@ export const episodes = writable<models.Episode[]>([]);
 export const episodesComplete = writable<boolean>(false);
 export const episodesError = writable<string>('');
 export const progressMap = writable<Record<string, models.WatchProgress>>({});
+/**
+ * T50: estado de navegación del reproductor para "retomar" — segundos desde
+ * los que debe arrancar el próximo `<video>`. Opcional, **0 = desde el
+ * principio** (el valor por defecto). Lo pone `retomar.ts` justo antes de
+ * navegar y lo consume `VistaReproductor` una sola vez al montar.
+ */
+export const startAt = writable<number>(0);
 export const searchResults = writable<models.Anime[]>([]);
 export const searchState = writable<SearchState>({ loading: false, error: '', query: '' });
 

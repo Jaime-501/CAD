@@ -1,8 +1,10 @@
 <script lang="ts">
   /**
    * Tarjeta del historial en la barra lateral (T49): portada, título,
-   * episodio/tiempo y barra de progreso. El clic lo cablea T50 vía `onOpen`;
-   * aquí `resolviendo`/`mensaje` quedan declarados y se pintan si vienen.
+   * episodio/tiempo y barra de progreso. T50: el clic va a `onOpen`
+   * (`alRetomar` de la barra); mientras `resolviendo` la tarjeta queda
+   * desactivada y muestra "Buscando…", y `mensaje` pinta el resultado
+   * ("Completado", "Al día", "No se pudo retomar") durante 4 s.
    */
   import type { models } from './api';
   import { formatearTiempo, fraccionProgreso, numeroDeEpisodio, tituloVisible } from './historial';
@@ -60,7 +62,9 @@
     >
       <span class="barra-relleno" style="width: {porcentaje}%"></span>
     </span>
-    {#if mensaje !== ''}
+    {#if resolviendo}
+      <span class="mensaje" aria-live="polite">Buscando…</span>
+    {:else if mensaje !== ''}
       <span class="mensaje" aria-live="polite">{mensaje}</span>
     {/if}
   </span>

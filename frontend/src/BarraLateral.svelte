@@ -9,18 +9,79 @@
    *   barra contraída (56px) oculta el contenido.
    * - Modo estrecho (`isNarrow`): cajón fijo sobre el contenido; `sidebarCollapsed`
    *   se ignora, el botón cierra, el foco va al botón al abrir y `Escape` cierra.
+   *
+   * T50 (retomar con un clic): `onOpen` lo cablea `App.svelte` con `retomar`;
+   * aquí vive el estado local del clic (`resolviendoId`, `mensajes`) —una
+   * resolución a la vez—, el mapeo de resultados a mensajes y el cierre del
+   * cajón al navegar en modo estrecho.
    */
-  import { tick } from 'svelte';
+  import { onDestroy, tick } from 'svelte';
   import { get } from 'svelte/store';
   import { agruparPorProveedor, cargarHistorial, historial, historialEstado, proveedorDe } from './historial';
+  import type { RetomarResultado } from './retomar';
   import { drawerOpen, isNarrow, sidebarCollapsed } from './ui';
   import TarjetaHistorial from './TarjetaHistorial.svelte';
   import type { models } from './api';
 
-  /** Clic sobre una tarjeta: lo cablea T50 (retomar con un clic). */
-  export let onOpen: (item: models.WatchProgress) => void = () => {};
+  /** Resolución del clic: la cablea `App.svelte` con `retomar` (T50). */
+  export let onOpen: (item: models.WatchProgress) => Promise<RetomarResultado>;
+
+  /** Duración del mensaje de tarjeta ("Completado"…) antes de borrarlo (T50). */
+  const MENSAJE_MS = 4000;
 
   let boton: HTMLButtonElement | null = null;
+  /** Clave `proveedor:anime_id` que se está resolviendo; null = ninguna. */
+  let resolviendoId: string | null = null;
+  let mensajes: Record<string, string> = {};
+  let temporizadores: Record<string, ReturnType<typeof setTimeout>> = {};
+
+  onDestroy(() => {
+    for (const temporizador of Object.values(temporizadores)) clearTimeout(temporizador);
+    temporizadores = {};
+  });
+
+  function claveDe(item: models.WatchProgress): string {
+    return `${proveedorDe(item)}:${item.anime_id}`;
+  }
+
+  /** Clic en una tarjeta: si ya hay una resolución en curso, se ignora (T50). */
+  async function alRetomar(item: models.WatchProgress): Promise<void> {
+    if (resolviendoId !== null) return;
+    const clave = claveDe(item);
+    resolviendoId = clave;
+    borrarMensaje(clave);
+
+    let res: RetomarResultado;
+    try {
+      res = await onOpen(item);
+    } catch (e) {
+      res = { ok: false, error: e instanceof Error ? e.message : String(e) };
+    }
+    resolviendoId = null;
+
+    if (!res.ok) {
+      console.warn('[BarraLateral] no se pudo retomar:', res.error);
+      ponerMensaje(clave, 'No se pudo retomar');
+      return;
+    }
+    if (res.accion === 'completed') ponerMensaje(clave, 'Completado');
+    else if (res.accion === 'up_to_date') ponerMensaje(clave, 'Al día');
+    // Las 4 acciones navegan: en modo estrecho el cajón se cierra (T48/T50).
+    if (get(isNarrow)) drawerOpen.set(false);
+  }
+
+  function ponerMensaje(clave: string, texto: string): void {
+    borrarMensaje(clave);
+    mensajes = { ...mensajes, [clave]: texto };
+    temporizadores[clave] = setTimeout(() => borrarMensaje(clave), MENSAJE_MS);
+  }
+
+  function borrarMensaje(clave: string): void {
+    clearTimeout(temporizadores[clave]);
+    delete temporizadores[clave];
+    if (!(clave in mensajes)) return;
+    mensajes = Object.fromEntries(Object.entries(mensajes).filter(([k]) => k !== clave));
+  }
 
   // Al abrir el cajón el foco va al botón de cerrar/contraer (regla de
   // teclado de T48): con `tick` el `bind:this` ya está aplicado.
@@ -121,8 +182,13 @@
                 <span>{grupo.nombre}</span>
                 <span class="grupo-contador">{grupo.items.length}</span>
               </h2>
-              {#each grupo.items as item (`${proveedorDe(item)}:${item.anime_id}`)}
-                <TarjetaHistorial {item} {onOpen} />
+              {#each grupo.items as item (claveDe(item))}
+                <TarjetaHistorial
+                  {item}
+                  onOpen={alRetomar}
+                  resolviendo={resolviendoId === claveDe(item)}
+                  mensaje={mensajes[claveDe(item)] ?? ''}
+                />
               {/each}
             </section>
           {/each}

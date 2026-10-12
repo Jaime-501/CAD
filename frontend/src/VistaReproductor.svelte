@@ -6,7 +6,7 @@
   import { getProgress, getVideoSources, saveProgress } from './api';
   import type { VideoSourceView } from './api';
   import type { FiltroIdioma } from './etiquetas';
-  import { currentDetail, progressMap } from './stores';
+  import { currentDetail, progressMap, startAt } from './stores';
   import { atras, seleccion, type SeleccionAnime } from './views';
   import SelectorFuente from './SelectorFuente.svelte';
 
@@ -35,6 +35,13 @@
   let hls: Hls | null = null;
   /** Posición a restaurar en el próximo `<video>` (progreso guardado o en curso). */
   let progresoPrevio: models.WatchProgress | null = null;
+  /**
+   * T50: posición que pidió `retomar` (`startAt`, en segundos). Se consume al
+   * montar (el store vuelve a 0), así que solo afecta al **primer**
+   * `loadedmetadata` de este montaje: no se reaplica al cambiar de fuente ni a
+   * los iframes.
+   */
+  let inicioPendiente = 0;
   let ultimoGuardado = 0;
 
   $: fuenteActual = fuentes[indice] ?? null;
@@ -43,6 +50,10 @@
   $: lineaEpisodio = etiquetaEpisodio($seleccion);
 
   onMount(() => {
+    // T50: la posición de "retomar" se toma UNA vez aquí y el store queda a 0.
+    inicioPendiente = get(startAt);
+    startAt.set(0);
+
     const sel = get(seleccion);
     if (videoEl) {
       videoEl.addEventListener('timeupdate', alAvanzar);
@@ -252,15 +263,36 @@
   }
 
   /**
-   * Restaura la posición guardada cuando el recurso ya tiene metadatos.
-   * Vale tanto al abrir como al cambiar de fuente (`elegirFuente` guarda
-   * justo antes): si la nueva fuente no llega a metadatos (iframe, error de
-   * red) se queda en 0 y la posición sigue guardada para el próximo intento.
+   * Restaura la posición cuando el recurso ya tiene metadatos.
+   * T50 (retomar): si quedó `inicioPendiente`, manda él — un solo intento, en
+   * el primer `<video>` con metadatos; si `startAt` no deja margen de 5 s antes
+   * del final (o no hay duración utilizable) se empieza en 0. Consumido, no se
+   * vuelve a aplicar al cambiar de fuente.
+   * T27 (progreso guardado): en los demás casos, la posición de `progresoPrevio`
+   * —igual que antes—, tanto al abrir como al cambiar de fuente (`elegirFuente`
+   * guarda justo antes): si la fuente nueva no llega a metadatos (iframe, error
+   * de red) se queda en 0 y la posición sigue guardada para el próximo intento.
    */
   function alMetadatos(): void {
     const v = videoEl;
+    if (!v || modo !== 'video') return;
+
+    if (inicioPendiente > 0) {
+      const objetivo = inicioPendiente;
+      inicioPendiente = 0;
+      const duracion = v.duration;
+      if (v.currentTime === 0 && objetivo < duracion - 5) {
+        try {
+          v.currentTime = objetivo;
+        } catch {
+          /* posición aún no válida */
+        }
+      }
+      return;
+    }
+
     const p = progresoPrevio;
-    if (!v || modo !== 'video' || !p || p.is_watched) return;
+    if (!p || p.is_watched) return;
     if (!(p.current_time > 0) || v.currentTime !== 0) return;
     try {
       v.currentTime = p.current_time;
