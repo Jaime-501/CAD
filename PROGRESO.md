@@ -297,31 +297,6 @@ Hecha el **2026-10-12** en `feature/home-historial-favoritos`, **sin crear tag n
 Recuento real por paquete (`go test -count=1 -v`, líneas `--- PASS`): `internal/app` **75** · `cache` **9** · `db` **43** · `httpx` **27** · `logx` **7** · `models` **24** · `scraper` **8** · `scraper/animeav1` **70** · `scraper/jkanime` **53** · `scraper/jkanime/extractors` **68** · `stream` **23** · `miapp` 0 → **total 407**.
 
 `git status --porcelain` solo con los archivos listados arriba; `git diff main.go` muestra únicamente la línea del `Title`.
-
-### Prueba manual con el `.exe` (pendiente del humano — sin marcar)
-
-Compila con `docker compose run --rm app wails build -platform windows/amd64` y ejecuta `build\bin\miapp.exe` en Windows:
-
-- [ ] La ventana se titula **CAD · Comfort Anime Desktop**.
-- [ ] Home: filas de **ambos** proveedores; filas alineadas con el buscador, carruseles **sin barra de scroll nativa** y tarjeta **realzada al pasar el ratón** (T53b).
-- [ ] Barra lateral: grupos por proveedor, orden por recencia y clic que retoma.
-- [ ] Retomar (`resume`) con el minuto correcto en **HLS** y en **MP4**.
-- [ ] Retomar de un episodio ya visto → entra al **siguiente**.
-- [ ] Estados `completed` y `up_to_date`.
-- [ ] Favoritos: estrella en el detalle, pestaña "★ Favoritos (N)" y **siguen ahí tras cerrar y abrir** la app.
-- [ ] Botón **Siguiente ▸**: se **resalta al 90 %** (en HLS y en MP4; **nunca** en un iframe), cambia de episodio y está **oculto** en películas y en el último episodio.
-- [ ] Al cambiar con "Siguiente ▸", el **episodio anterior queda guardado** en el historial.
-- [ ] Historial: deslizar a **izquierda y derecha**, **✕**, **Deshacer** a los 5 s, **borrar por proveedor** y **borrar todo** con doble confirmación.
-- [ ] Un `historial.json` de la **v1.1** (sin `updated_at`) sigue cargando y sus entradas aparecen **al final**.
-- [ ] Ventana estrecha → cajón/lateral sin cortes ni solapes.
-
-### Release v1.2.0 (pendiente del humano — NO ejecutadas todavía)
-
-1. `git add <archivos>` y commit en `feature/home-historial-favoritos` (revisa `git status` y `git diff` antes).
-2. Merge a `main`.
-3. `git tag -a v1.2.0 -m "Versión 1.2.0"` y `git push origin v1.2.0`.
-4. Empaquetado y notas según `docs/DESARROLLO.md` → "Publicar una versión": `docker compose run --rm app wails build -platform windows/amd64`, `Compress-Archive -Path build\bin\miapp.exe -DestinationPath miapp-v1.2.0-windows-amd64.zip`, `Get-FileHash miapp-v1.2.0-windows-amd64.zip -Algorithm SHA256` y en GitHub **Releases → Draft a new release** con el SHA256 y el aviso de SmartScreen.
-
 ---
 
 ## T57 — UI: botón "Siguiente ▸" discreto durante la reproducción
