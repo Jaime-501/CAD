@@ -3,11 +3,12 @@
   import { onDestroy, onMount } from 'svelte';
   import { get } from 'svelte/store';
   import type { models } from './api';
-  import { getProgress, getVideoSources, saveProgress } from './api';
+  import { getNextEpisode, getProgress, getVideoSources, saveProgress } from './api';
   import type { VideoSourceView } from './api';
   import type { FiltroIdioma } from './etiquetas';
-  import { currentDetail, progressMap, startAt } from './stores';
-  import { atras, seleccion, type SeleccionAnime } from './views';
+  import { currentDetail, episodes, progressMap, startAt } from './stores';
+  import { atras, navegarA, seleccion, type SeleccionAnime } from './views';
+  import BotonSiguiente from './BotonSiguiente.svelte';
   import SelectorFuente from './SelectorFuente.svelte';
 
   /** Throttle del guardado en `timeupdate` (T27: ~5 s). */
@@ -43,6 +44,31 @@
    */
   let inicioPendiente = 0;
   let ultimoGuardado = 0;
+  /**
+   * T55 — botón "Siguiente ▸": el cálculo lo hace Go (`getNextEpisode`, al
+   * montar y con cada cambio de episodio). `sigCargando` es la llamada en
+   * vuelo; `sigEncontrado`/`sigNumero`/`sigEpisodioID` son la respuesta
+   * vigente (`found: false` o error ⇒ botón `oculto`); `resaltadoSiguiente`
+   * se activa una vez (pegajoso) al 90 % de un vídeo HLS/MP4 y se limpia al
+   * cambiar de episodio; nunca se resalta en iframes.
+   */
+  let sigCargando = true;
+  let sigEncontrado = false;
+  let sigNumero = 0;
+  let sigEpisodioID = '';
+  let resaltadoSiguiente = false;
+  /**
+   * T55: al pasar de episodio con el botón se arranca en 0 (`startAt = 0` de
+   * la ficha): el primer `loadedmetadata` del episodio nuevo NO restaura
+   * `progresoPrevio` (aunque arranque tras retomar con posición, ese camino
+   * ya lo cubre `inicioPendiente` en el montaje).
+   */
+  let empezarDesdeCero = false;
+  /** Episodio cuyas fuentes/`getNextEpisode` están activos (guardia de carreras). */
+  let episodioActual = '';
+
+  $: estadoSiguiente = calcularEstadoSiguiente(sigCargando, sigEncontrado, resaltadoSiguiente);
+  $: sincronizarEpisodio($seleccion?.episodeID ?? '');
 
   $: fuenteActual = fuentes[indice] ?? null;
   $: avisoProxy = avisoDeProxy(fuenteActual);
@@ -62,13 +88,17 @@
       videoEl.addEventListener('loadedmetadata', alMetadatos);
     }
     window.addEventListener('beforeunload', alSalir);
+    window.addEventListener('keydown', alTecla);
 
     if (!sel?.episodeID) {
       cargando = false;
+      sigCargando = false;
       error = 'No hay ningún episodio seleccionado.';
       return;
     }
+    episodioActual = sel.episodeID;
     void arrancar(sel);
+    void pedirSiguiente(sel);
   });
 
   onDestroy(() => {
@@ -81,6 +111,7 @@
       videoEl.removeEventListener('error', alErrorFuente);
     }
     window.removeEventListener('beforeunload', alSalir);
+    window.removeEventListener('keydown', alTecla);
     limpiarReproduccion();
   });
 
@@ -88,6 +119,122 @@
     progresoPrevio = await recuperarProgreso(sel);
     if (get(seleccion)?.episodeID !== sel.episodeID) return;
     await cargarFuentes(false);
+  }
+
+  /**
+   * T55: pide a Go el siguiente episodio (menor número estrictamente mayor).
+   * Si el episodio cambia mientras la llamada está en vuelo, la respuesta
+   * vieja se ignora (comparación con el `episodeID` vigente).
+   */
+  async function pedirSiguiente(sel: SeleccionAnime): Promise<void> {
+    if (!sel.episodeID) {
+      sigCargando = false;
+      sigEncontrado = false;
+      return;
+    }
+    sigCargando = true;
+    try {
+      const sig = await getNextEpisode(sel.provider, sel.animeID, sel.episodeID);
+      if (get(seleccion)?.episodeID !== sel.episodeID) return;
+      sigCargando = false;
+      if (!sig.found) {
+        sigEncontrado = false;
+        return;
+      }
+      sigEncontrado = true;
+      sigNumero = sig.number;
+      sigEpisodioID = sig.episode_id;
+    } catch (e) {
+      if (get(seleccion)?.episodeID !== sel.episodeID) return;
+      // Película/serie sin siguiente o red caída: el botón queda oculto.
+      console.warn('[VistaReproductor] siguiente episodio no disponible:', texto(e));
+      sigCargando = false;
+      sigEncontrado = false;
+    }
+  }
+
+  /**
+   * Cambio de episodio DENTRO del reproductor (T55, misma vía de T50 sin
+   * pasar por el detalle): `navegarA('reproductor', …)` fija `seleccion` sin
+   * remontar la vista, así que aquí se reinicia la carga de fuentes y se
+   * vuelve a pedir el siguiente. El primer cambio lo ignora: es el montaje.
+   */
+  function sincronizarEpisodio(episodeID: string): void {
+    if (episodeID === episodioActual) return;
+    const eraInicial = episodioActual === '';
+    episodioActual = episodeID;
+    if (eraInicial) return;
+    reiniciarEpisodio();
+  }
+
+  function reiniciarEpisodio(): void {
+    const sel = get(seleccion);
+    if (!sel?.episodeID) return;
+    limpiarReproduccion();
+    resaltadoSiguiente = false;
+    empezarDesdeCero = true;
+    fuentes = [];
+    indice = 0;
+    intentos = 0;
+    modo = 'nada';
+    ocupado = false;
+    error = '';
+    cargando = true;
+    cargandoTexto = 'Cargando fuentes de vídeo…';
+    sigCargando = true;
+    sigEncontrado = false;
+    void arrancar(sel);
+    void pedirSiguiente(sel);
+  }
+
+  /** Clic del botón (o tecla N): guarda la posición actual y salta al siguiente. */
+  function alPulsarSiguiente(): void {
+    if (estadoSiguiente !== 'listo' && estadoSiguiente !== 'resaltado') return;
+    if (sigEpisodioID === '') return;
+    const sel = get(seleccion);
+    if (!sel?.episodeID) return;
+    guardarProgreso(true);
+    // Mismo objeto de sel + el episodio devuelto; `startAt = 0` (no se toca el
+    // store: `empezarDesdeCero` cubre el reinicio dentro del reproductor).
+    const titulo = get(episodes).find((ep) => ep.id === sigEpisodioID)?.title ?? '';
+    navegarA('reproductor', {
+      provider: sel.provider,
+      animeID: sel.animeID,
+      title: sel.title,
+      episodeID: sigEpisodioID,
+      episodeNumber: sigNumero,
+      episodeTitle: titulo,
+    });
+  }
+
+  /** Atajo N (T55): igual que clic si el botón está listo/resaltado. */
+  function alTecla(e: KeyboardEvent): void {
+    if (e.key.toLowerCase() !== 'n') return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const destino = e.target as HTMLElement | null;
+    if (destino) {
+      const tag = destino.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || destino.isContentEditable) return;
+    }
+    alPulsarSiguiente();
+  }
+
+  function calcularEstadoSiguiente(
+    cargandoSiguiente: boolean,
+    encontrado: boolean,
+    resaltado: boolean
+  ): 'cargando' | 'listo' | 'resaltado' | 'oculto' {
+    if (cargandoSiguiente) return 'cargando';
+    if (!encontrado) return 'oculto';
+    return resaltado ? 'resaltado' : 'listo';
+  }
+
+  /** Realce al 90 % (T55): solo con control de progreso (HLS/MP4), pegajoso. */
+  function marcarResaltadoSiTermina(): void {
+    if (resaltadoSiguiente || modo !== 'video') return;
+    const v = videoEl;
+    if (!v || !(v.duration > 0)) return;
+    if (v.currentTime / v.duration >= 0.9) resaltadoSiguiente = true;
   }
 
   /** Progreso del episodio: primero el mapa de la store; si no está, el backend. */
@@ -268,6 +415,8 @@
    * el primer `<video>` con metadatos; si `startAt` no deja margen de 5 s antes
    * del final (o no hay duración utilizable) se empieza en 0. Consumido, no se
    * vuelve a aplicar al cambiar de fuente.
+   * T55 (siguiente): si el episodio se abrió con el botón "Siguiente ▸" se
+   * arranca en 0 (`empezarDesdeCero`, un solo intento igual que `inicioPendiente`).
    * T27 (progreso guardado): en los demás casos, la posición de `progresoPrevio`
    * —igual que antes—, tanto al abrir como al cambiar de fuente (`elegirFuente`
    * guarda justo antes): si la fuente nueva no llega a metadatos (iframe, error
@@ -291,6 +440,11 @@
       return;
     }
 
+    if (empezarDesdeCero) {
+      empezarDesdeCero = false;
+      return;
+    }
+
     const p = progresoPrevio;
     if (!p || p.is_watched) return;
     if (!(p.current_time > 0) || v.currentTime !== 0) return;
@@ -303,12 +457,14 @@
 
   function alAvanzar(): void {
     guardarProgreso(false);
+    marcarResaltadoSiTermina();
   }
   function alPausar(): void {
     guardarProgreso(true);
   }
   function alTerminar(): void {
     guardarProgreso(true);
+    marcarResaltadoSiTermina();
   }
   function alSalir(): void {
     guardarProgreso(true);
@@ -458,6 +614,8 @@
     {#if cargando}
       <div class="cargando-overlay">{cargandoTexto}</div>
     {/if}
+
+    <BotonSiguiente estado={estadoSiguiente} numero={sigNumero} onClick={alPulsarSiguiente} />
   </div>
 
   {#if modo === 'iframe'}
