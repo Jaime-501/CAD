@@ -66,8 +66,15 @@
   let empezarDesdeCero = false;
   /** Episodio cuyas fuentes/`getNextEpisode` están activos (guardia de carreras). */
   let episodioActual = '';
+  /**
+   * T57: si el `<video>` está reproduciéndose. Se actualiza dentro de los
+   * handlers que ya existen (`alAvanzar`/`alPausar`/`alTerminar`), sin
+   * listeners nuevos; `v.paused` es la fuente de verdad en cada evento.
+   */
+  let reproduciendo = false;
 
   $: estadoSiguiente = calcularEstadoSiguiente(sigCargando, sigEncontrado, resaltadoSiguiente);
+  $: discretoSiguiente = calcularDiscreto(modo, estadoSiguiente, reproduciendo, resaltadoSiguiente);
   $: sincronizarEpisodio($seleccion?.episodeID ?? '');
 
   $: fuenteActual = fuentes[indice] ?? null;
@@ -227,6 +234,26 @@
     if (cargandoSiguiente) return 'cargando';
     if (!encontrado) return 'oculto';
     return resaltado ? 'resaltado' : 'listo';
+  }
+
+  /**
+   * T57: aspecto discreto del botón. Tabla de la ficha: HLS/MP4 reproduciendo
+   * con progreso < 0.90 ⇒ `true`; en pausa/sin iniciar/terminado/progreso
+   * ≥ 0.90 (⇒ `resaltadoSiguiente`, pegajoso) ⇒ `false`; fuente iframe ⇒
+   * `true` siempre. Solo aplica en el estado `listo` (`resaltado` nunca es
+   * discreto; `cargando`/`oculto` no cambian).
+   */
+  function calcularDiscreto(
+    modoActual: 'nada' | 'video' | 'iframe',
+    estado: 'cargando' | 'listo' | 'resaltado' | 'oculto',
+    reproduciendoActual: boolean,
+    resaltado: boolean
+  ): boolean {
+    if (estado !== 'listo') return false;
+    if (resaltado) return false;
+    if (modoActual === 'iframe') return true;
+    if (modoActual !== 'video') return false;
+    return reproduciendoActual;
   }
 
   /** Realce al 90 % (T55): solo con control de progreso (HLS/MP4), pegajoso. */
@@ -456,13 +483,18 @@
   }
 
   function alAvanzar(): void {
+    // T57: un `timeupdate` con `paused` a `true` es un seek en pausa.
+    const v = videoEl;
+    reproduciendo = !!v && !v.paused;
     guardarProgreso(false);
     marcarResaltadoSiTermina();
   }
   function alPausar(): void {
+    reproduciendo = false;
     guardarProgreso(true);
   }
   function alTerminar(): void {
+    reproduciendo = false;
     guardarProgreso(true);
     marcarResaltadoSiTermina();
   }
@@ -615,7 +647,12 @@
       <div class="cargando-overlay">{cargandoTexto}</div>
     {/if}
 
-    <BotonSiguiente estado={estadoSiguiente} numero={sigNumero} onClick={alPulsarSiguiente} />
+    <BotonSiguiente
+      estado={estadoSiguiente}
+      numero={sigNumero}
+      discreto={discretoSiguiente}
+      onClick={alPulsarSiguiente}
+    />
   </div>
 
   {#if modo === 'iframe'}

@@ -8,9 +8,13 @@
    *  - `listo`: habilitado, "Siguiente ▸ Ep {numero}";
    *  - `resaltado`: como `listo` con realce de acento y pulso suave (solo bajo
    *    `prefers-reduced-motion: no-preference`).
+   * T57: `discreto` atenúa y desenfoca el botón mientras se reproduce; solo
+   * se aplica en el estado `listo` (`resaltado` nunca es discreto; `cargando`
+   * y `oculto` no cambian). Sigue siendo clicable y accesible discreto.
    */
   export let estado: 'cargando' | 'listo' | 'resaltado' | 'oculto' = 'cargando';
   export let numero = 0;
+  export let discreto = false;
   export let onClick: () => void = () => {};
 </script>
 
@@ -19,6 +23,7 @@
     type="button"
     class="boton-siguiente"
     class:resaltado={estado === 'resaltado'}
+    class:discreto={discreto && estado === 'listo'}
     disabled={estado === 'cargando'}
     aria-busy={estado === 'cargando'}
     aria-label="Ir al siguiente episodio"
@@ -56,6 +61,24 @@
   }
   .boton-siguiente:hover:not(:disabled) {
     border-color: var(--cad-acento);
+  }
+  /* T57: discreto = atenuado y desenfocado mientras se reproduce; solo con
+     estado `listo` (la clase no se aplica en los demás). Clicable y con foco. */
+  .boton-siguiente.discreto {
+    opacity: 0.15;
+    filter: blur(2px);
+    transition: opacity 200ms, filter 200ms;
+  }
+  .boton-siguiente.discreto:hover:not(:disabled),
+  .boton-siguiente.discreto:focus-visible,
+  .boton-siguiente.discreto:focus-within {
+    opacity: 1;
+    filter: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .boton-siguiente.discreto {
+      transition: none;
+    }
   }
   .boton-siguiente.resaltado {
     border-color: var(--cad-acento);
