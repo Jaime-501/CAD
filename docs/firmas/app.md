@@ -13,6 +13,8 @@
 - `### T22 — historial de visualización` → creado por **T22** (Persistencia del historial).
 - `### T34 — búsqueda combinada + AnimeAV1 en la app` → creado por **T34**; sus cambios de firma también están anotados *in situ* en el bloque T20.
 - `### T37 — portabilidad del núcleo` → creado por **T37** (núcleo en `internal/app`, directorio de datos por parámetro).
+- `### T45 — app` → creado por **T45** (Home, favoritos, borrados de historial).
+- `### T46 — app` → creado por **T46** (`Nucleo.Retomar` y `Nucleo.SiguienteEpisodio`).
 
 ---
 
@@ -199,3 +201,86 @@ El paquete, su formato y sus tests están en **`docs/firmas/db.md`**. Aquí, lo 
 
 - **302 tests de paquete antes → 303 después** (los mismos 302, más `TestNucleoPortableSinWailsNiRutasDeUsuario`): `miapp` 33 → `miapp/internal/app` 33+1; el resto de paquetes intactos (`db` 13, `extractors` 68…).
 - Los E2E ahora llaman al núcleo (`n.Buscar`, `n.Detalle`, `n.Fuentes`, `n.GuardarProgreso`, `n.VerProgreso` con `context.Background()`) porque `&App{core: n}` ya no compila en `internal/app` (`App` es de `package main`); sus fixtures pasan a rutas relativas `../scraper/…` (el cwd del test ahora es `internal/app/`).
+
+---
+
+### T45 — app (Home, favoritos, borrados de historial)
+
+Integra T41 (db historial), T42 (db favoritos), T43 (Home JKAnime) y T44 (Home AnimeAV1) en el núcleo y en la capa Wails. Archivos: `internal/app/nucleo.go`, `app.go`, tests nuevos `nucleo_home_test.go`, `nucleo_favoritos_test.go`, `nucleo_historial_test.go` y los dos E2E (`app_e2e_test.go`, `app_e2e_integration_test.go`, solo ampliados). Sin cambios en `main.go`, `internal/{db,models,scraper,cache}/**` ni en `frontend/**` (`git diff frontend/` vacío).
+
+#### Núcleo (`internal/app`) — firmas nuevas
+
+- Sentinels: `ErrHomeNoDisponible = errors.New("El Home no está disponible para este proveedor")` · `ErrFavoritosNoDisponible = errors.New("Los favoritos no están disponibles")` (`ErrSinHistorial` es de T46, no existe aún).
+- `func (n *Nucleo) Home(ctx context.Context, proveedor string, noCache bool) ([]models.HomeSection, error)` — busca el provider en el registro y aplica aserción de tipo a `scraper.HomeProvider` (T43); si no lo implementa devuelve `ErrHomeNoDisponible` (los errores no se cachean). Orden de secciones y errores siguen los del provider (`emision` primero, luego `recientes`).
+- Caché de Home: `map[string]entradaHome` (`entradaHome{secciones []models.HomeSection; caducaEn time.Time}`) protegida por `muHome`, clave `cache.Clave("home", proveedor)` = `home:<proveedor>`, TTL `ttlCacheDetalle` (10 min). `noCache == true` salta la lectura (pero rellena); los errores jamás se guardan; las secciones se devuelven con **copia defensiva** (deep copy de items).
+  - **Desviación de la ficha**: el plan decía reusar `internal/cache`, pero ese paquete solo admite `Entrada{Detail, Episodes, Complete}` y está fuera de "Puedes tocar". La caché vive en `nucleo.go` con la misma clave y TTL; queda anotado aquí y en `PROGRESO.md`.
+- Favoritos (sobre `*db.Favorites`, abierto en `Arrancar` con `db.OpenFavorites(n.rutaHistorial)`, el MISMO directorio que el historial; si `OpenFavorites` falla, `slog.Warn("la app sigue sin favoritos", ...)` y la app sigue sin ellos): `AgregarFavorito(f models.Favorite) error` · `QuitarFavorito(proveedor, animeID string) error` · `ListarFavoritos() ([]models.Favorite, error)` · `EsFavorito(proveedor, animeID string) (bool, error)`. Sin almacén (`favoritos == nil`, antes de `Arrancar` o directorio vacío) → `ErrFavoritosNoDisponible`. `db.Favorites` no tiene `Close`: `Cerrar()` no la cierra. `AgregarFavorito` hace `TrimSpace` y valida que `f.Provider` y `f.AnimeID` no estén vacíos (**"el favorito necesita proveedor y anime: …"**) **y que el proveedor esté registrado** (delegando en `n.proveedor`, mismo error que `Home`/`Detalle`): un proveedor inventado solo ensuciaría la pestaña Favoritos. El orden es: argumentos → proveedor registrado → almacén (`ErrFavoritosNoDisponible`) → `db.Add`.
+- Historial reciente y borrados (delegan 1:1 en `db`, T41; todos exigen `historialAbierto`, si no → `ErrHistorialNoDisponible`): `HistorialReciente() ([]models.WatchProgress, error)` → `LastPerAnime` · `BorrarHistorialAnime(proveedor, animeID string) (int, error)` → `DeleteAnime` · `BorrarHistorialProveedor(proveedor string) (int, error)` → `DeleteProvider` · `BorrarHistorialTodo() (int, error)` → `Clear`. La validación de argumentos vacíos (error en español con "proveedor") va ANTES de tocar db, para no borrar registros sin proveedor.
+- `GuardarProgreso` no cambia de firma: pasa el registro tal cual; el sellado de `UpdatedAt` lo hace `db.Save` (regla T41: 0 → now, ≠0 se conserva; clave del Deshacer de T46).
+
+#### Wails (`app.go`) — firmas nuevas
+
+Los 9 métodos delegan tal cual en el núcleo, con retorno `(valor, error)` como el resto; `GetHomeSection` pasa `a.contexto()`. Para que Wails siga generando todo en `main`, no hay tipos nuevos en `app.go` (se usan directamente `models.HomeSection` y `models.Favorite`):
+
+- `func (a *App) GetHomeSection(provider string, noCache bool) ([]models.HomeSection, error)`
+- `func (a *App) AddFavorite(f models.Favorite) error`
+- `func (a *App) RemoveFavorite(provider string, animeID string) error`
+- `func (a *App) ListFavorites() ([]models.Favorite, error)`
+- `func (a *App) IsFavorite(provider string, animeID string) (bool, error)`
+- `func (a *App) GetRecentProgress() ([]models.WatchProgress, error)`
+- `func (a *App) DeleteProgressAnime(provider string, animeID string) (int, error)`
+- `func (a *App) DeleteProviderProgress(provider string) (int, error)`
+- `func (a *App) ClearProgress() (int, error)`
+
+`frontend/wailsjs/**` **no se regeneró** (prohibido en esta tarea): los bindings de estos 9 métodos llegan en T47.
+
+#### Tests
+
+- Nuevos en `internal/app` (16): `nucleo_home_test.go` (6: devuelve secciones del provider con el orden `emision`→`recientes` · provider desconocido · provider sin `HomeProvider` ⇒ `ErrHomeNoDisponible` · caché: 1 llamada al provider en 2 invocaciones y `noCache` la salta · el error no se cachea · copia defensiva) con el doble `homeFalso` (embebe `proveedorFalso`, cuenta `llamadas`) · `nucleo_favoritos_test.go` (5: agregar/listar/quitar · proveedor inexistente falla · sin directorio ⇒ `ErrFavoritosNoDisponible` · persisten entre arranques con un segundo `Nucleo` sobre el mismo dir · mismo slug en dos proveedores coexisten) · `nucleo_historial_test.go` (5: `HistorialReciente` delega en `LastPerAnime` con orden por `UpdatedAt` · los tres borrados con sus recuentos · sin directorio ⇒ `ErrHistorialNoDisponible` · `UpdatedAt ≠ 0` se conserva / `== 0` lo sella db · argumentos vacíos rechazados en español sin tocar db).
+- E2E offline ampliados (`app_e2e_test.go`, solo pasos nuevos + fixtures/rutas/listas de peticiones):
+  - JKAnime: paso `1b` (Home tras la búsqueda; 2 secciones, 30 y 32 items de los fixtures `home_directorio_emision.html`/`home_portada.html`) y paso `6b` (ciclo de favorito + borrados con 2 progresos de fechas fijas). Nuevas rutas del fake `GET /directorio` y `GET /`; la lista de peticiones exactas sube de 11 a 13 y **no** aparece una segunda petición de `excepciones.json` (el mapa ya se descargó en la búsqueda, T43).
+  - AnimeAV1: paso `1b` (Home; 2 secciones de 20 items, fixtures `home_catalogo_emision_data.json` distinguido por `?status=emision` y `home_portada_data.json` en `GET /__data.json`) y paso `5b` (favoritos/borrados con A = animeav1 y B = jkanime). La lista sube de 9 a 11 peticiones (`/catalogo/__data.json` ×2: `search=bleach` y `status=emision`; `/__data.json` ×1) y la aserción de query acepta las dos claves.
+- E2E de red real ampliados (`app_e2e_integration_test.go`): paso Home **tolerante** (T28) tras la búsqueda en `TestE2EFlujoCompletoRedReal` (`proveedorPrincipal`) y `TestE2EAnimeAV1RedReal` (`proveedorComplemento`): solo exige ≥1 sección con ≥1 item y ningún item con `ID`/`Title` vacíos. Ambos en verde contra el sitio real (JKAnime 15 s, AnimeAV1 3 s; 2 secciones con items cada uno).
+- Verificación: `gofmt -l .` sin salida · `go vet ./...` y `go vet -tags integration ./...` limpios · `go build ./...` OK · `go test -race -count=1 ./...` en verde (**366 → 382** `--- PASS`; `internal/app`: **34 → 50**) · guardia `portabilidad_test.go` en verde · `go list -deps ./internal/app | grep wailsapp` sin resultados · `git diff frontend/` vacío.
+
+---
+
+### T46 — app (`Nucleo.Retomar` y `Nucleo.SiguienteEpisodio`)
+
+Implementa la lógica testeable del clic sobre una tarjeta del historial y del botón "Siguiente ▸" (tabla de acciones de `tareas/v1.2_PLAN.md`). `Detalle`, `lote`, `iniciarStream`, `soltarStreamDistinto` y `borrarSiIncompleta` **quedan intactos**; el código nuevo vive en `internal/app/retomar.go` (nuevo) y solo añade dos métodos a `app.go`.
+
+#### Núcleo (`internal/app/retomar.go`)
+
+- Sentinels y variables de espera:
+  - `var ErrSinHistorial = errors.New("No hay registros de ese anime en el historial")` — no hay ningún registro para ese (proveedor, anime) en el historial (o el almacén no está abierto ⇒ `ErrHistorialNoDisponible`).
+  - `var errListaEpisodios = errors.New("no se pudo completar la lista de episodios")` — la lista completa de episodios no pudo completarse (stream fallido, cancelado por otro anime, caducado o se agotó la espera). El mensaje es el que ve la UI; nunca se decide `completed`/`up_to_date` ni se devuelve la lista parcial con este error.
+  - `var (intervaloEsperaEpisodios = 50 * time.Millisecond; esperaMaximaEpisodios = 60 * time.Second)` — cadencia y tope de la espera en `episodiosCompletos`; variables para que los tests las reduzcan (restauran con `t.Cleanup`). El temporizador solo gobierna la ESPERA, no el contexto de `Detalle`.
+- `func (n *Nucleo) episodiosCompletos(ctx context.Context, proveedor, animeID string) (models.AnimeDetail, []models.Episode, error)` — devuelve el detalle y la lista **COMPLETA** de episodios; **nunca** una lista parcial. Secuencia:
+  1. `proveedor`/`animeID` con `strings.TrimSpace`; `clave := cache.Clave(proveedor, animeID)`.
+  2. `res, err := n.Detalle(ctx, proveedor, animeID)` — el `ctx` se pasa **recibido tal cual** (no se deriva con `timeout`/`cancel`: el contexto del stream nace del que se pasa a `Detalle` y cancelarlo mataría los lotes que el frontend necesita después). Si `err != nil`, se devuelve sin reenvolver.
+  3. Si `n.proveedor(proveedor)` **no** implementa `scraper.EpisodeStreamer`: `Detalle` ya devolvió la lista completa y síncrona (sin cachear) ⇒ se devuelve `res.Detail` y `res.Episodes`.
+  4. Si lo implementa: se comprueba `n.cacheLocal.Get(clave)` **antes** del primer tick y luego cada `intervaloEsperaEpisodios`. Desenlaces: entrada con `Complete == true` ⇒ se devuelven **copias** de `e.Detail`/`e.Episodes`; entrada ausente (stream fallido, cancelado por otro anime o caducado) ⇒ `errListaEpisodios` sin lista parcial; `ctx.Done()` ⇒ `ctx.Err()` (cumple `errors.Is`); se agota `esperaMaximaEpisodios` ⇒ `errListaEpisodios`. **No se leen `st.fallo` ni otros internos del stream**: la única señal de "terminó" es la caché.
+- `func (n *Nucleo) Retomar(ctx context.Context, provider, animeID string) (models.ResumeInfo, error)` — decide el clic sobre la tarjeta (tabla de acciones):
+  1. Último registro del par desde `LastPerAnime()` filtrando por `AnimeID`/`ProviderName()` (sin él ⇒ `ErrSinHistorial`; sin almacén ⇒ `ErrHistorialNoDisponible`).
+  2. `!IsWatched` ⇒ `resume` con el `EpisodeID` del registro, el número de `ParseEpisodeID` y `StartAt = CurrentTime`, **sin pedir episodios**.
+  3. `IsWatched` y película (`KindMovie`) ⇒ `completed` sin pedir episodios.
+  4. `IsWatched` y serie ⇒ `episodiosCompletos` y `siguienteDe`: encontrado ⇒ `next` desde 0; no encontrado ⇒ `up_to_date` si `estaEnEmision(detalle.Status)`, si no `completed`. Si `episodiosCompletos` falla ⇒ se devuelve ese error (la UI lo muestra como «No se pudo retomar»); nunca se decide `completed`/`up_to_date` con una lista no completa.
+- `func (n *Nucleo) SiguienteEpisodio(ctx context.Context, provider, animeID, episodeID string) (models.NextEpisode, error)` — `ParseEpisodeID` del episodio; película ⇒ `NextEpisode{Found:false}` sin pedir episodios; si no, `episodiosCompletos` y `siguienteDe` ⇒ `Found:true`, `EpisodeID`, `Number`; sin siguiente ⇒ `Found:false`. Si `episodiosCompletos` falla ⇒ se devuelve el error (la UI oculta el botón). Proveedor desconocido ⇒ el mismo error que `Detalle`.
+- `func decidirRetomar(proveedor, animeID string, registro models.WatchProgress, kind models.EpisodeKind, numero int, episodios []models.Episode, status string) models.ResumeInfo` — función pura que aplica la tabla de acciones; el "número actual" sale de `ParseEpisodeID` del `EpisodeID` del registro (canónico; película ⇒ 0), **nunca** de `EpisodeNumber`.
+- `func siguienteDe(episodes []models.Episode, actual int) (models.Episode, bool)` — el episodio de **menor `Number` estrictamente mayor** que `actual`; no depende del orden de entrada ni asume números consecutivos (tolera huecos) e ignora los de `Kind == KindMovie`.
+- `func estaEnEmision(status string) bool` — normaliza (minúsculas, sin acentos, `TrimSpace`) y devuelve `true` **solo** si el resultado es exactamente `en emision`; cubre `En emision` (JKAnime, sin tilde) y `En emisión` (AnimeAV1, con tilde). Todo lo demás (`Concluido`, `Finalizado`, `Por estrenar`, `Próximamente`, `Desconocido`, vacío) ⇒ `false`. Con `quitarTildes` (`strings.NewReplacer`).
+- Los enlaces de vídeo no se tocan ni se cachean.
+
+#### Wails (`app.go`) — firmas nuevas
+
+Los 2 métodos delegan tal cual en el núcleo, con retorno `(valor, error)` como el resto, y pasan `a.contexto()`:
+
+- `func (a *App) ResumeAnime(provider string, animeID string) (models.ResumeInfo, error)`
+- `func (a *App) GetNextEpisode(provider string, animeID string, episodeID string) (models.NextEpisode, error)`
+
+`frontend/wailsjs/**` **no se regeneró** (prohibido en esta tarea): los bindings de estos 2 métodos llegan en T47.
+
+#### Tests
+
+- Nuevos en `internal/app/retomar_test.go` (25, reutilizando `proveedorFalso`/`streamerFalso`/`nuevoEntorno`/`emisorFalso.esperar` sin modificarlos): `TestSiguienteDeMenorNumeroMayor` · `TestSiguienteDeToleraHuecos` (1,2,4 ⇒ siguiente de 2 es 4) · `TestSiguienteDeListaDesordenada` · `TestSiguienteDeUltimoNoTieneSiguiente` · `TestSiguienteDeListaVacia` · `TestSiguienteDeIgnoraPeliculas` · `TestEstaEnEmisionConEstadosReales` (true: `En emision`, `En emisión`, `  EN EMISIÓN `; false: `Concluido`, `Finalizado`, `Por estrenar`, `Próximamente`, `Desconocido`, vacío) · `TestDecidirRetomarResume` · `TestDecidirRetomarNext` · `TestDecidirRetomarCompletedSerieFinalizada` · `TestDecidirRetomarUpToDateEnEmision` · `TestDecidirRetomarPeliculaVistaEsCompleted` · `TestRetomarSinRegistroDevuelveErrSinHistorial` · `TestRetomarUsaCacheSinPeticionesNuevas` (entrada completa en caché ⇒ 0 llamadas al proveedor) · `TestRetomarSinCacheObtieneDetalleUnaVez` (1 sola llamada a `StreamAnimeDetails`) · `TestRetomarTomaElRegistroMasRecienteDelAnime` · `TestRetomarMismoSlugOtroProveedorNoInterfiere` · `TestSiguienteEpisodioEncuentraSiguiente` · `TestSiguienteEpisodioPeliculaNoTiene` · `TestSiguienteEpisodioProveedorDesconocido` · `TestEpisodiosCompletosEsperaALosLotes` (primera tanda 1,2; lotes 3,4 y 5 con `Done` desde goroutine ⇒ devuelve 5 episodios y **no** retorna antes del `Done`) · `TestEpisodiosCompletosNoDevuelveListaParcialSiElStreamFalla` (lote final `Done` con `Err` ⇒ error y 0 episodios) · `TestEpisodiosCompletosSinStreamerUsaLaListaSincrona` · `TestEpisodiosCompletosCtxCanceladoDevuelveError` (`errors.Is(err, context.Canceled)`) · `TestEpisodiosCompletosTiempoMaximo` (fake que nunca envía `Done`; `esperaMaximaEpisodios` reducida ⇒ error en español).
+- Verificación: `gofmt -l .` sin salida · `go vet ./...` y `go vet -tags integration ./...` limpios · `go build ./...` OK · `go test -race -count=3 ./internal/app/` en verde · `go test -race -count=1 ./...` en verde (**382 → 407** `--- PASS`; `internal/app`: **50 → 75**) · guardia `portabilidad_test.go` en verde · `go list -deps ./internal/app | grep wailsapp` sin resultados · `git diff frontend/` vacío · `git diff internal/app/nucleo.go` y `git diff --stat` de `app_test.go`/`app_nucleo_cache_test.go`/`app_nucleo_animeav1_test.go` vacíos.

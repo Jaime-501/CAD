@@ -11,9 +11,20 @@
  * ver `docs/firmas/app.md` (eventos) y `docs/firmas/models.md` (modelos).
  */
 import {
+  AddFavorite,
+  ClearProgress,
+  DeleteProgressAnime,
+  DeleteProviderProgress,
   GetAnimeDetails,
+  GetHomeSection,
+  GetNextEpisode,
   GetProgress,
+  GetRecentProgress,
   GetVideoSources,
+  IsFavorite,
+  ListFavorites,
+  RemoveFavorite,
+  ResumeAnime,
   SaveProgress,
   SearchAnime,
 } from '../wailsjs/go/main/App.js';
@@ -98,6 +109,77 @@ export async function saveProgress(progress: models.WatchProgress): Promise<bool
 /** Historial de un anime; `animeID` vacío = historial entero (puede fallar: ver app.md T22). */
 export function getProgress(animeID: string): Promise<models.WatchProgress[]> {
   return GetProgress(animeID);
+}
+
+/**
+ * Acciones de "retomar" (`models.ResumeAction*` de Go, T46): el valor es lo
+ * que la tarjeta/retroceder decide al hacer clic. Como `as const`, el tipo
+ * de `RESUME_ACTION.resume` es el literal `'resume'`.
+ */
+export const RESUME_ACTION = {
+  resume: 'resume',
+  next: 'next',
+  completed: 'completed',
+  up_to_date: 'up_to_date',
+} as const;
+
+/** Secciones del Home de un proveedor (caché 10 min en el backend; `noCache` salta la lectura). */
+export function getHomeSection(provider: string, noCache = false): Promise<models.HomeSection[]> {
+  return GetHomeSection(provider, noCache);
+}
+
+/** Añade un favorito (idempotente: sobre uno existente actualiza título/portada). */
+export function addFavorite(f: models.Favorite): Promise<void> {
+  return AddFavorite(f);
+}
+
+/** Quita un favorito; no falla si no existía. */
+export function removeFavorite(provider: string, animeID: string): Promise<void> {
+  return RemoveFavorite(provider, animeID);
+}
+
+/** Favoritos guardados, ordenados por `added_at` descendente. */
+export function listFavorites(): Promise<models.Favorite[]> {
+  return ListFavorites();
+}
+
+/** ¿Está (proveedor, anime) en favoritos? */
+export function isFavorite(provider: string, animeID: string): Promise<boolean> {
+  return IsFavorite(provider, animeID);
+}
+
+/** Último registro del historial por anime (lo que pinta la barra lateral). */
+export function getRecentProgress(): Promise<models.WatchProgress[]> {
+  return GetRecentProgress();
+}
+
+/** Borra todos los registros de un (proveedor, anime); devuelve los borrados. */
+export function deleteProgressAnime(provider: string, animeID: string): Promise<number> {
+  return DeleteProgressAnime(provider, animeID);
+}
+
+/** Borra todo el historial de un proveedor; devuelve los borrados. */
+export function deleteProviderProgress(provider: string): Promise<number> {
+  return DeleteProviderProgress(provider);
+}
+
+/** Borra el historial entero; devuelve los borrados. */
+export function clearProgress(): Promise<number> {
+  return ClearProgress();
+}
+
+/** Acción de "retomar" para un anime (tabla de acciones de v1.2_PLAN). */
+export function resumeAnime(provider: string, animeID: string): Promise<models.ResumeInfo> {
+  return ResumeAnime(provider, animeID);
+}
+
+/** Siguiente episodio (menor número estrictamente mayor); `found: false` si no hay. */
+export function getNextEpisode(
+  provider: string,
+  animeID: string,
+  episodeID: string
+): Promise<models.NextEpisode> {
+  return GetNextEpisode(provider, animeID, episodeID);
 }
 
 /** Wails serializa a JSON: el payload puede llegar como objeto o como string. */

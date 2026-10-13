@@ -8,6 +8,8 @@
 
 - `### T22 — internal/db` → creado por **T22** (Persistencia del historial); corregido en **T38** (contrato T37 de `Open(dir)`: `dir == ""` ⇒ `ErrDirectorioVacio`, sin `rutaPorDefecto`).
 - `### T22 — integración en el núcleo` → creado por **T22** (documentada también en `docs/firmas/app.md`); actualizado en **T38** (el núcleo vive desde T37 en `internal/app/nucleo.go`, `package app`).
+- `### T41 — db` → creado por **T41** (historial con fecha, `LastPerAnime` y borrados por anime/proveedor/todo).
+- `### T42 — db favoritos` → creado por **T42** (almacén de favoritos en `favoritos.json`).
 
 ---
 
@@ -58,3 +60,38 @@ Historial de visualización persistido en un archivo **JSON** dentro de un direc
 - `app.go` solo delega: **`func (a *App) SaveProgress(progress models.WatchProgress) error`** (un único retorno: `binding.BoundMethod.Call` admite 1 o 2) y **`func (a *App) GetProgress(animeID string) ([]models.WatchProgress, error)`**.
 
 **Tests** (`internal/app/app_nucleo_historial_test.go`, 3 tests, sin red): abrir en `Arrancar` + guardar/leer + cerrar y relectura desde disco con otro `db.Open` · sin arrancar ⇒ `ErrHistorialNoDisponible` con su mensaje de UI · ruta inaccesible ⇒ `Arrancar` sigue funcionando (proxy escucha) y el historial queda nil.
+
+---
+
+### T41 — db
+
+Historial con fecha, listado reciente y borrados (la barra lateral de la v1.2). Todo sigue en el mismo `*DB` de T22: un único mutex, escritura atómica, sin goroutines nuevas. Símbolos y comportamientos nuevos:
+
+- `DB` gana el campo **no exportado `now func() time.Time`** —reloj inyectable; `time.Now` por defecto, fijado en `Open`—. Los tests del paquete lo sustituyen antes de arrancar goroutines.
+- **`SaveProgress` (comportamiento añadido; el resto del método no cambia)**: después del normalizado de T22, si **`UpdatedAt == 0` ⇒ `now().Unix()`**; si trae otra fecha **se conserva** (así un "Deshacer" restaura el orden original). Si **`Provider == ""` ⇒ `ProviderName()`** (el prefijo de `EpisodeID`). Solo al **guardar**: `cargar` no toca esos campos, así que un `historial.json` anterior a T41 se lee con los nuevos en cero (`UpdatedAt == 0` = "registro sin fecha"). Sin cambios en: exige `AnimeID`/`EpisodeID`, `IsWatched` calculado aquí, no-reescritura si el registro sale idéntico, escritura atómica, `.bak` ante corruptos y `ErrCerrado`.
+- `func (d *DB) LastPerAnime() []models.WatchProgress` — el **último** registro de cada anime, lo que pinta la barra lateral: un registro por **`(ProviderName(), AnimeID)`**; gana el de mayor `UpdatedAt` y, con empate, el de mayor `EpisodeNumber` y después el de `EpisodeID` **descendente** lexicográfico. El conjunto sale ordenado por `UpdatedAt` **descendente**, con empate por proveedor y `anime_id` **ascendentes**; los `UpdatedAt == 0` quedan al final. El proveedor se compara con `ProviderName()` (cubre los registros antiguos sin el campo). **Nunca nil** (lista vacía sin registros) y sus elementos son **copias**. **Cerrado ⇒ lista vacía sin error** (la firma no admite `error`: quien necesite distinguirlo mira `GetProgress`).
+- `func (d *DB) DeleteAnime(provider, animeID string) (int, error)` — borra **todos** los episodios de ese anime de ese proveedor y devuelve el nº de registros eliminados. Proveedor comparado con `ProviderName()`. No existe ⇒ `0, nil`.
+- `func (d *DB) DeleteProvider(provider string) (int, error)` — borra todos los registros del proveedor; mismas reglas.
+- `func (d *DB) Clear() (int, error)` — borra el historial entero y devuelve cuántos registros había.
+- Los tres van por el privado `borrar(predicado)`: rehacen el índice (`reindexar`), **persisten con la misma escritura atómica que `SaveProgress`** y, si no se borra **nada**, **no reescriben** el archivo. Si la escritura falla, los borrados ya no están en memoria (el próximo guardado los persiste) y se devuelve `(borrados, err)`. `cerrado` ⇒ `(0, ErrCerrado)`.
+- El formato del `historial.json` **no cambia**: sigue siendo el array plano de `models.WatchProgress` con sus 10 claves.
+- Tests: **`internal/db/historial_reciente_test.go`** (16 tests nuevos; `internal/db/db_test.go` **sin tocar**): `TestSaveAsignaUpdatedAtConRelojInyectado` · `TestSaveConservaUpdatedAtNoCero` · `TestSaveNormalizaProviderDesdeEpisodeID` · `TestSaveUpdatedAtPersisteTrasReabrir` · `TestLastPerAnimeUnoPorAnimeYProveedor` (mismo slug en 2 proveedores ⇒ 2 entradas) · `TestLastPerAnimeOrdenPorRecencia` (y copias) · `TestLastPerAnimeDesempate` · `TestLastPerAnimeRegistrosAntiguosSinFechaAlFinal` · `TestLastPerAnimeVacioEsSliceNoNil` · `TestDeleteAnimeBorraTodosLosEpisodiosYDevuelveCuenta` · `TestDeleteAnimeNoAfectaOtroProveedorConMismoSlug` · `TestDeleteAnimeInexistenteDevuelveCeroSinError` · `TestDeleteProveedor` · `TestClear` · `TestBorradosPersistenAlReabrir` · `TestBorradoConcurrenteConSave` (🔒, con `-race`). Los registros "antiguos" (sin fecha ni provider) se fabrican **escribiendo el JSON a mano** (`escribirHistorialViejo`): `Save` ya no los admite. `internal/db`: **13 → 29** tests.
+
+---
+
+### T42 — db favoritos
+
+Almacén de los animes marcados con la estrella (pestaña "Favoritos" del Home), en **`<dir>/favoritos.json`** —mismo directorio que `historial.json`, sin tocarlo— y con la misma robustez que el historial. Archivos: `favoritos.go` (+ `favoritos_test.go`); `db.go` **sin cambios**.
+
+- `type Favorites struct { /* opaco */ }` — cero valor **no** es válido: usa `OpenFavorites`. Un único `sync.Mutex`, sin goroutines. **No tiene `Close`** (a diferencia de `DB`): la API fija el plan v1.2 no lo incluye y no hay ciclo de vida que gestionar —cada `Add`/`Remove` ya escribió a disco—.
+- `func OpenFavorites(dir string) (*Favorites, error)` — crea el directorio si falta (`MkdirAll`) y carga `favoritos.json`. **`dir == ""` ⇒ `ErrDirectorioVacio`** (el mismo símbolo que `Open`, de T37). Archivo inexistente o vacío ⇒ almacén vacío **sin `.bak`** y **sin crear el archivo**; JSON inválido ⇒ se renombra a `favoritos.json.bak` (sustituye a un `.bak` previo) y se empieza **vacío sin error**; error de E/S real ⇒ sí devuelve error.
+- `func (f *Favorites) Add(fav models.Favorite) (bool, error)` — **idempotente, nunca toggle**: clave `Favorite.Key()` (`Provider + ":" + AnimeID`).
+  - `Provider` y `AnimeID` no vacíos; si no, error en español que nombra los dos campos ("el favorito necesita provider y anime_id") y no se escribe nada.
+  - `AddedAt == 0` ⇒ se sella con `now().Unix()` (reloj inyectable **no exportado**, `time.Now` por defecto); un valor distinto de 0 **se conserva**.
+  - Clave ya existente ⇒ **`(false, nil)`**: se conserva el `AddedAt` guardado, se actualizan `Title`/`CoverURL`, la entrada **no cambia de sitio** y se persiste igualmente.
+  - Si la escritura a disco falla, el favorito queda en memoria (el próximo `Add`/`Remove` lo reintenta) y se devuelve `(eraNuevo, err)`.
+- `func (f *Favorites) Remove(provider, animeID string) (bool, error)` — `(true, nil)` si existía (se reindexa y persiste); `(false, nil)` si no —**no reescribe el archivo**—. Escritura fallida ⇒ `(true, err)` con el favorito ya fuera de memoria.
+- `func (f *Favorites) Has(provider, animeID string) bool` — presencia por proveedor + slug.
+- `func (f *Favorites) List() []models.Favorite` — **nunca nil**, **copias**, orden `AddedAt` **descendente** y empate por `Key()` **ascendente**.
+- **Formato**: array JSON de `models.Favorite` **indentado** (`MarshalIndent` con 2 espacios; legible a mano). Escritura **atómica** idéntica a la del historial (temporal en el mismo directorio + `Sync` + `Rename`; temporal eliminado si algo falla); se reutiliza la constante de paquete `sufijoRespaldo` (`.bak`). Cargar un archivo con claves duplicadas (editado a mano) hace upsert por `Key()` conservando la posición (último gana); inalcanzable desde la UI.
+- Tests: **`internal/db/favoritos_test.go`** (14 tests; `internal/db/db.go` y `db_test.go` **sin tocar**; reutiliza los helpers `abrir` y `sinTemporales`): `TestOpenFavoritosDirectorioVacio` (+ subtest de `MkdirAll`) · `TestFavoritosInicialVacio` (no nil, sin crear archivo) · `TestAddNuevoDevuelveTrueYPersiste` (reloj inyectado, JSON indentado) · `TestAddExistenteDevuelveFalseConservaAddedAtActualizaTitulo` · `TestAddMismoSlugDistintoProveedorSonDistintos` · `TestAddRechazaProveedorOIDVacio` · `TestRemoveExistenteYInexistente` (el inexistente no reescribe) · `TestHas` · `TestListOrdenAddedAtDescDesempateClave` (y copias) · `TestFavoritosPersistenTrasReabrir` · `TestFavoritosArchivoCorruptoSeRenombraABakYEmpiezaVacio` · `TestFavoritosEscrituraAtomicaNoDejaTemporales` · `TestFavoritosConcurrentes` (🔒, con `-race`) · `TestFavoritosYHistorialConviveEnMismoDirectorio`. `internal/db`: **29 → 43** tests.

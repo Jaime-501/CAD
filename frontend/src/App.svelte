@@ -1,6 +1,11 @@
 <script lang="ts">
   import { onDestroy, onMount, tick } from 'svelte';
+  import BarraLateral from './BarraLateral.svelte';
+  import { cargarHistorial } from './historial';
+  import { retomar } from './retomar';
   import { disposeEvents, initEvents } from './stores';
+  import Toast from './Toast.svelte';
+  import { drawerOpen, isNarrow } from './ui';
   import {
     claveScroll,
     guardarScroll,
@@ -17,12 +22,15 @@
 
   let puente = true;
   let vistaPrevia: VistaNombre = 'busqueda';
+  /** Para refrescar el historial al salir del reproductor (T49). */
+  let vistaPreviaHistorial: VistaNombre = 'busqueda';
 
   onMount(() => {
     // window.go solo lo inyecta el dev server de Wails (:34115),
     // no el servidor de Vite (:5173)
     puente = typeof window !== 'undefined' && Boolean((window as any).go);
     initEvents();
+    void cargarHistorial();
   });
 
   onDestroy(() => {
@@ -41,23 +49,99 @@
     await tick();
     window.scrollTo(0, recuperarScroll(claveScroll(destino)));
   }
+
+  // El historial se refresca al salir del reproductor (T49): `tick` deja que
+  // el reproductor se desmonte y lance su guardado final antes de leer.
+  $: refrescarHistorialAlSalir($vista);
+
+  async function refrescarHistorialAlSalir(destino: VistaNombre) {
+    if (destino === vistaPreviaHistorial) return;
+    const saliaDelReproductor = vistaPreviaHistorial === 'reproductor';
+    vistaPreviaHistorial = destino;
+    if (!saliaDelReproductor) return;
+    await tick();
+    await cargarHistorial();
+  }
+
+  function abrirHistorial() {
+    drawerOpen.set(true);
+  }
 </script>
 
-{#if !puente}
-  <p class="aviso-puente">{MENSAJE_PUENTE}</p>
-{/if}
+<!--
+  Shell (T48): barra a la izquierda + área principal. El scroll sigue siendo el
+  de la ventana (min-height, sin overflow en el área) para no romper
+  sincronizarVista. Sin barra en el reproductor y en modo estrecho (donde la
+  barra pasa a cajón fijo y no ocupa columna): ahí la rejilla pasa a 1fr para
+  que el área principal ocupe todo el ancho, como antes.
+-->
+<div class="app-shell" class:sin-barra={$vista === 'reproductor' || $isNarrow}>
+  {#if $vista !== 'reproductor'}
+    <BarraLateral onOpen={retomar} />
+  {/if}
 
-{#if $vista === 'busqueda'}
-  <VistaBusqueda {puente} />
-{:else if $vista === 'detalle'}
-  <VistaDetalle />
-{:else}
-  <VistaReproductor />
-{/if}
+  <main class="area-principal">
+    {#if $isNarrow && $vista !== 'reproductor'}
+      <div class="cabecera-estrecha">
+        <button type="button" class="hamburguesa" aria-label="Abrir historial" on:click={abrirHistorial}>
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+            <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" fill="none" />
+          </svg>
+        </button>
+      </div>
+    {/if}
+
+    {#if !puente}
+      <p class="aviso-puente">{MENSAJE_PUENTE}</p>
+    {/if}
+
+    {#if $vista === 'busqueda'}
+      <VistaBusqueda {puente} />
+    {:else if $vista === 'detalle'}
+      <VistaDetalle />
+    {:else}
+      <VistaReproductor />
+    {/if}
+  </main>
+</div>
+
+<!-- Toast de una ranura (T51): montado una sola vez, fijo abajo-centro. -->
+<Toast />
 
 <style>
+  .app-shell {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    min-height: 100vh;
+  }
+  .app-shell.sin-barra {
+    grid-template-columns: 1fr;
+  }
+  .area-principal {
+    min-width: 0;
+  }
+  .cabecera-estrecha {
+    text-align: left;
+    padding: 8px;
+  }
+  .hamburguesa {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    background: var(--cad-superficie);
+    border: 1px solid var(--cad-borde);
+    border-radius: var(--cad-radio);
+    color: var(--cad-texto);
+    cursor: pointer;
+  }
+  .hamburguesa:focus-visible {
+    outline: 2px solid var(--cad-acento);
+    outline-offset: 2px;
+  }
   .aviso-puente {
-    color: #f87171;
+    color: var(--cad-peligro);
     margin: 1rem auto;
     max-width: 640px;
     padding: 10px 14px;

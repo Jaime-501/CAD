@@ -1,0 +1,955 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="https://www.w3.org/1999/xhtml">
+    <head>
+    <title>Directorio — JkAnime</title>
+    <meta name="csrf-token" content="TOKEN_DE_PRUEBA">
+    <meta name="description" content="La mejor pagina para Ver Anime Online Gratis, mira los ultimos capitulos de los animes del momento sin ninguna restriccion | ver Online y descargar"/>
+	<meta name="keywords" content="anime online español, anime online gratis, anime online naruto, anime online naruto shippuden, anime online sub español, anime online free, anime online latino, anime online bleach, animes, anime, ecchi, anime online, Naruto Shippuden, Anime online, Anime en Descarga Directa, Ver Anime Online."/>
+	<meta property="og:title" content="Directorio — JkAnime"/>
+	<meta property="og:image" content="https://jkanime.net/img/web.png"/>
+	<meta property="og:type" content="website"/>
+	<meta property="og:site_name" content="JkAnime"/>
+	<meta property="og:url" content="https://jkanime.net/directorio"/>
+
+    <link href="https://cdn.jkdesa.com/assets3/css/img/favicon.ico?v=2.0.204" rel="icon" type="image/x-icon">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="utf-8">
+
+    <meta http-equiv="content-language" content="es" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+<script>
+    const wpart1 = 'local';
+    const wpart2 = 'Storage';
+    const cacheLocal = window[wpart1 + wpart2];
+     const spart1 = 'session';
+    const sessionLocal = window[spart1 + wpart2];
+    const jparse = window['JSON']['parse'];
+
+</script>
+<script>
+  window.addEventListener = window.addEventListener || function() {};
+  if (typeof Element !== 'undefined' && !Element.prototype.addEventListener) {
+      Element.prototype.addEventListener = function() {};
+  }
+</script>
+    <script src="https://cdn.jkdesa.com/assets3/js/jquery-3.3.1.min.js?v=2.0.204"></script>
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Mulish:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet">
+
+    <!-- Css Styles -->
+    <link rel="stylesheet" href="https://cdn.jkdesa.com/assets3/css/bootstrap.min.css?v=2.0.204" type="text/css">
+    <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.35.0/dist/tabler-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jkdesa.com/assets3/css/elegant-icons.css?v=2.0.204" type="text/css">
+    <link rel="stylesheet" href="https://cdn.jkdesa.com/assets3/css/plyr.css?v=2.0.204" type="text/css">
+    <link rel="stylesheet" href="https://cdn.jkdesa.com/assets3/css/nice-select.css?v=2.0.204" type="text/css">
+    <link rel="stylesheet" href="https://cdn.jkdesa.com/assets3/css/owl.carousel.min.css?v=2.0.204" type="text/css">
+    <link rel="stylesheet" href="https://cdn.jkdesa.com/assets3/css/slicknav.min.css?v=2.0.204" type="text/css">
+	<link rel="stylesheet" href="https://cdn.jkdesa.com/assets3/css/jquery-confirm.css?v=2.0.204" type="text/css">
+	<link rel="stylesheet" href="https://cdn.jkdesa.com/assets3/css/jquery.toast.css?v=2.0.204" type="text/css">
+    <link rel="stylesheet" href="https://cdn.jkdesa.com/assets3/css/style.css?v=2.0.204" type="text/css">
+
+    <link rel="dns-prefetch" href="//connect.facebook.net">
+    <link rel="dns-prefetch" href="//facebook.com">
+    <link rel="dns-prefetch" href="//apis.google.com">
+    <link rel="dns-prefetch" href="//google-analytics.com">
+
+    <script>
+    var login_domain = 'https://login.jkanime.net';
+
+    function crear_cookie(cname,cvalue,exMins){var d=new Date();d.setTime(d.getTime()+(exMins*60*1000));var expires="expires="+d.toUTCString();document.cookie=cname+"="+cvalue+";"+expires+";path=/";}
+    function leer_cookie(cname){var name=cname+"=";var decodedCookie=decodeURIComponent(document.cookie);var ca=decodedCookie.split(';');for(var i=0;i<ca.length;i++){var c=ca[i];while(c.charAt(0)==' '){c=c.substring(1);}
+if(c.indexOf(name)==0){return c.substring(name.length,c.length);}}
+return "";}
+ $(function(){
+$('#darkswitch').change(function() {
+        if ($(this).is(':checked')) {
+         crear_cookie("darkmode","true",43200);
+         $('head').append('<link id="darkcss" rel="stylesheet" href="https://cdn.jkdesa.com/assets3/css/dark.css?v=2.0.204" type="text/css" />');
+         $(".header__logo img").attr("src", $(".header__logo img").attr("src").replace(".png","-dark.png"));
+
+        } else {
+           $('#darkcss').remove();
+           crear_cookie("darkmode","false",-1);
+           $(".header__logo img").attr("src", $(".header__logo img").attr("src").replace("-dark.png",".png"));
+        }
+
+        if(typeof load_jk_comments === 'function') {load_jk_comments(true);}
+      });
+
+if(leer_cookie("darkmode")) {
+$( "#darkswitch" ).prop( "checked", true );
+$(".header__logo img").attr("src", $(".header__logo img").attr("src").replace(".png","-dark.png"));
+
+}
+
+    });
+
+ function darkmode() {
+if(!$("#darkcss").length) {
+$('head').append('<link id="darkcss" rel="stylesheet" href="https://cdn.jkdesa.com/assets3/css/dark.css?v=2.0.204" type="text/css" />');
+darkmode();
+}
+}
+if(leer_cookie("darkmode")) {
+darkmode();
+}
+</script>
+
+<style>
+h6 {
+    color: #1f7aff;
+    font-weight: 600;
+    text-transform: uppercase;
+    padding-left: 20px;
+    position: relative;
+    font-size: 15px;
+    margin-top: 5px;
+    font-family: "Oswald", sans-serif;
+}
+.padtitle {
+    padding-right: 34px;
+}
+div#guardar-anime {
+    background: #3d3d3d;
+    border: none;
+    padding: 8px;
+    position: absolute;
+    width: 40px;
+    bottom: 20px;
+    right: 15px;
+    color: #fff;
+    box-shadow: 0 1px 4px 0 rgb(0 0 0 / 15%);
+    border-radius: 7px;
+    cursor: pointer;
+}
+.boxx {position: relative;}
+
+.dropmenu ul li {
+    background: none;
+    border-radius: 0;
+    width: 100%;
+    padding: 0px 0px;
+    left: 0;
+    margin: 0;
+    bottom: 0;
+}
+
+.dropmenu ul {
+    width: 110px;
+    position: absolute;
+    margin: 0;
+    padding: 0;
+    border-radius: 5px;
+    overflow: hidden;
+    box-shadow: 0px 0px 3px rgb(0 0 0 / 41%);
+    top: -76px;
+    left: -20px;
+}
+
+.dropmenu {
+    position: absolute;
+    top: -119px;
+    right: 126px;
+    z-index: 5;
+}
+.dropmenu li a i {
+    color: #36a9e2;
+}
+.dropmenu li a {
+    padding: 8px 4px 8px 12px;
+    display: block;
+    font-size: 13px;
+    color: #000;
+    background: #ffffff;
+    text-align: left;
+    text-shadow: none !important;
+}
+.dropmenu li a:hover {
+    background: #f3f3f3;
+    color: #36a9e2;
+}
+
+
+.dropmenu li a.activo {
+    color: #ff9801;
+    background: #f7f7f7;
+}
+.dropmenu li a.activo i {
+    color: #ff9801;
+}
+#guardar-anime[data-status="ti-eye"] {
+background: #1e95cf;
+}
+#guardar-anime[data-status="ti-circle-check"] {
+background: #17b8ae;
+}
+#guardar-anime[data-status="ti-player-pause"] {
+background: #ff9d00;
+}
+#guardar-anime[data-status="ti-heart"] {background: #d83a43;}
+
+div#filtro_div .btn {
+    margin-right: 5px;
+    margin-bottom: 5px;
+    line-height: 27px;
+    height: 40px !important;
+    width: 100% !important;
+}
+
+a#loadmore.activo {
+    background: #85b2c7;
+    pointer-events: none;
+}
+div#botones {
+    display: inline-block;
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+div#filtro_div .nice-select {
+    margin-right: 5px;
+    margin-bottom: 5px;
+    height: 40px;
+    line-height: 40px;
+}
+.nice-select {clear: inherit;}
+
+div#filtro_div .nice-select .list {
+    z-index: 100;
+}
+.custom_item2.joya {
+    background: #fffbec;
+}
+.custom_item2 .joya_tag {position: absolute;left: 3px;top: 3px;z-index: 3;background: #ff9d00;padding: 0px 15px 3px 15px;line-height: 18px;border-radius: 5px;color: #fff;}
+
+.custom_item2.joya .card-title {
+    background: rgb(107 74 0 / 81%);
+}
+.custom_item2 .joya_tag span {
+    margin-right: 6px;
+}
+
+</style>
+</head>
+<body>
+<div id="modal"></div>
+<header class="header">
+        <div class="container-head">
+            <div class="row">
+
+                <div class="col-5">
+
+
+                <div class="header__logo">
+                <a href="https://jkanime.net">
+                <img class="logoweb" src="https://cdn.jkdesa.com/assets3/css/img/jkanimenet.png?v=2.0.204" alt="Logo JkAnime">
+                </a>
+                </div>
+
+
+                </div>
+                <div class="col">
+                    <div class="header__right row">
+
+                  
+
+                  <label class="switchBtn">
+                  <input type="checkbox" id="darkswitch">
+                  <div class="slidebtn ti"></div>
+                  </label>
+						<form role="search" autocomplete="off" id="form_search_ajax" class=" col form_search2" data-ajax="https://jkanime.net/ajax_search" action="https://jkanime.net/buscar" method="get">
+
+                                <input type="search" id="buscanime" class="buscanime" name="q" rel="Buscar Anime" placeholder="Buscar Anime..." value="" required="">
+
+<button class="buton-form" id="btn_qsubmit" type="submit"><i class="search"></i></button>
+									<div style="display: none;" id="search_results"><div id="qloader" class="lds-ellipsis"><div></div><div></div><div></div><div></div></div></div><div style="display: none;" class="search_history"><h3>Buscado recientemente:</h3><ul class="history_list"></ul></div>
+                            </form>
+
+					<b class="screen-overlay"></b>
+
+					<div style="display: none;" id="notify"><i class="ti ti-bell-filled" aria-hidden="true"></i></div>
+
+					<div class="notify-list" style="display: none;">
+					<nav class="not-type mb-1"><button data-show="global">Global</button><button data-show="comentarios">Comentarios</button></nav>
+					<ul></ul>
+					</div>
+
+					<button class="usr-menu entrar" type="submit"><i class="ti not ti-user-filled"></i></button>
+					<ul style="display: none;" id="authmenu">
+					<div id="usrinfo"><a class="ed" href="https://jkanime.net/dash/editar-perfil">Editar perfil</a></div>
+					<hr>
+					<li class="auth"><a href="https://jkanime.net/usuario/$me"><i class="ti ti-user" aria-hidden="true"></i> Mi perfil</a></li>
+					<li class="auth"><a href="https://jkanime.net/dash/comentarios"><i class="ti ti-message" aria-hidden="true"></i> Comentarios</a></li>
+					<li class="auth"><a href="https://jkanime.net/notificaciones"><i class="ti ti-bell" aria-hidden="true"></i> Notificaciones</a></li>
+
+					<li class="auth"><a href="https://jkanime.net/dash/solicitudes"><i class="ti ti-users" aria-hidden="true"></i> Solicitudes</a></li>
+					<li class="auth"><a href="https://jkanime.net/dash/listas"><i class="ti ti-list" aria-hidden="true"></i> Mis listas</a></li>
+					<li class="auth"><a href="https://jkanime.net/guardado"><i class="ti ti-shield-plus" aria-hidden="true"></i> Guardado</a></li>
+					<li><a href="https://jkanime.net/historial"><i class="ti ti-history" aria-hidden="true"></i> Historial</a></li>
+					<li class="auth"><a class="logdom salir" href="/salir"><i class="ti ti-sign-out" aria-hidden="true"></i> Salir</a></li>
+					</ul>
+
+
+
+
+
+
+                    </div>
+
+
+                </div>
+
+
+
+
+
+            </div>
+
+
+
+
+
+
+        </div>
+
+        </header>
+
+
+
+<div class="page-content" >
+
+
+
+
+<div class="breadcrumb-option">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-12">
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+   <section class="contenido spad page_g">
+        <div class="container">
+
+
+
+            <div class="row">
+                <div class="col-lg-12">
+
+
+                                   <div class="jkinfo mb-5"><div class="infoc"><p>Temporada Otoño 2026</p><a href="https://jkanime.net/estrenos/"><button>Ver Ahora C:</button></a></div></div>
+                
+
+ <div class="mt-3 d-block">
+        </div>
+
+                    <div class="anime__page__content">
+                        <div class="anime__page__title">
+                            <div class="row">
+                                <div class="col-lg-8 col-md-8 col-sm-6">
+                                    <div class="horarybox dirbox section-title">
+                                        <h4>Lista completa de Animes </h4>
+                                        <h6 class="subtitle"></h6>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+
+
+
+<nav class="dir_options mb-3">
+<div class="modes">
+<button data-mode="1"><i class="ti ti-layout-grid" aria-hidden="true"></i></button>
+<button data-mode="2"><i class="ti ti-columns-3" aria-hidden="true"></i></button>
+<button data-mode="3"><i class="ti ti-list-details" aria-hidden="true"></i></button>
+</div>
+</nav>
+
+
+
+
+
+                                   <div class="hidden_filters mb-4" id="botones">
+
+
+                         <div id="filtro_div" class="n">
+	<form action="https://jkanime.net/directorio" method="get">
+
+	<div class="fil">
+	<label>Ordenar por</label>
+	<select name="filtro">
+	<option value="">Por fecha</option>
+	<option  value="nombre">Por nombre</option>
+	<option  selected  value="popularidad">Por popularidad</option>
+	</select>
+    </div>
+
+    <div class="fil">
+    <label>Genero</label>
+	<select name="genero">
+	<option value="">Sin genero</option>
+		<option value='accion' >Accion</option><option value='aventura' >Aventura</option><option value='autos' >Autos</option><option value='comedia' >Comedia</option><option value='dementia' >Dementia</option><option value='demonios' >Demonios</option><option value='misterio' >Misterio</option><option value='drama' >Drama</option><option value='ecchi' >Ecchi</option><option value='fantasia' >Fantasia</option><option value='juegos' >Juegos</option><option value='hentai' >Hentai</option><option value='historico' >Historico</option><option value='terror' >Terror</option><option value='nios' >Niños</option><option value='magia' >Magia</option><option value='artes-marciales' >Artes Marciales</option><option value='mecha' >Mecha</option><option value='musica' >Musica</option><option value='parodia' >Parodia</option><option value='samurai' >Samurai</option><option value='romance' >Romance</option><option value='colegial' >Colegial</option><option value='sci-fi' >Sci-Fi</option><option value='shoujo' >Shoujo</option><option value='shoujo-ai' >Shoujo Ai</option><option value='shounen' >Shounen</option><option value='shounen-ai' >Shounen Ai</option><option value='space' >Space</option><option value='deportes' >Deportes</option><option value='super-poderes' >Super Poderes</option><option value='vampiros' >Vampiros</option><option value='yaoi' >Yaoi</option><option value='yuri' >Yuri</option><option value='harem' >Harem</option><option value='cosas-de-la-vida' >Cosas de la vida</option><option value='sobrenatural' >Sobrenatural</option><option value='militar' >Militar</option><option value='policial' >Policial</option><option value='psicologico' >Psicologico</option><option value='thriller' >Thriller</option><option value='seinen' >Seinen</option><option value='josei' >Josei</option><option value='latino' >Español Latino</option><option value='isekai' >Isekai</option>
+	</select>
+    </div>
+
+    <div class="fil">
+    <label>Letra</label>
+	<select name="letra">
+	<option value="">Sin letra</option>
+	<option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option><option>G</option><option>H</option><option>I</option><option>J</option><option>K</option><option>L</option><option>M</option><option>N</option><option>O</option><option>P</option><option>Q</option><option>R</option><option>S</option><option>T</option><option>U</option><option>V</option><option>W</option><option>X</option><option>Y</option><option>Z</option>
+	</select>
+    </div>
+
+    <div class="fil">
+    <label>Demografia</label>
+	<select name="demografia">
+	<option value="">Sin demografia</option>
+		<option value='nios' >Niños</option><option value='shoujo' >Shoujo</option><option value='shounen' >Shounen</option><option value='seinen' >Seinen</option><option value='josei' >Josei</option>}
+	</select>
+    </div>
+
+    <div class="fil">
+    <label>Categoria</label>
+	<select name="categoria">
+	<option value="">Sin categoria</option>
+			<option  value="donghua">Donghua</option>
+			<option  value="latino">Latino</option>
+
+	</select>
+    </div>
+
+    <div class="fil">
+    <label>Tipo</label>
+	<select name="tipo">
+		<option value="">Sin tipo</option>
+		<option  value="animes">Animes</option>
+		<option  value="peliculas">Peliculas</option>
+		<option  value="especiales">Especiales</option>
+		<option  value="ovas">Ovas</option>
+		<option  value="onas">Onas</option>
+	</select>
+    </div>
+
+    <div class="fil">
+    <label>Estado</label>
+	<select name="estado">
+		<option value="">Ninguno</option>
+		<option  value="emision">En emisión</option>
+		<option  value="finalizados">Finalizado</option>
+		<option  value="estrenos">Por Estrenar</option>
+	</select>
+    </div>
+
+    <div class="fil">
+    <label>Año</label>
+	<select name="fecha">
+		<option value="">Sin año</option>
+		<option>2026</option><option>2025</option><option>2024</option><option>2023</option><option>2022</option><option>2021</option><option>2020</option><option>2019</option><option>2018</option><option>2017</option><option>2016</option><option>2015</option><option>2014</option><option>2013</option><option>2012</option><option>2011</option><option>2010</option><option>2009</option><option>2008</option><option>2007</option><option>2006</option><option>2005</option><option>2004</option><option>2003</option><option>2002</option><option>2001</option><option>2000</option><option>1999</option><option>1998</option><option>1997</option><option>1996</option><option>1995</option><option>1994</option><option>1993</option><option>1992</option><option>1991</option><option>1990</option><option>1989</option><option>1988</option><option>1987</option><option>1986</option><option>1985</option><option>1984</option><option>1983</option><option>1982</option><option>1981</option>
+	</select>
+    </div>
+
+    <div class="fil">
+    <label>Temporada</label>
+	<select name="temporada">
+		<option value="">Sin temporada</option>
+		<option value='invierno' >Invierno</option><option value='primavera' >Primavera</option><option value='verano' >Verano</option><option value='otoño' >Otoño</option>
+	</select>
+    </div>
+
+    <div class="fil">
+    <label>Orden</label>
+	<select name="orden">
+		<option  value="asc">Ascendente</option>
+		<option  selected  value="">Descendente</option>
+	</select>
+    </div>
+
+    <div class="fil bte">
+    <button class="btn btn-dark"><i class="ti ti-filter"></i> Filtrar</button>
+    <a href="https://jkanime.net/aleatorio" class="btn aleatorio btn-primary"><i class="ti ti-arrows-shuffle"></i> Aleatorio</a>
+    </div>
+
+</form>
+                            </div>
+                              </div>
+
+
+<div class="row mode1 autoimagedir page_horario row-cols-md-4 row-cols-2 row-cols-lg-6 page_directorio"></div>
+<div class="row mode2 row-cols-md-3 custom_flex page_directorio"></div>
+<div class="row mode3 row-cols-1 page_directorio"></div>
+
+
+
+                    </div>
+                    </div>
+                    </div>
+
+
+
+                    <div class="text-center mb-5"><nav>
+        <ul class="pagination">
+            
+                            <li class="page-item disabled" aria-disabled="true" aria-label="&laquo; Anterior">
+                    <span class="page-link" aria-hidden="true">&lsaquo;</span>
+                </li>
+            
+            
+                            
+                
+                
+                                                                                        <li class="page-item active" aria-current="page"><span class="page-link">1</span></li>
+                                                                                                <li><a class="page-link" href="https://jkanime.net/directorio?filtro=popularidad&amp;p=2">2</a></li>
+                                                                                                <li><a class="page-link" href="https://jkanime.net/directorio?filtro=popularidad&amp;p=3">3</a></li>
+                                                                                                <li><a class="page-link" href="https://jkanime.net/directorio?filtro=popularidad&amp;p=4">4</a></li>
+                                                                                                <li><a class="page-link" href="https://jkanime.net/directorio?filtro=popularidad&amp;p=5">5</a></li>
+                                                                                                <li><a class="page-link" href="https://jkanime.net/directorio?filtro=popularidad&amp;p=6">6</a></li>
+                                                                                        
+                                    <li class="page-item disabled" aria-disabled="true"><span class="page-link">...</span></li>
+                
+                
+                                            
+                
+                
+                                                                                        <li><a class="page-link" href="https://jkanime.net/directorio?filtro=popularidad&amp;p=167">167</a></li>
+                                                                                                <li><a class="page-link" href="https://jkanime.net/directorio?filtro=popularidad&amp;p=168">168</a></li>
+                                                                        
+            
+                            <li>
+                    <a class="page-link" href="https://jkanime.net/directorio?filtro=popularidad&amp;p=2" rel="next" aria-label="Siguiente &raquo;">&rsaquo;</a>
+                </li>
+                    </ul>
+    </nav>
+</div>
+
+    <div class="row justify-content-center mt-5 mb-5">
+                    <div class="row g-0 align-items-center mt-5">
+                        <!-- Lado izquierdo (icono) -->
+                        <div class="col-md-4 text-right">
+                           <img style="max-width: 200px;" src="https://jkanime.net/img/tehee_thumb.png">
+                        </div>
+
+                        <div class="col-md-8">
+                            <h4 class="mb-2 fw-bold t-dark">¿Nos falta algún anime?</h4>
+                            <p class="text-muted mb-3 t-dark">
+                                Si no encuentras el anime que te gustaría ver en nuestra web, puedes solicitarlo!
+                            </p>
+                            <a href="https://jkanime.net/pedidos"><button class="btn btn-primary">
+                                Pedir un anime
+                            </button></a>
+                        </div>
+                </div>
+    </div>
+
+                </div>
+</div>
+</div>
+</section>
+
+<script>
+var animes = {"current_page":1,"data":[{"id":201,"title":"One Piece","synopsis":"Una historia \u00e9pica de piratas, donde narra la historia de \"Monkey D. Luffy\" quien cuando tenia 7 a\u00f1os, comi\u00f3 accidentalmente una \"Akuma no mi\"(Fruta del diablo) la cual le convirti\u00f3 en un hombre de goma. Por otra parte \"Gol D. Roger\" conocido como \"El rey de los Piratas\" quien fuera ejecutado por la Marine, habl\u00f3 antes de morir, acerca de su mayor tesoro,el \"One Piece\" escondido en la \"Gran line\". Esta noticia desat\u00f3 la gran era de los piratas lanzando a incontables piratas a ese lugar, en busca del \"One Piece\" el tesoro perdido. Diez a\u00f1os despu\u00e9s, Luffy inspirado en \"Gol D. Roger\" y un pirata de nombre Akagami no Shanks (Shanks el pelirrojo) se convierte en pirata deseando ser el pr\u00f3ximo \"Rey de los Piratas\" y zarpar para conocer amigos y tener aventuras con ellos, teniendo como meta encontrar el \"One Piece\".","image":"https:\/\/cdn.jkdesa.com\/assets\/images\/animes\/image\/one-piece.jpg","studios":"ABC","slug":"one-piece","type":"TV","status":"currently","url":"https:\/\/jkanime.net\/one-piece\/","estado":"En emision","tipo":"Serie","base64_id":"MjAx","short_title":"One Piece"},{"id":3687,"title":"Kimetsu no Yaiba: Hashira Geiko-hen","synopsis":"Nueva temporada de Kimetsu no Yaiba.","image":"https:\/\/cdn.jkdesa.com\/assets\/images\/animes\/image\/kimetsu-no-yaiba-hashira-geiko-hen.jpg","studios":"ABC","slug":"kimetsu-no-yaiba-hashira-geiko-hen","type":"TV","status":"finished","url":"https:\/\/jkanime.net\/kimetsu-no-yaiba-hashira-geiko-hen\/","estado":"Concluido","tipo":"Serie","base64_id":"MzY4Nw==","short_title":"Kimetsu no Yaiba: Hashira Geik..."},{"id":1765,"title":"Kono Subarashii Sekai ni Shukufuku wo!","synopsis":"Esta comedia de mundos alternativos gira en torno a Kazuma Satou, un hikikomori fan a muerte de los videojuegos, el anime y el manga. Un accidente de tr\u00e1fico pone fin a su vida\u2026 o eso deber\u00eda haber pasado, pero se despierta con una preciosa chica al lado que se presenta diciendo que es una diosa. La chica le dice \u201cTengo buenas noticias. \u00bfTe gustar\u00eda ir a un mundo alternativo? Puedes llevarte s\u00f3lo una cosa que te guste\u201d y \u00e9l le contesta \u201cEntonces, te llevar\u00e9 a ti\u201d. Con eso, es teletransportado a otro mundo en el que comienza su gran aventura para derrotar al rey demonio\u2026","image":"https:\/\/cdn.jkdesa.com\/assets\/images\/animes\/image\/kono-subarashii-sekai-ni-shukufuku-wo.jpg","studios":"ABC","slug":"kono-subarashii-sekai-ni-shukufuku-wo","type":"TV","status":"finished","url":"https:\/\/jkanime.net\/kono-subarashii-sekai-ni-shukufuku-wo\/","estado":"Concluido","tipo":"Serie","base64_id":"MTc2NQ==","short_title":"Kono Subarashii Sekai ni Shuku..."},{"id":251,"title":"Dragon Ball Z (Original)","synopsis":"En Dragon ball Z Goku se ha convertido en un adulto y est\u00e1 casado con Milk, con la que tiene un hijo llamado Gohan. En esta segunda saga de Dragon ball Goku descubrir\u00e1 que no es un terricola, sino que pertenece a una raza de guerreros conocida por ser una de las m\u00e1s poderosas de la galaxia, para posteriormente dar paso a los verdaderos enemigos de la serie. Para poder vencer a los nuevos enemigos que ir\u00e1n surgiendo, Goku y sus amigos tendr\u00e1n que viajar por otros planetas e incluso al cielo y al infierno. Cada enemigo ser\u00e1 m\u00e1s fuerte que el anterior, por lo que tendr\u00e1n que entrenar muy duro para poder derrotarlos adem\u00e1s de que se les ir\u00e1n uniendo nuevos personajes que les ayudar\u00e1n a vencerlos.","image":"https:\/\/cdn.jkdesa.com\/assets\/images\/animes\/image\/dragon-ball-z.jpg","studios":"ABC","slug":"dragon-ball-z","type":"TV","status":"finished","url":"https:\/\/jkanime.net\/dragon-ball-z\/","estado":"Concluido","tipo":"Serie","base64_id":"MjUx","short_title":"Dragon Ball Z (Original)"},{"id":1488,"title":"Danmachi","synopsis":"La acci\u00f3n de Dungeon ni Deai wo Motomeru no wa Machigatteiru Darou ka? tiene lugar en Orario, una laber\u00edntica ciudad tambi\u00e9n conocida como \u201cMazmorra\u201d. Vel Chanel es un aventurero inexperto al que le encantar\u00eda \"tener un encuentro trascendental con una persona del sexo opuesto\".\n\nUn d\u00eda, Vel es atacado por un minotauro. Antes de perecer a manos del monstruo es salvado por Eyes Warenstein, una aventurera de primer\u00edsimo nivel. El pobre Vel se queda prendado de ella inmediatamente, por lo que se propone convertirse en un aventurero tan bueno como ella. Sin embargo, m\u00e1s tarde se topa con Hestia, \u201cla diosa lolita\u201d debido a su baja estatura, que inmediatamente se enamorar\u00e1 de \u00e9l.","image":"https:\/\/cdn.jkdesa.com\/assets\/images\/animes\/image\/dungeon-ni-deai-wo-motomeru-no-wa-machigatteiru-darou-ka.jpg","studios":"ABC","slug":"dungeon-ni-deai-wo-motomeru-no-wa-machigatteiru-darou-ka","type":"TV","status":"finished","url":"https:\/\/jkanime.net\/dungeon-ni-deai-wo-motomeru-no-wa-machigatteiru-darou-ka\/","estado":"Concluido","tipo":"Serie","base64_id":"MTQ4OA==","short_title":"Danmachi"},{"id":2403,"title":"Kimetsu no Yaiba","synopsis":"Estamos en la era Taisho de Jap\u00f3n. Tanjiro, un joven que se gana la vida vendiendo carb\u00f3n, descubre un d\u00eda que su familia ha sido asesinada por un demonio. Para empeorar las cosas, su hermana menor Nezuko, la \u00fanica superviviente de la masacre, ha sufrido una transformaci\u00f3n en demonio. Destrozado por los acontecimientos Tanjiro decide convertirse en un cazador de demonios para poder devolver a su hermana a la normalidad y matar al demonio que masacr\u00f3 a su familia","image":"https:\/\/cdn.jkdesa.com\/assets\/images\/animes\/image\/kimetsu-no-yaiba.jpg","studios":"ABC","slug":"kimetsu-no-yaiba","type":"TV","status":"finished","url":"https:\/\/jkanime.net\/kimetsu-no-yaiba\/","estado":"Concluido","tipo":"Serie","base64_id":"MjQwMw==","short_title":"Kimetsu no Yaiba"},{"id":3004,"title":"Sono Bisque Doll wa Koi wo Suru","synopsis":"Wakana Gojou siempre ha tenido una afici\u00f3n por las mu\u00f1ecas tradicionales. Sin embargo, una experiencia negativa y traum\u00e1tica con un amigo en el pasado lo hizo transformarse en un chico solitario que pasa sus d\u00edas en el sal\u00f3n de econom\u00eda del hogar, cosiendo.\n\nUn d\u00eda, la preciosa Marin Kitagawa, una joven que siempre va a la moda y no le importa lo que piensen de ella, se le acerca para apreciar su talento. Y Marin decide intentar meterlo en el mundo de su hobby: el cosplay.","image":"https:\/\/cdn.jkdesa.com\/assets\/images\/animes\/image\/sono-bisque-doll-wa-koi-wo-suru.jpg","studios":"ABC","slug":"sono-bisque-doll-wa-koi-wo-suru","type":"TV","status":"finished","url":"https:\/\/jkanime.net\/sono-bisque-doll-wa-koi-wo-suru\/","estado":"Concluido","tipo":"Serie","base64_id":"MzAwNA==","short_title":"Sono Bisque Doll wa Koi wo Sur..."},{"id":4115,"title":"Kaoru Hana wa Rin to Saku","synopsis":"A pesar de estar uno al lado del otro, el instituto p\u00fablico Chidori y la academia privada Kikyo, s\u00f3lo para chicas, parecen existir en dos mundos diferentes. Mientras que este \u00faltimo goza de una reputaci\u00f3n inmaculada y favorece a las estudiantes de or\u00edgenes acomodados, el primero es un nido de delincuentes de pocas luces. Todos en Kikyo albergan un profundo odio hacia sus vecinos de Chidori.\r\n\r\nRintarou Tsumugi, de diecis\u00e9is a\u00f1os, es un estudiante de Chidori cuyo rostro intimidante hace que la gente le evite. Rintarou no presta atenci\u00f3n a esto, ya que est\u00e1 contento con su grupo de amigos. Sin embargo, hay algo que a\u00fan no les ha contado: a veces, ayuda en la pasteler\u00eda de su familia.\r\n\r\nUn d\u00eda en el trabajo, Rintarou ve a una clienta en una mesa, pero ella sale corriendo antes de que \u00e9l pueda hablar con ella. Al d\u00eda siguiente, recibe una disculpa de la chica, Kaoruko Waguri, que le explica que no huy\u00f3 por su aspecto y que cree que Rintarou es una persona de buen coraz\u00f3n. Aunque no est\u00e1 acostumbrado a la brillante personalidad de Kaoruko, Rintarou est\u00e1 deseando entablar amistad con ella. S\u00f3lo hay un obst\u00e1culo que se interpone en su camino: Kaoruko es alumna de Kikyo.","image":"https:\/\/cdn.jkdesa.com\/assets\/images\/animes\/image\/kaoru-hana-wa-rin-to-saku.jpg","studios":"ABC","slug":"kaoru-hana-wa-rin-to-saku","type":"TV","status":"finished","url":"https:\/\/jkanime.net\/kaoru-hana-wa-rin-to-saku\/","estado":"Concluido","tipo":"Serie","base64_id":"NDExNQ==","short_title":"Kaoru Hana wa Rin to Saku"},{"id":3948,"title":"Ore dake Level Up na Ken Season 2: Arise from the Shadow","synopsis":"Segunda temporada de Ore dake Level Up na Ken.","image":"https:\/\/cdn.jkdesa.com\/assets\/images\/animes\/image\/ore-dake-level-up-na-ken-season-2-arise-from-the-shadow.jpg","studios":"ABC","slug":"ore-dake-level-up-na-ken-season-2-arise-from-the-shadow","type":"TV","status":"finished","url":"https:\/\/jkanime.net\/ore-dake-level-up-na-ken-season-2-arise-from-the-shadow\/","estado":"Concluido","tipo":"Serie","base64_id":"Mzk0OA==","short_title":"Ore dake Level Up na Ken Seaso..."},{"id":3675,"title":"Kaijuu 8-gou","synopsis":"Unos monstruos grotescos parecidos a Godzilla llamados \"kaijuu\" llevan muchos a\u00f1os apareciendo por Jap\u00f3n. Para combatir a estas bestias, una unidad militar de \u00e9lite conocida como Cuerpo de Defensa arriesga su vida a diario para proteger a los civiles. Una vez que se mata a una criatura, los \"barrenderos\" -que trabajan bajo las \u00f3rdenes de la Corporaci\u00f3n Profesional de Limpieza de Kaijuu- se encargan de deshacerse de sus restos.\n\nKafka Hibino, un hombre de 32 a\u00f1os, no est\u00e1 satisfecho con su trabajo de barrendero. Desde muy joven ha aspirado a unirse al Cuerpo de Defensa y ganarse la vida matando kaijuus. Sin embargo, tras varios intentos fallidos, renunci\u00f3 a sus sue\u00f1os y se resign\u00f3 a la mediocridad que le proporcionaba un sueldo decente. Sin embargo, cuando un ambicioso recluta de 18 a\u00f1os llamado Leno Ichikawa se une a su equipo de limpieza, Kafka vuelve a recordar su deseo de alistarse en el ej\u00e9rcito.\n\nTras una cadena de desafortunados acontecimientos y una interacci\u00f3n con el barrendero junior, Kafka se encuentra con un kaijuu de tipo par\u00e1sito que se abre paso a trav\u00e9s de su boca, convirti\u00e9ndolo en un monstruo humanoide. Con sus nuevos poderes, Kafka se propone dar una \u00faltima oportunidad al sue\u00f1o de su vida.","image":"https:\/\/cdn.jkdesa.com\/assets\/images\/animes\/image\/kaijuu-8-gou.jpg","studios":"ABC","slug":"kaijuu-8-gou","type":"TV","status":"finished","url":"https:\/\/jkanime.net\/kaijuu-8-gou\/","estado":"Concluido","tipo":"Serie","base64_id":"MzY3NQ==","short_title":"Kaijuu 8-gou"},{"id":2706,"title":"Jujutsu Kaisen (TV)","synopsis":"En un mundo donde los demonios se alimentan de humanos desprevenidos, fragmentos del legendario y temido demonio Ryoumen Sukuna se perdieron y se dispersaron. Si alg\u00fan demonio consume partes del cuerpo de Sukuna, el poder que obtienen podr\u00eda destruir el mundo tal como lo conocemos. Afortunadamente, existe una misteriosa escuela de hechiceros Jujutsu que existen para proteger la precaria existencia de los vivos de los no muertos.","image":"https:\/\/cdn.jkdesa.com\/assets\/images\/animes\/image\/jujutsu-kaisen-tv.jpg","studios":"ABC","slug":"jujutsu-kaisen-tv","type":"TV","status":"finished","url":"https:\/\/jkanime.net\/jujutsu-kaisen-tv\/","estado":"Concluido","tipo":"Serie","base64_id":"MjcwNg==","short_title":"Jujutsu Kaisen (TV)"},{"id":814,"title":"Shingeki no Kyojin","synopsis":"La historia nos traslada a un mundo en el que la humanidad estuvo a punto de ser exterminada cientos de a\u00f1os atr\u00e1s por los Titanes. Los Titanes son seres enormes, parecen no ser inteligentes y devoran humanos. Lo peor es que parece que lo hacen por placer y no por alimentarse.\r\n\r\nUna peque\u00f1a parte de la humanidad ha conseguido sobrevivir protegi\u00e9ndose con unos alt\u00edsimos muros, m\u00e1s altos que el mayor de los Titanes. La ciudad vive su vida tranquila, y hace m\u00e1s de 100 a\u00f1os que ning\u00fan Titan aparece por all\u00ed.\r\n\r\nEren y Mikasa son todav\u00eda unos adolescentes cuando ven algo horroroso:  un Titan mucho mayor que todos los que la humanidad hab\u00eda conocido hasta el momento est\u00e1 destruyendo los muros de la ciudad, en ese momento la humanidad volver\u00e1 a recordar el terror.","image":"https:\/\/cdn.jkdesa.com\/assets\/images\/animes\/image\/shingeki-no-kyojin.jpg","studios":"ABC","slug":"shingeki-no-kyojin","type":"TV","status":"finished","url":"https:\/\/jkanime.net\/shingeki-no-kyojin\/","estado":"Concluido","tipo":"Serie","base64_id":"ODE0","short_title":"Shingeki no Kyojin"},{"id":142,"title":"Naruto Shippuden","synopsis":"Naruto Shippuden \/ Shippuuden\nPasan dos a\u00f1os despu\u00e9s de que Naruto y Sakura se fueran a entrenar cada uno con su maestro sannin, en este caso, Naruto se fue con Jiraya y Sakura con Tsunade. Ya tienen 14 a\u00f1os y son unos geniales ninjas, Naruto ha aprendido muchas t\u00e9cnicas nuevas y ha perfeccionado el Kage Bunshin aparte de otras que ya las ver\u00e1n a lo largo de la serie, m\u00e1s una t\u00e9cnica secreta. Sakura ha aprendido todo sobre la medicina ninja, y se ha convertido en una ninja m\u00e9dico. Los otros personajes sin olvidarlos, tambi\u00e9n han evolucionado subiendo de rango de ninja (todos menos Naruto) y tambi\u00e9n los temas amorosos, Shikamaru ya tiene novia. Pero durante esos 2 a\u00f1os, los Akatsuki se han preparado para lo que viene. Empiezan a mover ficha yendo a buscar a los 9 demonios de chakra legendario (Kyubi, Shukaku de la arena y siete m\u00e1s).","image":"https:\/\/cdn.jkdesa.com\/assets\/images\/animes\/image\/naruto-shippuden.jpg","studios":"ABC","slug":"naruto-shippuden","type":"TV","status":"finished","url":"https:\/\/jkanime.net\/naruto-shippuden\/","estado":"Concluido","tipo":"Serie","base64_id":"MTQy","short_title":"Naruto Shippuden"},{"id":3671,"title":"Tensei shitara Slime Datta Ken 3rd Season","synopsis":"Tercera Temporada de Tensei shitara Slime Datta Ken.\n\n","image":"https:\/\/cdn.jkdesa.com\/assets\/images\/animes\/image\/tensei-shitara-slime-datta-ken-3rd-season.jpg","studios":"ABC","slug":"tensei-shitara-slime-datta-ken-3rd-season","type":"TV","status":"finished","url":"https:\/\/jkanime.net\/tensei-shitara-slime-datta-ken-3rd-season\/","estado":"Concluido","tipo":"Serie","base64_id":"MzY3MQ==","short_title":"Tensei shitara Slime Datta Ken..."},{"id":3829,"title":"Dandadan","synopsis":"Despu\u00e9s de ser rechazada agresivamente, Momo Ayase se encuentra enfurru\u00f1ada cuando tropieza con un chico que est\u00e1 siendo acosado. Salvado por su precipitada amabilidad, el chico obsesionado con los alien\u00edgenas intenta hablar con ella sobre intereses extraterrestres que cree que comparten. Rechazando sus afirmaciones, Ayase proclama que ella en cambio cree en los fantasmas, lo que inicia una discusi\u00f3n entre ambos sobre cu\u00e1l de los dos es real.\n\nEn una apuesta para determinar qui\u00e9n tiene raz\u00f3n, ambos deciden visitar por separado lugares asociados tanto con lo extraterrestre como con lo sobrenatural: Ayase visita lo primero y el chico lo segundo. Cuando ambos llegan a sus respectivos lugares, resulta que ninguno de los dos estaba equivocado y que tanto los extraterrestres como los fantasmas existen.\n\nEsto marca el comienzo de la aventura de Ayase y el chico, que intentan arreglar los elementos surrealistas, sobrenaturales y extraterrestres que les rodean para volver a una vida normal.","image":"https:\/\/cdn.jkdesa.com\/assets\/images\/animes\/image\/dandadan.jpg","studios":"ABC","slug":"dandadan","type":"TV","status":"finished","url":"https:\/\/jkanime.net\/dandadan\/","estado":"Concluido","tipo":"Serie","base64_id":"MzgyOQ==","short_title":"Dandadan"},{"id":3596,"title":"Tsuki ga Michibiku Isekai Douchuu 2nd Season","synopsis":"Segunda temporada de Tsuki ga Michibiku Isekai Douchuu","image":"https:\/\/cdn.jkdesa.com\/assets\/images\/animes\/image\/tsuki-ga-michibiku-isekai-douchuu-2nd-season.jpg","studios":"ABC","slug":"tsuki-ga-michibiku-isekai-douchuu-2nd-season","type":"TV","status":"finished","url":"https:\/\/jkanime.net\/tsuki-ga-michibiku-isekai-douchuu-2nd-season\/","estado":"Concluido","tipo":"Serie","base64_id":"MzU5Ng==","short_title":"Tsuki ga Michibiku Isekai Douc..."},{"id":3326,"title":"Kimetsu no Yaiba: Katanakaji no Sato-hen","synopsis":"Inicia el arco de los herreros en Kimetsu No Yaiba. Continuaci\u00f3n de la segunda temporada, Arco del distrito rojo. Tanjiro y compa\u00f1\u00eda tendr\u00e1n que cumplir una nueva misi\u00f3n, acompa\u00f1ados de dos pilares.","image":"https:\/\/cdn.jkdesa.com\/assets\/images\/animes\/image\/kimetsu-no-yaiba-katanakaji-no-sato-hen.jpg","studios":"ABC","slug":"kimetsu-no-yaiba-katanakaji-no-sato-hen","type":"TV","status":"finished","url":"https:\/\/jkanime.net\/kimetsu-no-yaiba-katanakaji-no-sato-hen\/","estado":"Concluido","tipo":"Serie","base64_id":"MzMyNg==","short_title":"Kimetsu no Yaiba: Katanakaji n..."},{"id":3504,"title":"Sousou no Frieren","synopsis":"El rey demonio fue derrotado. Los h\u00e9roes que lograron esta haza\u00f1a vuelven a sus hogares como h\u00e9roes. Pero llega el momento de la separaci\u00f3n, y Frieren, la maga y elfa del grupo, no envejece como los dem\u00e1s. Todos est\u00e1n viviendo sus vidas despu\u00e9s de sus aventuras, pero poco a poco, los compa\u00f1eros de Frieren perecen... y ella es la \u00fanica que queda. Pero antes de su muerte, su compa\u00f1ero Heiter le entrega a una humana aprendiz a Frieren. Juntas, deciden recorrer esos lugares por los que pasaron los h\u00e9roes, recordando momentos inolvidables. Y Frieren, poco a poco, se da cuenta de que debi\u00f3 haber atesorado m\u00e1s a sus compa\u00f1eros cuando estaban juntos.","image":"https:\/\/cdn.jkdesa.com\/assets\/images\/animes\/image\/sousou-no-frieren.jpg","studios":"ABC","slug":"sousou-no-frieren","type":"TV","status":"finished","url":"https:\/\/jkanime.net\/sousou-no-frieren\/","estado":"Concluido","tipo":"Serie","base64_id":"MzUwNA==","short_title":"Sousou no Frieren"},{"id":3507,"title":"Kusuriya no Hitorigoto","synopsis":"En una antigua corte imperial en China, la joven de 17 a\u00f1os Maomao es secuestrada y obligada a servir en el palacio del emperador. Aunque conserva su esp\u00edritu curioso, todo cambia cuando los hijos del emperador enferman. Maomao, con su experiencia farmac\u00e9utica y personalidad \u00fanica, decide actuar en secreto. Pronto, su talento llama la atenci\u00f3n del influyente eunuco Jinshi, llev\u00e1ndola a resolver misterios m\u00e9dicos en la corte del emperador.","image":"https:\/\/cdn.jkdesa.com\/assets\/images\/animes\/image\/kusuriya-no-hitorigoto.jpg","studios":"ABC","slug":"kusuriya-no-hitorigoto","type":"TV","status":"finished","url":"https:\/\/jkanime.net\/kusuriya-no-hitorigoto\/","estado":"Concluido","tipo":"Serie","base64_id":"MzUwNw==","short_title":"Kusuriya no Hitorigoto"},{"id":3672,"title":"Boku no Hero Academia 7th Season","synopsis":"Septima temporada de Boku no Hero Academia","image":"https:\/\/cdn.jkdesa.com\/assets\/images\/animes\/image\/boku-no-hero-academia-7th-season.jpg","studios":"ABC","slug":"boku-no-hero-academia-7th-season","type":"TV","status":"finished","url":"https:\/\/jkanime.net\/boku-no-hero-academia-7th-season\/","estado":"Concluido","tipo":"Serie","base64_id":"MzY3Mg==","short_title":"Boku no Hero Academia 7th Seas..."},{"id":3673,"title":"Mushoku Tensei II: Isekai Ittara Honki Dasu Part 2","synopsis":"Parte 2 de Mushoku Tensei II: Isekai Ittara Honki Dasu.","image":"https:\/\/cdn.jkdesa.com\/assets\/images\/animes\/image\/mushoku-tensei-ii-isekai-ittara-honki-dasu-part-2.jpg","studios":"ABC","slug":"mushoku-tensei-ii-isekai-ittara-honki-dasu-part-2","type":"TV","status":"finished","url":"https:\/\/jkanime.net\/mushoku-tensei-ii-isekai-ittara-honki-dasu-part-2\/","estado":"Concluido","tipo":"Serie","base64_id":"MzY3Mw==","short_title":"Mushoku Tensei II: Isekai Itta..."},{"id":3422,"title":"Jujutsu Kaisen 2nd Season","synopsis":"Seguimos a Yuji Itadori, un estudiante con habilidades f\u00edsicas excepcionales que se une a la escuela de magia para combatir maldiciones. Junto a Megumi Fushiguro y Nobara Kugisaki, se enfrentan a diversas amenazas sobrenaturales. Yuji debe controlar el poder de Ryomen Sukuna, un demonio poderoso que se encuentra dentro de su cuerpo. Con la gu\u00eda de su instructor, Satoru Gojo, luchan contra enemigos poderosos mientras descubren m\u00e1s sobre el mundo de las maldiciones.\n\nEn la segunda temporada se cubrir\u00e1 el arco que presenta la relaci\u00f3n de Satoru Gojo con Suguru Geto y su primer encuentro con Toji Fushiguro, el padre de Megumi. Por otra parte, veremos el tan esperado arco del \"incidente de Shibuya\".","image":"https:\/\/cdn.jkdesa.com\/assets\/images\/animes\/image\/jujutsu-kaisen-2nd-season.jpg","studios":"ABC","slug":"jujutsu-kaisen-2nd-season","type":"TV","status":"finished","url":"https:\/\/jkanime.net\/jujutsu-kaisen-2nd-season\/","estado":"Concluido","tipo":"Serie","base64_id":"MzQyMg==","short_title":"Jujutsu Kaisen 2nd Season"},{"id":3199,"title":"Chainsaw Man","synopsis":"Denji es un joven pobre que hace cualquier cosa por dinero, incluso cazar demonios con su perro diab\u00f3lico Pochita. Es un hombre sencillo con sue\u00f1os sencillos, ahogado bajo una monta\u00f1a de deudas. Pero su triste vida da un vuelco cuando es traicionado por alguien en quien conf\u00eda. Ahora, con el poder de un demonio dentro de \u00e9l, Denji se ha convertido en un hombre completamente nuevo: \u00a1el hombre de la sierra de cadena!","image":"https:\/\/cdn.jkdesa.com\/assets\/images\/animes\/image\/chainsaw-man.jpg","studios":"ABC","slug":"chainsaw-man","type":"TV","status":"finished","url":"https:\/\/jkanime.net\/chainsaw-man\/","estado":"Concluido","tipo":"Serie","base64_id":"MzE5OQ==","short_title":"Chainsaw Man"},{"id":3597,"title":"Mashle 2nd Season","synopsis":"Segunda temporada de Mashle","image":"https:\/\/cdn.jkdesa.com\/assets\/images\/animes\/image\/mashle-2nd-season.jpg","studios":"ABC","slug":"mashle-2nd-season","type":"TV","status":"finished","url":"https:\/\/jkanime.net\/mashle-2nd-season\/","estado":"Concluido","tipo":"Serie","base64_id":"MzU5Nw==","short_title":"Mashle 2nd Season"},{"id":2788,"title":"Horimiya","synopsis":"Aunque admirada en la escuela por su amabilidad y destreza acad\u00e9mica, la estudiante de secundaria Kyouko Hori ha estado escondiendo otro lado de ella. Con sus padres a menudo fuera de casa debido al trabajo, Hori tiene que cuidar de su hermano menor y hacer las tareas del hogar, sin dejar ninguna posibilidad de socializar fuera de la escuela.\r\n\r\nMientras tanto, Izumi Miyamura es visto como un otaku inquietante que usa anteojos. Sin embargo, en realidad, es una persona amable e inepta para estudiar. Adem\u00e1s, tiene nueve piercings escondidos detr\u00e1s de su largo cabello y un tatuaje a lo largo de su espalda y hombro izquierdo.","image":"https:\/\/cdn.jkdesa.com\/assets\/images\/animes\/image\/horimiya.jpg","studios":"ABC","slug":"horimiya","type":"TV","status":"finished","url":"https:\/\/jkanime.net\/horimiya\/","estado":"Concluido","tipo":"Serie","base64_id":"Mjc4OA==","short_title":"Horimiya"},{"id":2121,"title":"Black Clover (TV)","synopsis":"Hay un mundo en donde la magia lo es todo. Asta y Yuno crecieron en una iglesia, y el d\u00eda que cumplieron 15 a\u00f1os participaron en una ceremonia en donde les concedieron grimores los cuales despiertan los poderes m\u00e1gicos innatos.\nAsta y Yuno, para probar sus poderes, y el honor que les fueron concedido, se lanzan en una traves\u00eda para llegar a ser emperadores m\u00e1gicos. ","image":"https:\/\/cdn.jkdesa.com\/assets\/images\/animes\/image\/black-clover-tv.jpg","studios":"ABC","slug":"black-clover-tv","type":"TV","status":"finished","url":"https:\/\/jkanime.net\/black-clover-tv\/","estado":"Concluido","tipo":"Serie","base64_id":"MjEyMQ==","short_title":"Black Clover (TV)"},{"id":4759,"title":"Mushoku Tensei III: Isekai Ittara Honki Dasu","synopsis":"Tercera temporada de Mushoku Tensei III","image":"https:\/\/cdn.jkdesa.com\/assets\/images\/animes\/image\/mushoku-tensei-iii-isekai-ittara-honki-dasu.jpg","studios":"ABC","slug":"mushoku-tensei-iii-isekai-ittara-honki-dasu","type":"TV","status":"finished","url":"https:\/\/jkanime.net\/mushoku-tensei-iii-isekai-ittara-honki-dasu\/","estado":"Concluido","tipo":"Serie","base64_id":"NDc1OQ==","short_title":"Mushoku Tensei III: Isekai Itt..."},{"id":3598,"title":"Boku no Kokoro no Yabai Yatsu Season 2","synopsis":"Segunda temporada de Boku no Kokoro no Yabai Yatsu .\n\n","image":"https:\/\/cdn.jkdesa.com\/assets\/images\/animes\/image\/boku-no-kokoro-no-yabai-yatsu-season-2.jpg","studios":"ABC","slug":"boku-no-kokoro-no-yabai-yatsu-season-2","type":"TV","status":"finished","url":"https:\/\/jkanime.net\/boku-no-kokoro-no-yabai-yatsu-season-2\/","estado":"Concluido","tipo":"Serie","base64_id":"MzU5OA==","short_title":"Boku no Kokoro no Yabai Yatsu ..."},{"id":2993,"title":"Kimetsu no Yaiba: Yuukaku-hen","synopsis":"Tanjirou, Zenitsu e Inosuke, con la ayuda del Sound Hashira Tengen Uzui, viajan al distrito rojo de Yoshiwara para cazar a un demonio que ha estado aterrorizando a la ciudad.","image":"https:\/\/cdn.jkdesa.com\/assets\/images\/animes\/image\/kimetsu-no-yaiba-yuukaku-hen.jpg","studios":"ABC","slug":"kimetsu-no-yaiba-yuukaku-hen","type":"TV","status":"finished","url":"https:\/\/jkanime.net\/kimetsu-no-yaiba-yuukaku-hen\/","estado":"Concluido","tipo":"Serie","base64_id":"Mjk5Mw==","short_title":"Kimetsu no Yaiba: Yuukaku-hen"},{"id":2853,"title":"Ijiranaide, Nagatoro-san","synopsis":"A la estudiante de secundaria Hayase Nagatoro le encanta pasar su tiempo libre haciendo una cosa, \u00a1y eso es intimidar a su Senpai! Despu\u00e9s de que Nagatoro y sus amigos se topan con los dibujos del aspirante a artista, disfrutan intimidando sin piedad al t\u00edmido Senpai. Nagatoro decide continuar con su cruel juego y lo visita a diario para poder obligar a Senpai a hacer lo que le interese en ese momento, especialmente si eso lo incomoda.","image":"https:\/\/cdn.jkdesa.com\/assets\/images\/animes\/image\/ijiranaide-nagatoro-san.jpg","studios":"ABC","slug":"ijiranaide-nagatoro-san","type":"TV","status":"finished","url":"https:\/\/jkanime.net\/ijiranaide-nagatoro-san\/","estado":"Concluido","tipo":"Serie","base64_id":"Mjg1Mw==","short_title":"Ijiranaide, Nagatoro-san"}],"first_page_url":"https:\/\/jkanime.net\/directorio?filtro=popularidad&p=1","from":1,"last_page":168,"last_page_url":"https:\/\/jkanime.net\/directorio?filtro=popularidad&p=168","links":[{"url":null,"label":"&laquo; Anterior","page":null,"active":false},{"url":"https:\/\/jkanime.net\/directorio?filtro=popularidad&p=1","label":"1","page":1,"active":true},{"url":"https:\/\/jkanime.net\/directorio?filtro=popularidad&p=2","label":"2","page":2,"active":false},{"url":"https:\/\/jkanime.net\/directorio?filtro=popularidad&p=3","label":"3","page":3,"active":false},{"url":"https:\/\/jkanime.net\/directorio?filtro=popularidad&p=4","label":"4","page":4,"active":false},{"url":"https:\/\/jkanime.net\/directorio?filtro=popularidad&p=5","label":"5","page":5,"active":false},{"url":"https:\/\/jkanime.net\/directorio?filtro=popularidad&p=6","label":"6","page":6,"active":false},{"url":null,"label":"...","active":false},{"url":"https:\/\/jkanime.net\/directorio?filtro=popularidad&p=167","label":"167","page":167,"active":false},{"url":"https:\/\/jkanime.net\/directorio?filtro=popularidad&p=168","label":"168","page":168,"active":false},{"url":"https:\/\/jkanime.net\/directorio?filtro=popularidad&p=2","label":"Siguiente &raquo;","page":2,"active":false}],"next_page_url":"https:\/\/jkanime.net\/directorio?filtro=popularidad&p=2","path":"https:\/\/jkanime.net\/directorio","per_page":30,"prev_page_url":null,"to":30,"total":5038};
+var mode = leer_cookie('dir_mode') ? leer_cookie('dir_mode') : 1;
+$('div.modes button[data-mode="'+mode+'"]').addClass('active');
+
+function anime_status(e = false) {
+return "ABC";
+}
+
+function type_anime(str = false) {
+return "ABC";
+}
+
+
+
+var template_1 = '<div class="mb-4 d-flex align-items-stretch mb-3 dir1"><div class="card ml-2 mr-2"><a href="{slug}"><div class="d-thumb"><img class="card-img-top" src="{img}" alt="{titulo}"><div class="badges badges-top"><span class="badge {type_original} badge-primary">{type}</span><span class="badge {status_original} ml-1 badge-primary">{status}</span></div></div><div class="card-body d-flex flex-column"><h5 class="strlimit padtitle card-title">{titulo}</h5></div></a><div id="guardar-anime" style="display: none;" class="svea" data-tipo="{type}" data-anime="{id}" class="btn btn-light btn-sm ml-2"><i class="ti ti-shield-plus" aria-hidden="true"></i><div data-status="{status_original}" class="dropmenu"></div></div></div></div>';
+
+var template_2 = '<div class="card mb-3 custom_item2 "><div class="row g-0"><div class="col-md-5 custom_thumb2"><a href="{slug}"><img src="{img}" class="img-fluid rounded-start" alt="{titulo}"></a><h5 class="card-title"><a title="{titulo}" href="{slug}">{titulo}</a></h5></div><div class="col-md-7"><div class="card-body"><h5 class="card-title-alt"><a href="{slug}">{titulo}</a><span></span></h5><p class="card-text ep">{eps} Eps, estudio <a href="/studio/{studio_id}/">{studio_name}</a></p><div class="card-info"><p class="card-status {status_original}">{status} </p><p class="bdg card-txt {type_original}"> {type} </p></div><p class="card-text synopsis">{desc}</p><p class="card-text"></p></div></div></div></div>';
+
+var template_3 = '<div class="card mb-4"><div class="d-flex"><div class="custom_thumb3"><a href="{slug}"><img src="{img}" class="img-fluid rounded-start" alt="{titulo}"></a></div><div class="card-body"><h5 class="card-title"><a href="{slug}">{titulo}</a><span></span></h5><p class="card-text ep">{eps} Eps, estudio <a href="/studio/{studio_id}/">{studio_name}</a></p><div class="card-info"><p class="badge {status_original}">{status} </p><p class="badge {type_original}"> {type} </p></div><p class="card-text strlimit">{desc}</p><p class="card-text"></p></div></div></div>';
+
+$('.modes button').click(function() {
+$('.modes button.active').removeClass('active');$(this).addClass('active');
+mode = $(this).attr('data-mode');
+crear_cookie('dir_mode', mode, 525600);
+render_animes();
+});
+
+function render_animes() {
+$('.page_directorio').html('');
+$.each(animes.data, function( index, value ) {
+//console.log(value);
+if(value.categoria == 1) {value.type = 'Donghua';}
+if(value.episodes == null) {value.episodes = 0;}
+var tmp = mode == 1 ? template_1 : (mode == 2 ? template_2 : template_3);
+var final_template = tmp.replace(/{img}/g, value.image).replace(/{slug}/g, value.url).replace(/{titulo}/g, value.title).replace(/{desc}/g, value.synopsis).replace(/{type}/g, value.tipo).replace(/{type_original}/g, value.type).replace(/{status}/g, value.estado).replace(/{status_original}/g,value.status).replace(/{studio_name}/g,value.studios.nombre).replace(/{eps}/g,value.episodes).replace(/{studio_id}/g,value.studios.id).replace(/{id}/g,value.id);
+
+$('.page_directorio.mode'+mode).append(final_template);
+});
+}
+
+render_animes();
+
+$('button.show_filters').click(function() {
+if($(this).hasClass('active')) {
+$('.hidden_filters').hide(500);
+$(this).removeClass('active');
+
+} else {
+$('.hidden_filters').show(500);
+$(this).addClass('active');
+}
+});
+</script>
+
+</div>
+
+
+<div class="searchbg" style="display: none;"><form role="search" autocomplete="off" id="form_search_ajax" class="form_search2" data-ajax="https://jkanime.net/ajax_search" action="https://jkanime.net/buscar" method="get">
+
+<input type="search" id="buscanime" class="buscanime" name="q" rel="Buscar Anime" placeholder="Buscar Anime..." value="" required="">
+
+<button class="buton-form" id="btn_qsubmit" type="submit"><i class="search"></i></button>
+<div style="display: none;" id="search_results"><div id="qloader" class="lds-ellipsis"><div></div><div></div><div></div><div></div></div></div><div style="display: none;" class="search_history mobhistory"><h3>Buscado recientemente:</h3><ul class="history_list"></ul></div>
+</form>
+</div>
+
+<nav class="mobile-bottom-nav">
+<div class="mainmenu">
+
+<!-- MENÚ main GENERADO DINÁMICAMENTE - NO EDITAR MANUALMENTE -->
+<!-- Última actualización: 2026-02-06 17:39:41 -->
+
+	<a href="https://jkanime.net" class="mobile-bottom-nav__item ">
+		<div class="mobile-bottom-nav__item-content">
+			<i class="ti ti-home-bolt"></i> Inicio
+		</div>
+	</a>
+	<a href="https://jkanime.net/directorio" class="mobile-bottom-nav__item  mobile-bottom-nav__item--active ">
+		<div class="mobile-bottom-nav__item-content">
+			<i class="ti ti-list-details"></i> Directorio
+		</div>
+	</a>
+	<a href="https://jkanime.net/horario" class="mobile-bottom-nav__item ">
+		<div class="mobile-bottom-nav__item-content">
+			<i class="ti ti-calendar-clock"></i> Horario
+		</div>
+	</a>
+		<a href="https://jkanime.net/comunidad" class="mobile-bottom-nav__item ">
+		<div class="mobile-bottom-nav__item-content">
+			<i class="ti ti-users"></i> Comunidad
+		</div>
+	</a>
+	<a href="#" class="mobile-bottom-nav__item movmenu floatsearch">
+		<div class="mobile-bottom-nav__item-content">
+			<i class="ti ti-search"></i> Buscar
+		</div>
+	</a>
+
+    <a href="#" class="fullmenu mobile-bottom-nav__item">
+	<div class="mobile-bottom-nav__item-content">
+	<i class="ti ti-dots"></i> Más</div>
+	</a>
+    </div>
+
+	<div class="fullmenu_container d-bg" style="display: none;">
+    <!-- MENÚ full GENERADO DINÁMICAMENTE - NO EDITAR MANUALMENTE -->
+<!-- Última actualización: 2026-09-02 12:41:29 -->
+
+	<h3 class="t-dark">Más secciones</h3>
+	<a href="https://jkanime.net/aplicacion" class="mobile-bottom-nav__item ">
+		<div class="mobile-bottom-nav__item-content">
+			<i class="ti ti-device-mobile"></i> Aplicación Android
+		</div>
+	</a>
+	<a href="https://jkanime.net/pedidos" class="mobile-bottom-nav__item ">
+		<div class="mobile-bottom-nav__item-content">
+			<i class="ti ti-plus"></i> Pedir un anime
+		</div>
+	</a>
+			<a href="https://jkanime.net/historial" class="mobile-bottom-nav__item">
+			<div class="mobile-bottom-nav__item-content">
+				<i class="ti ti-history"></i> Historial
+			</div>
+		</a>
+				<a href="https://jkanime.net/estrenos" class="mobile-bottom-nav__item ">
+			<div class="mobile-bottom-nav__item-content">
+				<i class="ti ti-calendar"></i> Estrenos
+			</div>
+		</a>
+		<a href="https://jkanime.net/top" class="mobile-bottom-nav__item ">
+		<div class="mobile-bottom-nav__item-content">
+			<i class="ti ti-trophy"></i> Top
+		</div>
+	</a>
+
+	<h3 class="t-dark">Te recomendamos</h3>
+	<a href="https://hentaijk.com" target="_blank" class="mobile-bottom-nav__item">
+		<div class="mobile-bottom-nav__item-content">
+			HentaiJK
+		</div>
+	</a>
+	</div>
+
+</nav>
+
+
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pusher/8.3.0/pusher.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/laravel-echo/2.2.4/echo.iife.min.js"></script>
+<script src="https://cdn.jkdesa.com/assets3/js/bootstrap.min.js?v=2.0.204"></script>
+<script src="https://cdn.jkdesa.com/assets3/js/player.js?v=2.0.204"></script>
+<script src="https://cdn.jkdesa.com/assets3/js/jquery.nice-select.min.js?v=2.0.204"></script>
+<script src="https://cdn.jkdesa.com/assets3/js/mixitup.min.js?v=2.0.204"></script>
+<script src="https://cdn.jkdesa.com/assets3/js/jquery.slicknav.js?v=2.0.204"></script>
+<script src="https://cdn.jkdesa.com/assets3/js/owl.carousel.min.js?v=2.0.204"></script>
+<script src="https://cdn.jkdesa.com/assets3/js/jquery.simplemodal.js?v=2.0.204"></script>
+<script src="https://cdn.jkdesa.com/assets3/js/jquery.toast.js?v=2.0.204"></script>
+<script src="https://cdn.jkdesa.com/assets3/js/jquery-confirm.js?v=2.0.204"></script>
+<script src="https://cdn.jkdesa.com/assets3/js/bot-detector.js?v=2.0.204"></script>
+<script src="https://cdn.jkdesa.com/assets3/js/history.js?v=2.0.204"></script>
+<script src="https://cdn.jkdesa.com/assets3/js/notify.js?v=2.0.204"></script>
+<script src="https://cdn.jkdesa.com/assets3/js/main.js?v=2.0.204"></script>
+<script>
+function getQueryParameter(name) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const value = urlParams.get(name);
+    return value !== null ? value : false;
+}
+
+if(document.getElementById('jk_thread')) {
+function load_jk_comments(reload = false) {
+    if(reload) {document.getElementById('jk_thread').innerHTML = '';}
+
+    const iframe = document.createElement('iframe');
+    iframe.src = "https://login.jkanime.net/api/comentarios?titulo="+page_title+"&url="+page_url;
+    if(leer_cookie("darkmode")) {iframe.src += "&dark=true";}
+    //Notificaciones
+    if(getQueryParameter('comentario')) {iframe.src += "&notify="+getQueryParameter('comentario');}
+
+    iframe.id = "jkcomments";
+    iframe.allowTransparency = true;
+    iframe.frameBorder = 0;
+    iframe.width = "100%";
+    iframe.style.minHeight = "800px";
+
+    iframe.onload = function() {
+        $('#jk_thread #qloader').remove();
+    }
+
+    document.getElementById('jk_thread').appendChild(iframe);
+
+    window.onmessage = function(event) {
+        if (event.origin === location.protocol+"//login."+location.hostname || event.origin.includes('localhost')) {
+            const iframeData = event.data;
+            // Si el mensaje es sobre la altura
+            if (iframeData.type === 'iframeHeight') {
+                $('#jk_thread #qloader').remove();
+                const iframe = document.getElementById('jkcomments'); // Obtén el iframe por su ID
+                if (iframe) {
+
+                    iframe.style.height = iframeData.height + 'px';
+                }
+            }
+        }
+
+    };
+
+}
+
+var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+            if($("#jk_thread iframe").length == 0) {load_jk_comments();}
+        }
+    });
+}, { threshold: 0.1 }); // 50% de visibilidad
+
+$('#jk_thread').each(function() {
+    observer.observe(this);
+});
+
+if(getQueryParameter('comentario')) {
+    window.scrollTo(0, document.body.scrollHeight);
+
+
+    setTimeout(() => {
+
+        window.scrollTo({
+            top: document.body.scrollHeight,
+            behavior: 'smooth'
+        });
+
+    }, 1200);
+
+}
+
+}
+
+$(document).ready(function() {
+    $('.fullmenu').on('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        $(this).toggleClass('active');
+        if ($('.fullmenu_container').css('display') === 'none') {
+            $('.fullmenu_container').removeAttr('style').addClass('is-active');
+        } else {
+            $('.fullmenu_container').css('display', 'none').removeClass('is-active');
+        }
+    });
+
+    $(document).on('click', function(e) {
+        if (!$(e.target).closest('.fullmenu_container').length && !$(e.target).closest('.fullmenu').length) {
+
+            $('.fullmenu').removeClass('active');
+            $('.fullmenu_container').css('display', 'none').removeClass('is-active');
+        }
+    });
+});
+</script>
+
+<div class="auth_modal d-none">
+
+<div class="auth-container">
+<div class="auth-wrapper login">
+<h2 class="mb-4">Iniciar Sesión</h2>
+
+<div class="alert alert-danger" style="display: none;" role="alert"></div>
+
+<form id="loginForm">
+
+<label for="registerUsername" class="form-label">Usuario</label>
+<div class="form-outline w-100">
+<input type="text" placeholder="Usuario o email" class="pl-5 form-control ps-5 placeholder-active" id="loginUsername" name="usuario" required>
+<i class="ti ti-user ms-3"></i>
+<div class="form-notch"><div class="form-notch-leading" style="width: 9px;"></div><div class="form-notch-middle" style="width: 0px;"></div><div class="form-notch-trailing"></div></div></div>
+
+<label for="registerEmail" class="form-label">Contraseña</label>
+<div class="form-outline w-100">
+<input type="password" placeholder="contraseña" class="pl-5 form-control ps-5 placeholder-active" id="loginPassword" name="password" required>
+<i class="ti ti-lock ms-3"></i>
+<div class="form-notch"><div class="form-notch-leading" style="width: 9px;"></div><div class="form-notch-middle" style="width: 0px;"></div><div class="form-notch-trailing"></div></div></div>
+
+<button type="submit" class="mt-3 btn btn-primary w-100 mb-3">Entrar</button>
+<p class="text-center">¿No tienes una cuenta? <a href="#" id="showRegister">Regístrate aquí</a></p>
+
+<p class="text-center"><a target="_blank" href="https://login.jkanime.net/password/reset">¿Olvidaste tu contraseña?</a></p>
+
+
+<hr>
+<a href="https://login.jkanime.net/api/auth/google" style="" class="btn w-100 d-inline-block gauth"><i class="ti ti-brand-google-filled"></i> Entrar con Google</a>
+<a href="https://login.jkanime.net/api/auth/discord" style="" class="btn w-100 d-inline-block dauth"><i class="ti ti-brand-discord-filled"></i> Entrar con Discord</a>
+
+</form>
+</div>
+
+<div class="auth-wrapper register">
+<h2 class="mb-4">Registrarse</h2>
+
+<div class="alert alert-danger" style="display: none;" role="alert"></div>
+
+<form id="registerForm">
+
+<div class="d-flex justify-content-center flex-column w-xl-25 w-md-50">
+
+<label for="registerUsername" class="form-label">Usuario</label>
+<div data-mdb-input-init="" class="form-outline w-100" data-mdb-input-initialized="true">
+<input type="text" placeholder="Usuario" class="pl-5 form-control ps-5 placeholder-active" id="registerUsername" name="usuario" required>
+<i class="ti ti-user ms-3"></i>
+<div class="form-notch"><div class="form-notch-leading" style="width: 9px;"></div><div class="form-notch-middle" style="width: 0px;"></div><div class="form-notch-trailing"></div></div></div>
+
+<label for="registerEmail" class="form-label">Email</label>
+<div data-mdb-input-init="" class="form-outline w-100" data-mdb-input-initialized="true">
+<input type="email" placeholder="Correo" class="pl-5 form-control ps-5 placeholder-active" id="registerEmail" name="email" required>
+<i class="ti ti-mail ms-3"></i>
+<div class="form-notch"><div class="form-notch-leading" style="width: 9px;"></div><div class="form-notch-middle" style="width: 0px;"></div><div class="form-notch-trailing"></div></div></div>
+
+<label for="registerPassword" class="form-label">Contraseña</label>
+<div data-mdb-input-init="" class="form-outline w-100" data-mdb-input-initialized="true">
+<input type="password" placeholder="Contraseña" class="pl-5 form-control ps-5 placeholder-active" id="registerPassword" name="password" required>
+<i class="ti ti-lock ms-3"></i>
+<div class="form-notch"><div class="form-notch-leading" style="width: 9px;"></div><div class="form-notch-middle" style="width: 0px;"></div><div class="form-notch-trailing"></div></div></div>
+
+<label for="registerPasswordConfirm" class="form-label">Confirmar contraseña</label>
+<div data-mdb-input-init="" class="form-outline w-100" data-mdb-input-initialized="true">
+<input type="password" placeholder="Confirmar contraseña" class="pl-5 form-control ps-5 placeholder-active" id="registerPasswordConfirm" name="password_confirmation" required>
+<i class="ti ti-lock-exclamation ms-3"></i>
+<div class="form-notch"><div class="form-notch-leading" style="width: 9px;"></div><div class="form-notch-middle" style="width: 0px;"></div><div class="form-notch-trailing"></div></div></div>
+
+</div>
+
+
+<button type="submit" class="btn btn-success w-100 mt-5 mb-3">Registrarse</button>
+<p class="text-center">¿Ya tienes una cuenta? <a href="#" id="showLogin">Iniciar Sesión</a></p>
+</form>
+</div>
+</div>
+
+
+</div>
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZXZ6QXBP06"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-ZXZ6QXBP06');
+</script>
+
+<ins class="604c7625" data-key="d7da2793-cc3a-4d10-a59e-1cb9b54c23c7" data-cp-host="3a30daa6132e4053a9e719ba96b7adc3|Jkanime.net" data-cp-domain="Jkanime.net"></ins>
+<ins class="604c7625" data-key="3e459bd0-12be-4023-813a-b58a5e7f86b8" data-cp-host="3a30daa6132e4053a9e719ba96b7adc3|Jkanime.net" data-cp-domain="Jkanime.net"></ins>
+
+<script async src="https://cvt-s2.agl003.com/o/s/114ceb8fd4b175d08f041c62576b2f82.js"></script>
+<style>
+div#jk_thread > #adangle-pop-iframe-container {
+    height: unset !important;
+    display: unset !important;
+    width: unset !important;
+    position: unset !important;
+}
+</style>
+
+
+
+
+
+<script data-cfasync="false" async type="text/javascript" src="//db.unboltsecole.com/r5K9akItvISYz1J/128512"></script>
+
+<!-- Privacy-friendly analytics by Plausible -->
+<script async src="http://stats.jkdesa.com/js/pa-lKuCEqYJhM-34XTHbzbfQ.js"></script>
+<script>
+  window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};
+  plausible.init()
+</script>
+
+<footer class="footer">
+    <div class="page-up">
+        <a href="#" id="scrollToTopButton"><span class="arrow_carrot-up"></span></a>
+    </div>
+    <div class="container">
+        <div class="row">
+
+            <div class="col-lg-9">
+                <div class="footer__nav">
+                    <ul>
+                        <li class="active"><a href="https://jkanime.net">Inicio</a></li>
+                        <li><a href="https://jkanime.net/pedidos">Pedir un anime</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="col-lg-3">
+
+            </div>
+          </div>
+      </div>
+  </footer>
+</body></html>

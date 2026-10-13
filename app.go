@@ -149,3 +149,79 @@ func (a *App) SaveProgress(progress models.WatchProgress) error {
 func (a *App) GetProgress(animeID string) ([]models.WatchProgress, error) {
 	return a.core.VerProgreso(animeID)
 }
+
+// GetHomeSection devuelve las secciones del Home del proveedor (T45): "En
+// emisión", "Recién agregados"… lo que ofrezca cada sitio. noCache salta la
+// caché local de 10 min y refresca el resultado. Un proveedor sin
+// scraper.HomeProvider devuelve ErrHomeNoDisponible; uno inexistente, un
+// error claro con los proveedores disponibles.
+func (a *App) GetHomeSection(provider string, noCache bool) ([]models.HomeSection, error) {
+	return a.core.Home(a.contexto(), provider, noCache)
+}
+
+// AddFavorite marca un anime con la estrella (T45): idempotente, nunca
+// toggle. Falla si el proveedor no existe o si el almacén no está abierto
+// (ErrFavoritosNoDisponible, antes de arrancar o si su apertura falló).
+func (a *App) AddFavorite(f models.Favorite) error {
+	return a.core.AgregarFavorito(f)
+}
+
+// RemoveFavorite quita la estrella; quitar un favorito que no estaba no es
+// un error (el estado ya es el pedido).
+func (a *App) RemoveFavorite(provider string, animeID string) error {
+	return a.core.QuitarFavorito(provider, animeID)
+}
+
+// ListFavorites devuelve los favoritos en orden de añadido (más recientes
+// primero); cada uno trae proveedor, anime, título y portada.
+func (a *App) ListFavorites() ([]models.Favorite, error) {
+	return a.core.ListarFavoritos()
+}
+
+// IsFavorite dice si ese anime está marcado. Sin almacén de favoritos
+// abierto devuelve error en lugar de una estrella apagada falsa.
+func (a *App) IsFavorite(provider string, animeID string) (bool, error) {
+	return a.core.EsFavorito(provider, animeID)
+}
+
+// GetRecentProgress devuelve el último registro de cada anime (lo que pinta
+// la barra lateral): ordenado por recencia, un entry por proveedor+anime.
+func (a *App) GetRecentProgress() ([]models.WatchProgress, error) {
+	return a.core.HistorialReciente()
+}
+
+// ResumeAnime resuelve el clic de "Retomar" sobre una tarjeta del historial
+// (T46): resume, salta al siguiente, o abre el detalle porque no hay
+// siguiente (completed si terminó o es película, up_to_date si sigue en
+// emisión). Sin registro para ese (proveedor, anime) ⇒ ErrSinHistorial; sin
+// almacén abierto ⇒ ErrHistorialNoDisponible.
+func (a *App) ResumeAnime(provider string, animeID string) (models.ResumeInfo, error) {
+	return a.core.Retomar(a.contexto(), provider, animeID)
+}
+
+// GetNextEpisode devuelve el episodio siguiente al dado (T46/T55): el de
+// menor número estrictamente mayor (tolera huecos). Una película no tiene
+// siguiente (found=false). Si la lista completa de episodios no pudo
+// completarse, o el proveedor es desconocido, se devuelve el error (la UI
+// oculta el botón "Siguiente").
+func (a *App) GetNextEpisode(provider string, animeID string, episodeID string) (models.NextEpisode, error) {
+	return a.core.SiguienteEpisodio(a.contexto(), provider, animeID, episodeID)
+}
+
+// DeleteProgressAnime borra todo el progreso guardado de un anime y
+// devuelve el nº de registros eliminados (0 si no había).
+func (a *App) DeleteProgressAnime(provider string, animeID string) (int, error) {
+	return a.core.BorrarHistorialAnime(provider, animeID)
+}
+
+// DeleteProviderProgress borra todos los registros de un proveedor
+// (papelera del encabezado de la barra lateral).
+func (a *App) DeleteProviderProgress(provider string) (int, error) {
+	return a.core.BorrarHistorialProveedor(provider)
+}
+
+// ClearProgress vacía el historial entero y devuelve el nº de registros
+// eliminados; el frontend pide doble confirmación antes de llamarlo.
+func (a *App) ClearProgress() (int, error) {
+	return a.core.BorrarHistorialTodo()
+}

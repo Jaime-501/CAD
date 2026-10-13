@@ -1,3 +1,17 @@
+/* T48: tokens del shell (barra lateral/hamburguesa). Valores copiados de los
+   hex que YA usan las vistas existentes; solo los usan App.svelte y
+   BarraLateral.svelte. Los colores de las vistas NO cambian. */
+:root {
+    --cad-fondo: #151515;
+    --cad-superficie: #1e1e24;
+    --cad-borde: #3f3f46;
+    --cad-texto: #ffffff;
+    --cad-texto-suave: #a1a1aa;
+    --cad-acento: #4ade80;
+    --cad-peligro: #f87171;
+    --cad-radio: 8px;
+}
+
 html {
     background-color: rgba(27, 38, 54, 1);
     text-align: center;

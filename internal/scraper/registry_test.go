@@ -198,3 +198,40 @@ func TestErrNoDetails(t *testing.T) {
 		t.Errorf("error = %v, quería ErrNoDetails", err)
 	}
 }
+
+// fakeConHome es un provider que además implementa HomeProvider (T43).
+type fakeConHome struct{ fakeProvider }
+
+var _ HomeProvider = (*fakeConHome)(nil)
+
+func (f *fakeConHome) Home(ctx context.Context) ([]models.HomeSection, error) {
+	return []models.HomeSection{{ID: "prueba", Title: "Prueba", Items: []models.Anime{}}}, nil
+}
+
+// TestHomeProviderEsOpcional comprueba que HomeProvider, al estilo de
+// EpisodeStreamer, no cambia Provider ni Registry: un fake sin Home no la
+// cumple, uno con Home sí, y el registro acepta a los dos por igual.
+func TestHomeProviderEsOpcional(t *testing.T) {
+	var sin Provider = &fakeProvider{name: "jkanime"}
+	if _, ok := sin.(HomeProvider); ok {
+		t.Error("un provider sin Home no debe cumplir HomeProvider")
+	}
+
+	var con Provider = &fakeConHome{fakeProvider{name: "jkanime"}}
+	home, ok := con.(HomeProvider)
+	if !ok {
+		t.Fatal("un provider con Home debe cumplir HomeProvider")
+	}
+	secciones, err := home.Home(context.Background())
+	if err != nil || len(secciones) != 1 {
+		t.Errorf("Home del fake = (%v, %v), quería una sección sin error", secciones, err)
+	}
+
+	r := NewRegistry()
+	if err := r.Register(sin); err != nil {
+		t.Fatalf("Register con provider sin Home: %v", err)
+	}
+	if _, ok := r.Get("jkanime"); !ok {
+		t.Error("el registro debe seguir aceptando providers sin Home")
+	}
+}

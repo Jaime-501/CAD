@@ -60,6 +60,17 @@ var ErrDetalleNoDisponible = errors.New("Detalle no disponible para este proveed
 // abierto pero marcado como cerrado, y ahí el error es db.ErrCerrado.
 var ErrHistorialNoDisponible = errors.New("El historial de visualización no está disponible")
 
+// ErrHomeNoDisponible es lo que ve el Home cuando el proveedor existe en el
+// registro pero no implementa scraper.HomeProvider (interfaz opcional, T43):
+// no es un fallo de red, es que ese sitio no ofrece secciones de inicio.
+var ErrHomeNoDisponible = errors.New("El Home no está disponible para este proveedor")
+
+// ErrFavoritosNoDisponible es lo que ven los métodos de favoritos cuando no
+// hay almacén abierto: antes de arrancar, si su apertura falló (el núcleo lo
+// loguea y sigue, la app no muere por los favoritos) o si el núcleo se
+// construyó sin directorio de datos (T45).
+var ErrFavoritosNoDisponible = errors.New("Los favoritos no están disponibles")
+
 // Emisor entrega un evento al frontend. En producción es un cierre sobre
 // runtime.EventsEmit con el contexto de startup; en tests, un doble que
 // graba. nil = no emitir (antes de arrancar o en pruebas sin UI).
@@ -115,11 +126,18 @@ type streamActivo struct {
 	fallo  atomic.Bool
 }
 
+// entradaHome es una fila del caché de Home (T45): las secciones que devolvió
+// un proveedor y cuándo caducan (mismo TTL deslizante que el detalle).
+type entradaHome struct {
+	secciones []models.HomeSection
+	caducaEn  time.Time
+}
+
 // Nucleo es la lógica de orquestación: proveedores, eventos, proxy, la
-// caché local de detalle y el historial de visualización. Vive en
-// internal/app —fuera de app.go y de Wails— para poder testearla sin Wails
-// ni red: todas sus dependencias entran por interfaz o por inyección y el
-// emisor es una función inyectada.
+// caché local de detalle, el Home, los favoritos y el historial de
+// visualización. Vive en internal/app —fuera de app.go y de Wails— para
+// poder testearla sin Wails ni red: todas sus dependencias entran por
+// interfaz o por inyección y el emisor es una función inyectada.
 type Nucleo struct {
 	registro RegistroProviders
 	proxy    ProxyLocal
@@ -135,6 +153,20 @@ type Nucleo struct {
 	// abra (antes de arrancar o si su apertura falló). cerrar NO lo borra,
 	// así que un guardado tardío ve db.ErrCerrado y no una carrera.
 	historial *db.DB
+	// favoritos se abre en arrancar con db.OpenFavorites sobre el MISMO
+	// directorio que el historial (T42/T45); nil mientras no abra (antes de
+	// arrancar, fallo de apertura o núcleo sin directorio de datos). No se
+	// cierra en cerrar: db.Favorites no tiene Close (cada Add/Remove ya
+	// escribió a disco).
+	favoritos *db.Favorites
+
+	// muHome protege home: las secciones del Home por proveedor (T45). Es un
+	// caché PROPIO del núcleo con la misma clave (cache.Clave("home", p)) y
+	// el mismo TTL que el detalle: internal/cache solo admite entradas
+	// detalle+episodios y no puede guardar []models.HomeSection (desviación
+	// anotada en PROGRESO.md y en docs/firmas/app.md).
+	muHome sync.Mutex
+	home   map[string]entradaHome
 
 	mu sync.Mutex
 	// emisor es el que empuja eventos al frontend (nil hasta arrancar).
@@ -159,6 +191,7 @@ func NuevoNucleo(reg RegistroProviders, px ProxyLocal, sel Resolutor, emis Emiso
 		emisor:        emis,
 		cacheLocal:    c,
 		rutaHistorial: rutaHistorial,
+		home:          map[string]entradaHome{},
 	}
 }
 
@@ -175,9 +208,10 @@ func NuevoNucleo(reg RegistroProviders, px ProxyLocal, sel Resolutor, emis Emiso
 //   - extractors.SelectBestSource como selector de la mejor fuente (T17),
 //   - cache.New(ttlCacheDetalle) como caché local de detalle+episodios (T21);
 //     su rutina de limpieza se arranca con arrancar y se para con cerrar,
-//   - el historial de visualización en el directorio que calcule el llamador
-//     (en la app, app.go con os.UserConfigDir()/miapp, T22): ahí se abre en
-//     arrancar.
+//   - el historial de visualización (T22) y los favoritos (T42/T45) en el
+//     directorio que calcule el llamador (en la app, app.go con
+//     os.UserConfigDir()/miapp): ambos se abren en arrancar, en el mismo
+//     directorio.
 //
 // Registro: jkanime + animeav1 (AnimeFLV se retiró en T35); la búsqueda
 // consulta los dos en paralelo.
@@ -200,14 +234,15 @@ func NuevoNucleoPorDefecto(rutaHistorial string) *Nucleo {
 
 // arrancar prepara el núcleo para servir: instala el emisor de eventos, pone
 // a funcionar la limpieza de la caché local, abre el historial de
-// visualización (T22) y el proxy a escuchar en 127.0.0.1 (sin Escuchar,
-// Register devuelve las fuentes sin registrar, T19). Se llama desde
-// App.startup.
+// visualización (T22) y los favoritos (T42, en el MISMO directorio) y el
+// proxy a escuchar en 127.0.0.1 (sin Escuchar, Register devuelve las fuentes
+// sin registrar, T19). Se llama desde App.startup.
 //
-// El historial es lo único cuyo fallo NO se devuelve: si no se puede abrir
-// (sin permisos, ruta inexistente...) se loguea y la app sigue viva sin
-// historial —guardar o leer progreso dará ErrHistorialNoDisponible—, porque
-// el proxy y la reproducción no dependen de él.
+// El historial y los favoritos son lo único cuyo fallo NO se devuelve: si no
+// se pueden abrir (sin permisos, ruta inexistente...) se loguea y la app sigue
+// viva sin ese almacén —guardar o leer progreso dará
+// ErrHistorialNoDisponible, y los favoritos darán ErrFavoritosNoDisponible—,
+// porque el proxy y la reproducción no dependen de ellos.
 func (n *Nucleo) Arrancar(emis Emisor) error {
 	n.mu.Lock()
 	n.emisor = emis
@@ -220,6 +255,13 @@ func (n *Nucleo) Arrancar(emis Emisor) error {
 	} else {
 		n.mu.Lock()
 		n.historial = h
+		n.mu.Unlock()
+	}
+	if favs, err := db.OpenFavorites(n.rutaHistorial); err != nil {
+		slog.Warn("la app sigue sin favoritos", "err", err)
+	} else {
+		n.mu.Lock()
+		n.favoritos = favs
 		n.mu.Unlock()
 	}
 
@@ -479,6 +521,63 @@ func (n *Nucleo) VerProgreso(animeID string) ([]models.WatchProgress, error) {
 	return h.GetProgress(animeID)
 }
 
+// HistorialReciente devuelve el ÚLTIMO registro de cada anime (LastPerAnime,
+// T41): es lo que pinta la barra lateral y el frontend lo filtra por
+// proveedor con el prefijo del episode_id (T34). Sin almacén abierto da
+// ErrHistorialNoDisponible; tras cerrar el almacén devuelve lista vacía sin
+// error (decisión de T41: db.LastPerAnime no admite error), y aquí no se
+// traduce en error.
+func (n *Nucleo) HistorialReciente() ([]models.WatchProgress, error) {
+	h := n.historialAbierto()
+	if h == nil {
+		return nil, ErrHistorialNoDisponible
+	}
+	return h.LastPerAnime(), nil
+}
+
+// BorrarHistorialAnime borra TODOS los episodios guardados de un anime y
+// devuelve el nº de registros eliminados (0 si no había). proveedor y
+// animeID no pueden venir vacíos —la nota de T41: un "" llegaría a
+// db.DeleteAnime tal cual—, así que el error sale aquí, en español y sin
+// llamar a db, para no borrar de más.
+func (n *Nucleo) BorrarHistorialAnime(proveedor, animeID string) (int, error) {
+	proveedor = strings.TrimSpace(proveedor)
+	animeID = strings.TrimSpace(animeID)
+	if proveedor == "" || animeID == "" {
+		return 0, fmt.Errorf("borrar historial necesita proveedor y anime: provider=%q animeID=%q", proveedor, animeID)
+	}
+	h := n.historialAbierto()
+	if h == nil {
+		return 0, ErrHistorialNoDisponible
+	}
+	return h.DeleteAnime(proveedor, animeID)
+}
+
+// BorrarHistorialProveedor borra todos los registros de un proveedor
+// (papelera del encabezado de la barra lateral); mismas reglas de
+// validación que BorrarHistorialAnime.
+func (n *Nucleo) BorrarHistorialProveedor(proveedor string) (int, error) {
+	proveedor = strings.TrimSpace(proveedor)
+	if proveedor == "" {
+		return 0, fmt.Errorf("borrar historial necesita un proveedor: provider=%q", proveedor)
+	}
+	h := n.historialAbierto()
+	if h == nil {
+		return 0, ErrHistorialNoDisponible
+	}
+	return h.DeleteProvider(proveedor)
+}
+
+// BorrarHistorialTodo vacía el historial entero y devuelve el nº de
+// registros eliminados (el frontend pide doble confirmación antes).
+func (n *Nucleo) BorrarHistorialTodo() (int, error) {
+	h := n.historialAbierto()
+	if h == nil {
+		return 0, ErrHistorialNoDisponible
+	}
+	return h.Clear()
+}
+
 // historialAbierto devuelve el almacén bajo el mutex del núcleo. Es nil
 // antes de arrancar o si su apertura falló; cerrar no lo borra, así que
 // después del shutdown la llamada llega al almacén y devuelve db.ErrCerrado
@@ -487,6 +586,143 @@ func (n *Nucleo) historialAbierto() *db.DB {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	return n.historial
+}
+
+// Home devuelve las secciones del Home del proveedor (T45): pide a
+// scraper.HomeProvider —interfaz opcional, T43— y cachea el resultado con la
+// misma vida que el detalle (ttlCacheDetalle, 10 min) bajo la clave
+// cache.Clave("home", proveedor). Los errores no se cachean; noCache salta
+// la lectura y refresca la entrada al terminar bien. Las secciones salen
+// COPIADAS (la caché y el llamador no comparten memoria). Un proveedor sin
+// HomeProvider devuelve ErrHomeNoDisponible; uno desconocido, el mismo error
+// que ya devuelve Detalle.
+func (n *Nucleo) Home(ctx context.Context, proveedor string, noCache bool) ([]models.HomeSection, error) {
+	proveedor = strings.TrimSpace(proveedor)
+	p, err := n.proveedor(proveedor)
+	if err != nil {
+		return nil, err
+	}
+	hp, ok := p.(scraper.HomeProvider)
+	if !ok {
+		return nil, ErrHomeNoDisponible
+	}
+
+	clave := cache.Clave("home", proveedor)
+	if !noCache {
+		if secciones, ok := n.homeDe(clave); ok {
+			return secciones, nil
+		}
+	}
+	secciones, err := hp.Home(ctx)
+	if err != nil {
+		return nil, err // los errores no se cachean (T45)
+	}
+	n.ponerHome(clave, secciones)
+	return copiaHome(secciones), nil
+}
+
+// homeDe lee la caché del Home bajo muHome: false si no hay entrada o si ya
+// caducó (la lectura no la renueva: el TTL es por deslizamiento desde la
+// escritura, igual que el detalle).
+func (n *Nucleo) homeDe(clave string) ([]models.HomeSection, bool) {
+	n.muHome.Lock()
+	defer n.muHome.Unlock()
+	e, ok := n.home[clave]
+	if !ok || time.Now().After(e.caducaEn) {
+		return nil, false
+	}
+	return copiaHome(e.secciones), true
+}
+
+// ponerHome guarda una copia de las secciones con el TTL del detalle.
+func (n *Nucleo) ponerHome(clave string, secciones []models.HomeSection) {
+	n.muHome.Lock()
+	defer n.muHome.Unlock()
+	n.home[clave] = entradaHome{
+		secciones: copiaHome(secciones),
+		caducaEn:  time.Now().Add(ttlCacheDetalle),
+	}
+}
+
+// AgregarFavorito marca un anime como favorito (T42/T45): valida que
+// proveedor y animeID no estén vacíos y que el proveedor esté registrado
+// (la clave del favorito es proveedor+slug, T40: un proveedor inventado
+// solo ensuciaría la pestaña Favoritos). Add es idempotente, nunca toggle
+// (db.Favorites.Add).
+func (n *Nucleo) AgregarFavorito(f models.Favorite) error {
+	f.Provider = strings.TrimSpace(f.Provider)
+	f.AnimeID = strings.TrimSpace(f.AnimeID)
+	if f.Provider == "" || f.AnimeID == "" {
+		return fmt.Errorf("el favorito necesita proveedor y anime: provider=%q animeID=%q", f.Provider, f.AnimeID)
+	}
+	if _, err := n.proveedor(f.Provider); err != nil {
+		return err
+	}
+	fav := n.favoritosAbierto()
+	if fav == nil {
+		return ErrFavoritosNoDisponible
+	}
+	_, err := fav.Add(f)
+	return err
+}
+
+// QuitarFavorito quita la estrella; quitar un favorito que no estaba no es
+// un error (el estado ya es el pedido).
+func (n *Nucleo) QuitarFavorito(proveedor, animeID string) error {
+	fav := n.favoritosAbierto()
+	if fav == nil {
+		return ErrFavoritosNoDisponible
+	}
+	_, err := fav.Remove(strings.TrimSpace(proveedor), strings.TrimSpace(animeID))
+	return err
+}
+
+// ListarFavoritos devuelve los favoritos en copias y orden AddedAt
+// descendente (db.Favorites.List); nunca nil.
+func (n *Nucleo) ListarFavoritos() ([]models.Favorite, error) {
+	fav := n.favoritosAbierto()
+	if fav == nil {
+		return nil, ErrFavoritosNoDisponible
+	}
+	return fav.List(), nil
+}
+
+// EsFavorito dice si ese anime está marcado con la estrella; sin almacén
+// devuelve error (el frontend no debe pintar una estrella apagada como si
+// fuera verdad).
+func (n *Nucleo) EsFavorito(proveedor, animeID string) (bool, error) {
+	fav := n.favoritosAbierto()
+	if fav == nil {
+		return false, ErrFavoritosNoDisponible
+	}
+	return fav.Has(strings.TrimSpace(proveedor), strings.TrimSpace(animeID)), nil
+}
+
+// favoritosAbierto devuelve el almacén de favoritos bajo el mutex del
+// núcleo: nil antes de arrancar o si su apertura falló. db.Favorites no
+// tiene Close, así que cerrar no lo invalida (a diferencia del historial).
+func (n *Nucleo) favoritosAbierto() *db.Favorites {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	return n.favoritos
+}
+
+// copiaHome copia las secciones y sus items (models.Anime es un valor
+// plano, sin punteros compartidos): la caché y el llamador nunca comparten
+// memoria.
+func copiaHome(secciones []models.HomeSection) []models.HomeSection {
+	if secciones == nil {
+		return nil
+	}
+	out := make([]models.HomeSection, len(secciones))
+	for i, s := range secciones {
+		out[i] = models.HomeSection{ID: s.ID, Title: s.Title}
+		if s.Items != nil {
+			out[i].Items = make([]models.Anime, len(s.Items))
+			copy(out[i].Items, s.Items)
+		}
+	}
+	return out
 }
 
 // proveedor busca un provider por nombre; si no existe, devuelve un error

@@ -66,6 +66,30 @@ func TestE2EFlujoCompletoRedReal(t *testing.T) {
 	}
 	t.Logf("búsqueda: %d resultados; se sigue %q", len(resultados), slug)
 
+	// --- 1b. Home por proveedor (T45) ------------------------------------
+	// Tolerante a cambios de contenido (T28): solo se exige que haya al
+	// menos una sección con al menos un item.
+	secciones, err := n.Home(context.Background(), proveedorPrincipal, false)
+	if err != nil {
+		t.Errorf("Home(jkanime) contra la red real: %v", err)
+	} else {
+		conItems := 0
+		for _, s := range secciones {
+			if len(s.Items) > 0 {
+				conItems++
+			}
+			for _, item := range s.Items {
+				if item.ID == "" || item.Title == "" {
+					t.Errorf("item incompleto en la sección %q: %+v", s.ID, item)
+				}
+			}
+		}
+		if conItems == 0 {
+			t.Error("Home no devolvió ninguna sección con items")
+		}
+		t.Logf("home: %d secciones (%d con items)", len(secciones), conItems)
+	}
+
 	// --- 2. Detalle con streaming y eventos -------------------------------
 	detalle, err := n.Detalle(context.Background(), proveedorPrincipal, slug)
 	if err != nil {
@@ -287,6 +311,30 @@ func TestE2EAnimeAV1RedReal(t *testing.T) {
 	}
 	slug := "bleach"
 	t.Logf("búsqueda: %d resultados (%d de animeav1); se sigue %q", len(resultados), av1, slug)
+
+	// --- 1b. Home por proveedor (T45) ------------------------------------
+	// Tolerante a cambios de contenido (T28): solo se exige que haya al
+	// menos una sección con al menos un item.
+	secciones, err := n.Home(context.Background(), proveedorComplemento, false)
+	if err != nil {
+		t.Errorf("Home(animeav1) contra la red real: %v", err)
+	} else {
+		conItems := 0
+		for _, s := range secciones {
+			if len(s.Items) > 0 {
+				conItems++
+			}
+			for _, item := range s.Items {
+				if item.ID == "" || item.Title == "" {
+					t.Errorf("item incompleto en la sección %q: %+v", s.ID, item)
+				}
+			}
+		}
+		if conItems == 0 {
+			t.Error("Home no devolvió ninguna sección con items")
+		}
+		t.Logf("home: %d secciones (%d con items)", len(secciones), conItems)
+	}
 
 	// --- 2. Detalle con streaming y eventos -------------------------------
 	detalle, err := n.Detalle(context.Background(), proveedorComplemento, slug)

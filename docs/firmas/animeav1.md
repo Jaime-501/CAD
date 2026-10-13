@@ -9,6 +9,7 @@
 - `### T31 — internal/scraper/animeav1` → creado por **T31** (desempaquetador devalue + búsqueda; `devalue.go`, `animeav1.go`).
 - `### T32 — internal/scraper/animeav1` → creado por **T32** (detalle y episodios por lotes; `detail.go`, `episodes.go`).
 - `### T33 — internal/scraper/animeav1` → creado por **T33** (fuentes de vídeo; `sources.go`).
+- `### T44 — animeav1` → creado por **T44** (Home: secciones `emision` y `recientes`; `home.go`).
 
 ---
 
@@ -368,5 +369,61 @@ Captura: `curl.exe` + `httpx.DefaultUserAgent`, ambos `200 application/json`, sa
 | --- | --- |
 | `episode_movie_data.json` | `GET /media/bleach-movie-1-memories-of-nobody/1/__data.json` (3500 B) · raíz `{media,episode,embeds,downloads}`; `embeds` trae **solo SUB** (5 servidores) |
 | `episode_404_data.json` | `GET /media/bleach/367/__data.json` (205 B) · **HTTP 200** con nodo `{"type":"error","error":{"message":"No encontrado"},"status":404}` |
+
+---
+
+### T44 — animeav1
+
+Home (secciones de la vista de inicio, v1.2). Archivo nuevo: `home.go`. Vía: **dos peticiones** `__data.json` (misma vía devalue `PageData`/`Unflatten` de la búsqueda), sin cookies ni CSRF. `animeav1` pasa a cumplir `scraper.HomeProvider` (interfaz de T43) sin tocar `provider.go`.
+
+#### Constantes nuevas
+
+```go
+const (
+	rutaHome           = "/__data.json"          // portada: latestMedia en la raíz de PageData
+	maxItemsHome       = 20                      // tope por sección (results y latestMedia traen 20)
+	pausaSecciones     = 300 * time.Millisecond  // espera entre peticiones de secciones
+	statusFiltroEmision = 2                      // filters.status exigido en la sección emision
+)
+```
+
+#### API pública (firmas literales)
+
+```go
+// Home devuelve las secciones del Home de AnimeAV1, en este orden:
+// "emision" (catálogo filtrado por estado, solo página 1) y "recientes"
+// (latestMedia de la portada). El fallo de una sección no anula la otra;
+// si fallan todas se devuelve el primer error. Un ctx cancelado corta sin
+// más peticiones y el error cumple errors.Is con context.Canceled.
+func (a *AnimeAV1) Home(ctx context.Context) ([]models.HomeSection, error)
+
+var _ scraper.HomeProvider = (*AnimeAV1)(nil)
+```
+
+#### Internos
+
+```go
+func (a *AnimeAV1) seccionHome(ctx context.Context, ruta string, parsear func([]byte) ([]models.Anime, error)) ([]models.Anime, error)
+func (a *AnimeAV1) parseEmision(data []byte) ([]models.Anime, error)
+func filtroEmisionAplicado(datos map[string]any) error
+func (a *AnimeAV1) parseRecientes(data []byte) ([]models.Anime, error)
+func itemsHome(datos map[string]any, clave string) ([]models.Anime, error)
+func dedupHome(items []models.Anime, max int) []models.Anime
+func esperar(ctx context.Context, d time.Duration) bool
+```
+
+#### Comportamiento (lo que T45 debe saber)
+
+- **`emision`** (`ID:"emision"`, `Title:"En emisión"`): `GET {base}/catalogo/__data.json?status=emision` (reutiliza `rutaBusqueda`; **sin** `order=`). **Guarda**: `filters.status` debe valer `2` (float64) — si el sitio dejara de reconocer el slug `emision` devolvería todo el catálogo sin error (riesgo 2 del informe T39) y la sección falla con "el filtro de estado no se aplicó". Los items salen de `resultadosAnime` (mismo mapeo que `Search`: `ID` = slug, portada desde `id` string).
+- **`recientes`** (`ID:"recientes"`, `Title:"Recién agregados"`): `GET {base}/__data.json`, `latestMedia` en la **raíz** de `PageData` (20 items, `id` **numérico**): `portada`/`idTexto` lo convierten con `strconv.FormatFloat(v, 'f', -1, 64)` — nunca notación científica. No se usa `latestEpisodes` (miniaturas 16:9, exigirían dedup por anime).
+- `models.Anime` **no tiene `Type`** → los items salen sin tipo (la `category.name` del JSON se ignora, igual que en `Search`); `Provider = "animeav1"`.
+- Comunes: dedup por slug conservando el orden, recorte a `maxItemsHome` (20), sección vacía se **omite**, `Items` nunca nil, pausa de 300 ms entre secciones, límite de lectura `maxBusquedaBytes`, `Operation: "home"` en httpx.
+- Fallos: parcial → `slog.Warn` con `logx.Redact` + la sección que funciona (mismo patrón que `jkanime.Home`, T43); total → `"el Home de animeav1 no está disponible: %w"` con el primer error (el de `emision`, el primero pedido); ctx → `"el Home de animeav1 se interrumpió: %w"`.
+
+#### Tests
+
+- **`home_test.go` (11 tests, sin red)**: los 11 nombres fijados por la ficha — ParseaSeccionEmision (20 items; primer slug `battle-spirits-re-zekkai-no-kuu`, último `marronnier-oukoku-no-shichinin-no-kishi`, ambos leídos del fixture en el Paso 0), ParseaSeccionRecientes (20; `hotaru-no-yomeiri` … `mouse-cursor-de-genjitsu-…-click-shimaasu`), SlugsUsablesEnDetalle, PortadaUsaCDN, IdNumericoSinNotacionCientifica, EmisionFiltroNoAplicadoEsError (sirve el fixture real sin filtro `home_catalogo_data.json` en la ruta `status=emision`), DeduplicaPorSlug (payloads **artificiales**), UnaSeccionFallaLaOtraSirve (500 en la portada), TodasFallanDevuelveError (`errors.Is(err, httpx.ErrServerError)`), SeccionVaciaSeOmite, ContextoCancelado (ctx precancelado ⇒ 0 peticiones). Helpers: `servidorHome` (distingue `/catalogo/__data.json` exigiendo `status=emision` y `/__data.json`; body nil ⇒ 500), `fixturesHome`, `payloadDePrueba` (array plano devalue con literales sueltos y objetos solo con referencias por índice), `buscarSeccion`/`idsDe`.
+- **`animeav1_integration_test.go` (tag `integration`)**: nuevo `TestHomeRedReal` → ≥ 1 sección con ≥ 1 item, slugs con formato y `Provider` correcto. Verificado en verde contra el sitio real: **2 secciones × 20 items** (recientes es feed vivo: primer slug `kyoufu-collector` el día de la prueba).
+- Verificación de T44: `gofmt -l .` sin salida · `go vet ./...` y `go vet -tags integration ./...` limpios · `go build ./...` OK · `go test -race -count=1 ./...` en verde (**355 → 366** `--- PASS`; `internal/scraper/animeav1`: **59 → 70**).
 
 ---

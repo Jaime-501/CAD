@@ -41,28 +41,32 @@ import (
 // pide a través del proxy, cosa que T17 no hace). Anotado en PROGRESO.md.
 // ---------------------------------------------------------------------------
 const (
-	rutaFixtureBusqueda  = "../scraper/jkanime/testdata/search.html"
-	rutaFixtureDetalle   = "../scraper/jkanime/testdata/detail.html"
-	rutaFixturePagina1   = "../scraper/jkanime/testdata/episodes_p1.json"
-	rutaFixturePagina2   = "../scraper/jkanime/testdata/episodes_p2.json"
-	rutaFixtureEpisodio  = "../scraper/jkanime/testdata/episode_page.html"
-	rutaFixturePlayerUM  = "../scraper/jkanime/extractors/testdata/jkplayer_um.html"
-	rutaFixturePlayerUMv = "../scraper/jkanime/extractors/testdata/jkplayer_umv.html"
-	rutaFixtureMediaFire = "../scraper/jkanime/extractors/testdata/mediafire.html"
+	rutaFixtureBusqueda       = "../scraper/jkanime/testdata/search.html"
+	rutaFixtureDetalle        = "../scraper/jkanime/testdata/detail.html"
+	rutaFixturePagina1        = "../scraper/jkanime/testdata/episodes_p1.json"
+	rutaFixturePagina2        = "../scraper/jkanime/testdata/episodes_p2.json"
+	rutaFixtureEpisodio       = "../scraper/jkanime/testdata/episode_page.html"
+	rutaFixturePlayerUM       = "../scraper/jkanime/extractors/testdata/jkplayer_um.html"
+	rutaFixturePlayerUMv      = "../scraper/jkanime/extractors/testdata/jkplayer_umv.html"
+	rutaFixtureMediaFire      = "../scraper/jkanime/extractors/testdata/mediafire.html"
+	rutaFixtureHomePortada    = "../scraper/jkanime/testdata/home_portada.html"
+	rutaFixtureHomeDirectorio = "../scraper/jkanime/testdata/home_directorio_emision.html"
 )
 
 // Rutas del sitio falso.
 const (
-	rutaBusqueda    = "/buscar/"
-	rutaExcepciones = "/excepciones.json"
-	rutaDetalle     = "/bleach/"
-	rutaEpisodio    = "/bleach/1/"
-	rutaAJAX        = "/ajax/episodes/"
-	rutaPlayerUM    = "/jkplayer/um"
-	rutaPlayerUMv   = "/jkplayer/umv"
-	rutaMediaFire   = "/file/aaxudss27tqq7c8/"
-	rutaManifiesto  = "/hls/bleach_1.m3u8"
-	rutaSegmento    = "/hls/segmento1.ts"
+	rutaBusqueda       = "/buscar/"
+	rutaExcepciones    = "/excepciones.json"
+	rutaDetalle        = "/bleach/"
+	rutaEpisodio       = "/bleach/1/"
+	rutaAJAX           = "/ajax/episodes/"
+	rutaPlayerUM       = "/jkplayer/um"
+	rutaPlayerUMv      = "/jkplayer/umv"
+	rutaMediaFire      = "/file/aaxudss27tqq7c8/"
+	rutaManifiesto     = "/hls/bleach_1.m3u8"
+	rutaSegmento       = "/hls/segmento1.ts"
+	rutaHomePortada    = "/"           // Home de JKAnime: sección recientes (T43)
+	rutaHomeDirectorio = "/directorio" // Home de JKAnime: sección emision (T43)
 )
 
 // Constantes del contrato del AJAX (T09): cookie de sesión y token CSRF, que
@@ -154,16 +158,18 @@ type sitioFalso struct {
 	mu         sync.Mutex
 	peticiones []string
 
-	htmlBusqueda string
-	htmlDetalle  string
-	htmlEpisodio string
-	playerUM     string
-	playerUMv    string
-	htmlMediaFir string
-	paginas      map[string]string
-	csrf         string
-	idNumerico   string
-	segmento     []byte
+	htmlBusqueda    string
+	htmlDetalle     string
+	htmlEpisodio    string
+	playerUM        string
+	playerUMv       string
+	htmlMediaFir    string
+	htmlHomePortada string
+	htmlHomeDir     string
+	paginas         map[string]string
+	csrf            string
+	idNumerico      string
+	segmento        []byte
 }
 
 // nuevoSitioFalso monta el servidor y prepara el contenido (que necesita la
@@ -217,6 +223,10 @@ func (s *sitioFalso) preparar(t *testing.T) {
 	s.playerUM = playerUM
 	s.playerUMv = playerUMv
 	s.htmlMediaFir = fixturePrueba(t, rutaFixtureMediaFire)
+	// Home (T43): portada y directorio filtrado, con la misma reescritura de
+	// jkanime.net que el resto del HTML.
+	s.htmlHomePortada = strings.ReplaceAll(fixturePrueba(t, rutaFixtureHomePortada), "https://jkanime.net", base)
+	s.htmlHomeDir = strings.ReplaceAll(fixturePrueba(t, rutaFixtureHomeDirectorio), "https://jkanime.net", base)
 	s.paginas = paginas
 	s.csrf = csrf
 	s.idNumerico = idNumerico
@@ -291,6 +301,10 @@ func (s *sitioFalso) responder(r *http.Request) (int, string, []byte, string) {
 		return http.StatusOK, "application/vnd.apple.mpegurl", []byte(manifiestoPrueba), ""
 	case ruta == rutaSegmento:
 		return http.StatusOK, "video/mp2t", append([]byte(nil), s.segmento...), ""
+	case ruta == rutaHomePortada:
+		return http.StatusOK, "text/html; charset=utf-8", []byte(s.htmlHomePortada), ""
+	case ruta == rutaHomeDirectorio:
+		return http.StatusOK, "text/html; charset=utf-8", []byte(s.htmlHomeDir), ""
 	case r.Method == http.MethodPost:
 		return http.StatusMethodNotAllowed, "text/plain; charset=utf-8", []byte("method not allowed"), ""
 	default:
@@ -617,6 +631,38 @@ func TestE2EFlujoCompletoOffline(t *testing.T) {
 	}
 	t.Logf("búsqueda: %d resultados; se sigue %q", len(resultados), slug)
 
+	// --- 1b. Home por proveedor (T45) ------------------------------------
+	// Dos secciones desde los fixtures de T43 (emision 30, recientes 32) y
+	// exactamente dos peticiones nuevas: /directorio y la portada. El mapa
+	// de excepciones ya está descargado por la búsqueda (una sola vez por
+	// proceso, T43), así que el Home no añade otra petición de excepciones.
+	secciones, err := n.Home(context.Background(), proveedorPrincipal, false)
+	if err != nil {
+		t.Fatalf("Home: %v", err)
+	}
+	if len(secciones) != 2 {
+		t.Fatalf("Home devolvió %d secciones; se esperaban 2 (emision y recientes)", len(secciones))
+	}
+	if secciones[0].ID != "emision" || secciones[1].ID != "recientes" {
+		t.Errorf("secciones = %q, %q; se esperaba emision y recientes en ese orden", secciones[0].ID, secciones[1].ID)
+	}
+	if len(secciones[0].Items) != 30 {
+		t.Errorf("emision = %d items; se esperaban 30 (el JSON del directorio)", len(secciones[0].Items))
+	}
+	if len(secciones[1].Items) != 32 {
+		t.Errorf("recientes = %d items; se esperaban 32 (las tarjetas de la portada)", len(secciones[1].Items))
+	}
+	for _, s := range secciones {
+		for _, item := range s.Items {
+			if item.ID == "" || item.Title == "" || item.Provider != proveedorPrincipal {
+				t.Errorf("item incompleto en %q: %+v", s.ID, item)
+			}
+			validarURL(t, "portada del Home "+s.ID+":"+item.ID, item.CoverURL)
+		}
+	}
+	t.Logf("home: %s = %d items, %s = %d items",
+		secciones[0].ID, len(secciones[0].Items), secciones[1].ID, len(secciones[1].Items))
+
 	// --- 2. Detalle con streaming y eventos -------------------------------
 	primera, err := n.Detalle(context.Background(), proveedorPrincipal, slug)
 	if err != nil {
@@ -835,6 +881,78 @@ func TestE2EFlujoCompletoOffline(t *testing.T) {
 		t.Logf("historial: %s (%d bytes)", filepath.Base(archivoHistorial), info.Size())
 	}
 
+	// --- 6b. Favoritos (T42) y borrados de historial (T41/T45) -----------
+	favorito := models.Favorite{
+		Provider: proveedorPrincipal,
+		AnimeID:  slug,
+		Title:    primera.Detail.Title,
+		CoverURL: primera.Detail.Cover,
+	}
+	if err := n.AgregarFavorito(favorito); err != nil {
+		t.Fatalf("AddFavorite: %v", err)
+	}
+	if ok, err := n.EsFavorito(proveedorPrincipal, slug); err != nil || !ok {
+		t.Fatalf("IsFavorite = %v, %v; se esperaba true sin error", ok, err)
+	}
+	favoritos, err := n.ListarFavoritos()
+	if err != nil {
+		t.Fatalf("ListFavorites: %v", err)
+	}
+	if len(favoritos) != 1 || favoritos[0].AnimeID != slug || favoritos[0].Provider != proveedorPrincipal {
+		t.Errorf("ListFavorites = %+v; se esperaba solo el favorito de %s", favoritos, slug)
+	}
+	if err := n.QuitarFavorito(proveedorPrincipal, slug); err != nil {
+		t.Fatalf("RemoveFavorite: %v", err)
+	}
+	if ok, err := n.EsFavorito(proveedorPrincipal, slug); err != nil || ok {
+		t.Errorf("IsFavorite tras quitar = %v, %v; se esperaba false sin error", ok, err)
+	}
+
+	// Historial reciente y borrados: A (el del paso 6, con fecha fija para
+	// que el orden no dependa del reloj) y B, más reciente.
+	base := time.Now().Unix()
+	if err := n.GuardarProgreso(models.WatchProgress{
+		AnimeID: slug, EpisodeID: epID, CurrentTime: 230, TotalDuration: 240, UpdatedAt: base,
+	}); err != nil {
+		t.Fatalf("SaveProgress (A): %v", err)
+	}
+	if err := n.GuardarProgreso(models.WatchProgress{
+		AnimeID: "naruto", EpisodeID: proveedorPrincipal + ":naruto:episode:1", UpdatedAt: base + 60,
+	}); err != nil {
+		t.Fatalf("SaveProgress (B): %v", err)
+	}
+	reciente, err := n.HistorialReciente()
+	if err != nil {
+		t.Fatalf("GetRecentProgress: %v", err)
+	}
+	if len(reciente) != 2 {
+		t.Fatalf("HistorialReciente = %d entradas; se esperaban 2 (A y B)", len(reciente))
+	}
+	if reciente[0].AnimeID != "naruto" || reciente[1].AnimeID != slug {
+		t.Errorf("HistorialReciente = %q, %q; se esperaba naruto primero (más reciente)",
+			reciente[0].AnimeID, reciente[1].AnimeID)
+	}
+	borrados, err := n.BorrarHistorialAnime(proveedorPrincipal, slug)
+	if err != nil {
+		t.Fatalf("DeleteProgressAnime: %v", err)
+	}
+	if borrados != 1 {
+		t.Errorf("DeleteProgressAnime = %d; se esperaba 1 (un solo episodio de %s)", borrados, slug)
+	}
+	if reciente, err = n.HistorialReciente(); err != nil || len(reciente) != 1 || reciente[0].AnimeID != "naruto" {
+		t.Errorf("tras borrar A = %+v, %v; se esperaba solo naruto", reciente, err)
+	}
+	borrados, err = n.BorrarHistorialTodo()
+	if err != nil {
+		t.Fatalf("ClearProgress: %v", err)
+	}
+	if borrados != 1 {
+		t.Errorf("ClearProgress = %d; se esperaba 1 (quedaba naruto)", borrados)
+	}
+	if reciente, err = n.HistorialReciente(); err != nil || len(reciente) != 0 {
+		t.Errorf("tras borrar todo = %+v, %v; se esperaba vacío sin error", reciente, err)
+	}
+
 	// --- 7. Nada salió a la red -------------------------------------------
 	if fuera := transporte.intentosFuera(); len(fuera) > 0 {
 		t.Errorf("el flujo intentó salir del sitio falso %d vez/veces: %v", len(fuera), fuera)
@@ -845,6 +963,8 @@ func TestE2EFlujoCompletoOffline(t *testing.T) {
 	queria := []string{
 		"GET " + rutaExcepciones,
 		"GET " + rutaBusqueda + "bleach",
+		"GET " + rutaHomeDirectorio,
+		"GET " + rutaHomePortada,
 		"GET " + rutaDetalle,
 		"POST " + rutaAJAX + sitio.idNum() + "/1",
 		"POST " + rutaAJAX + sitio.idNum() + "/2",
@@ -951,6 +1071,10 @@ const (
 	rutaFixtureCatalogoAV1 = "../scraper/animeav1/testdata/catalogo_data.json"
 	rutaFixtureDetalleAV1  = "../scraper/animeav1/testdata/detail_data.json"
 	rutaFixtureEpisodioAV1 = "../scraper/animeav1/testdata/episode_data.json"
+	// Fixtures del Home de T44: portada (latestMedia) y catálogo filtrado
+	// por estado emision (filters.status = 2).
+	rutaFixtureHomePortadaAV1 = "../scraper/animeav1/testdata/home_portada_data.json"
+	rutaFixtureHomeEmisionAV1 = "../scraper/animeav1/testdata/home_catalogo_emision_data.json"
 )
 
 // Rutas del sitio falso de AnimeAV1, además de /buscar/ y /excepciones.json
@@ -961,6 +1085,7 @@ const (
 	rutaEpisodioAV1   = "/media/bleach/1/__data.json"
 	rutaManifiestoAV1 = "/m3u8/"
 	rutaSegmentoAV1   = "/segmento1.ts"
+	rutaHomeAV1       = "/__data.json" // Home de AnimeAV1: sección recientes (T44)
 )
 
 // hostJugadorPrueba es el host del reproductor propio: sources.go deriva
@@ -1069,11 +1194,13 @@ type sitioAV1 struct {
 	mu         sync.Mutex
 	peticiones []peticionAV1
 
-	htmlBusqueda string
-	catalogo     string
-	detalle      string
-	episodio     string
-	segmento     []byte
+	htmlBusqueda    string
+	catalogo        string
+	catalogoEmision string
+	homePortada     string
+	detalle         string
+	episodio        string
+	segmento        []byte
 }
 
 // nuevoSitioAV1 monta el servidor y prepara el contenido (que necesita la
@@ -1093,11 +1220,15 @@ func (s *sitioAV1) preparar(t *testing.T) {
 	catalogo := fixturePrueba(t, rutaFixtureCatalogoAV1)
 	detalle := fixturePrueba(t, rutaFixtureDetalleAV1)
 	episodio := fixturePrueba(t, rutaFixtureEpisodioAV1)
+	emision := fixturePrueba(t, rutaFixtureHomeEmisionAV1)
+	portada := fixturePrueba(t, rutaFixtureHomePortadaAV1)
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.htmlBusqueda = busqueda
 	s.catalogo = catalogo
+	s.catalogoEmision = emision
+	s.homePortada = portada
 	s.detalle = detalle
 	s.episodio = episodio
 	s.segmento = bytes.Repeat([]byte("SEGMENTO_AV1_DE_PRUEBA\n"), 256)
@@ -1141,7 +1272,15 @@ func (s *sitioAV1) contenido(r *http.Request, ruta, fetch, rango string) (int, s
 	case r.Method == http.MethodGet && ruta == rutaExcepciones:
 		return http.StatusOK, "application/json", []byte("{}"), ""
 	case r.Method == http.MethodGet && ruta == rutaCatalogoAV1:
+		// La misma ruta sirve la búsqueda (?search=bleach) y la sección
+		// "emision" del Home (?status=emision, T44): el fixture del Home
+		// trae filters.status = 2, que es lo que parseEmision exige.
+		if r.URL.Query().Get("status") == "emision" {
+			return http.StatusOK, "application/json", []byte(s.catalogoEmision), ""
+		}
 		return http.StatusOK, "application/json", []byte(s.catalogo), ""
+	case r.Method == http.MethodGet && ruta == rutaHomeAV1:
+		return http.StatusOK, "application/json", []byte(s.homePortada), ""
 	case r.Method == http.MethodGet && ruta == rutaDetalleAV1:
 		return http.StatusOK, "application/json", []byte(s.detalle), ""
 	case r.Method == http.MethodGet && ruta == rutaEpisodioAV1:
@@ -1297,6 +1436,38 @@ func TestE2EAnimeAV1FlujoCompletoOffline(t *testing.T) {
 	}
 	t.Logf("búsqueda combinada: %d resultados (%d jkanime + %d animeav1); se sigue %q",
 		len(resultados), jk, av1, slug)
+
+	// --- 1b. Home por proveedor (T45) ------------------------------------
+	// Dos secciones desde los fixtures de T44 (emision 20, recientes 20):
+	// el catálogo con ?status=emision y la portada con /__data.json. El
+	// mapa de excepciones de JKAnime ya se descargó en la búsqueda (una
+	// sola vez por proceso, T43), así que el Home no lo vuelve a pedir.
+	secciones, err := n.Home(context.Background(), proveedorComplemento, false)
+	if err != nil {
+		t.Fatalf("Home(animeav1): %v", err)
+	}
+	if len(secciones) != 2 {
+		t.Fatalf("Home devolvió %d secciones; se esperaban 2 (emision y recientes)", len(secciones))
+	}
+	if secciones[0].ID != "emision" || secciones[1].ID != "recientes" {
+		t.Errorf("secciones = %q, %q; se esperaba emision y recientes en ese orden", secciones[0].ID, secciones[1].ID)
+	}
+	if len(secciones[0].Items) != 20 {
+		t.Errorf("emision = %d items; se esperaban 20 (los del fixture filtrado)", len(secciones[0].Items))
+	}
+	if len(secciones[1].Items) != 20 {
+		t.Errorf("recientes = %d items; se esperaban 20 (los del latestMedia)", len(secciones[1].Items))
+	}
+	for _, s := range secciones {
+		for _, item := range s.Items {
+			if item.ID == "" || item.Title == "" || item.Provider != proveedorComplemento {
+				t.Errorf("item incompleto en %q: %+v", s.ID, item)
+			}
+			validarURL(t, "portada del Home "+s.ID+":"+item.ID, item.CoverURL)
+		}
+	}
+	t.Logf("home: %s = %d items, %s = %d items",
+		secciones[0].ID, len(secciones[0].Items), secciones[1].ID, len(secciones[1].Items))
 
 	// --- 2. Detalle de AnimeAV1 con streaming y eventos ------------------
 	primera, err := n.Detalle(context.Background(), proveedorComplemento, slug)
@@ -1537,6 +1708,78 @@ func TestE2EAnimeAV1FlujoCompletoOffline(t *testing.T) {
 	t.Logf("proxy: manifiesto de %d bytes con el segmento reescrito; Range → 206 (%d byte), directo → 403/200 según Sec-Fetch-Site",
 		len(cuerpo), len(cuerpoRango))
 
+	// --- 5b. Favoritos (T42) y borrados de historial (T41/T45) -----------
+	favorito := models.Favorite{
+		Provider: proveedorComplemento,
+		AnimeID:  slug,
+		Title:    primera.Detail.Title,
+		CoverURL: primera.Detail.Cover,
+	}
+	if err := n.AgregarFavorito(favorito); err != nil {
+		t.Fatalf("AddFavorite: %v", err)
+	}
+	if ok, err := n.EsFavorito(proveedorComplemento, slug); err != nil || !ok {
+		t.Fatalf("IsFavorite = %v, %v; se esperaba true sin error", ok, err)
+	}
+	favoritos, err := n.ListarFavoritos()
+	if err != nil {
+		t.Fatalf("ListFavorites: %v", err)
+	}
+	if len(favoritos) != 1 || favoritos[0].AnimeID != slug || favoritos[0].Provider != proveedorComplemento {
+		t.Errorf("ListFavorites = %+v; se esperaba solo el favorito de %s/%s", favoritos, proveedorComplemento, slug)
+	}
+	if err := n.QuitarFavorito(proveedorComplemento, slug); err != nil {
+		t.Fatalf("RemoveFavorite: %v", err)
+	}
+	if ok, err := n.EsFavorito(proveedorComplemento, slug); err != nil || ok {
+		t.Errorf("IsFavorite tras quitar = %v, %v; se esperaba false sin error", ok, err)
+	}
+
+	// Historial reciente y borrados: A (animeav1) y B (jkanime), con fechas
+	// fijas para que el orden no dependa del reloj.
+	base := time.Now().Unix()
+	if err := n.GuardarProgreso(models.WatchProgress{
+		AnimeID: slug, EpisodeID: epID, CurrentTime: 90, TotalDuration: 240, UpdatedAt: base,
+	}); err != nil {
+		t.Fatalf("SaveProgress (A): %v", err)
+	}
+	if err := n.GuardarProgreso(models.WatchProgress{
+		AnimeID: "naruto", EpisodeID: proveedorPrincipal + ":naruto:episode:1", UpdatedAt: base + 60,
+	}); err != nil {
+		t.Fatalf("SaveProgress (B): %v", err)
+	}
+	reciente, err := n.HistorialReciente()
+	if err != nil {
+		t.Fatalf("GetRecentProgress: %v", err)
+	}
+	if len(reciente) != 2 {
+		t.Fatalf("HistorialReciente = %d entradas; se esperaban 2 (A y B)", len(reciente))
+	}
+	if reciente[0].AnimeID != "naruto" || reciente[1].AnimeID != slug {
+		t.Errorf("HistorialReciente = %q, %q; se esperaba naruto primero (más reciente)",
+			reciente[0].AnimeID, reciente[1].AnimeID)
+	}
+	borrados, err := n.BorrarHistorialAnime(proveedorComplemento, slug)
+	if err != nil {
+		t.Fatalf("DeleteProgressAnime: %v", err)
+	}
+	if borrados != 1 {
+		t.Errorf("DeleteProgressAnime = %d; se esperaba 1 (un solo episodio de %s)", borrados, slug)
+	}
+	if reciente, err = n.HistorialReciente(); err != nil || len(reciente) != 1 || reciente[0].AnimeID != "naruto" {
+		t.Errorf("tras borrar A = %+v, %v; se esperaba solo naruto", reciente, err)
+	}
+	borrados, err = n.BorrarHistorialTodo()
+	if err != nil {
+		t.Fatalf("ClearProgress: %v", err)
+	}
+	if borrados != 1 {
+		t.Errorf("ClearProgress = %d; se esperaba 1 (quedaba naruto)", borrados)
+	}
+	if reciente, err = n.HistorialReciente(); err != nil || len(reciente) != 0 {
+		t.Errorf("tras borrar todo = %+v, %v; se esperaba vacío sin error", reciente, err)
+	}
+
 	// --- 6. Nada salió a la red -------------------------------------------
 	if fuera := transporte.intentosFuera(); len(fuera) > 0 {
 		t.Errorf("el proveedor intentó salir del sitio falso %d vez/veces: %v", len(fuera), fuera)
@@ -1554,6 +1797,8 @@ func TestE2EAnimeAV1FlujoCompletoOffline(t *testing.T) {
 		"GET " + rutaBusqueda + "bleach",
 		"GET " + rutaExcepciones,
 		"GET " + rutaCatalogoAV1,
+		"GET " + rutaCatalogoAV1,
+		"GET " + rutaHomeAV1,
 		"GET " + rutaDetalleAV1,
 		"GET " + rutaEpisodioAV1,
 		"GET " + rutaManifest,
@@ -1573,7 +1818,8 @@ func TestE2EAnimeAV1FlujoCompletoOffline(t *testing.T) {
 	exactas := map[string]int{
 		rutaBusqueda + "bleach": 1,
 		rutaExcepciones:         1,
-		rutaCatalogoAV1:         1,
+		rutaCatalogoAV1:         2, // búsqueda (search=bleach) + Home (status=emision)
+		rutaHomeAV1:             1,
 		rutaDetalleAV1:          1,
 		rutaEpisodioAV1:         1,
 		rutaManifest:            1,
@@ -1585,8 +1831,9 @@ func TestE2EAnimeAV1FlujoCompletoOffline(t *testing.T) {
 		}
 	}
 	for _, p := range sitio.todas() {
-		if p.ruta == rutaCatalogoAV1 && p.consulta != "search=bleach" {
-			t.Errorf("la búsqueda de animeav1 llegó con query %q; se esperaba search=bleach", p.consulta)
+		if p.ruta == rutaCatalogoAV1 && p.consulta != "search=bleach" && p.consulta != "status=emision" {
+			t.Errorf("la petición al catálogo de animeav1 llegó con query %q; se esperaba search=bleach o status=emision",
+				p.consulta)
 		}
 	}
 

@@ -9,13 +9,14 @@ main.go                   entrada Wails; incrusta frontend/dist (//go:embed)
 app.go                    capa Wails: traduce llamadas ↔ núcleo           (T37)
 internal/
   app/                    núcleo: orquestación testeable, sin Wails       (T37)
-    nucleo.go             registro, proxy, caché, historial, eventos
+    nucleo.go             registro, proxy, caché, historial, favoritos, Home
+    retomar.go            "Retomar" y "Siguiente ▸"                       (T46)
     portabilidad_test.go  guardia P2/P3 con go/parser
   logx/                     # slog + redacción de secretos           (T01)
   httpx/                    # cliente HTTP, errores, reintentos      (T02)
   models/                   # modelos de dominio                     (T03, T05)
   scraper/                  # SOLO interfaz Provider y registro      (T04)
-    animeav1/               #todo lo de AnimeAv1
+    animeav1/             # todo lo de AnimeAV1 (paquete animeav1)
     jkanime/                # todo lo de JKAnime (paquete jkanime)
       exceptions.go
       search.go
@@ -26,10 +27,9 @@ internal/
         extractor.go
         jkanime.go
         jkphp.go
-    animeflv/               # paquete animeflv                       (T18)
   stream/                   # proxy local de streaming               (T19)
   cache/                    # caché en memoria con TTL               (T21)
-  db/                       # historial de visualización             (T22)
+  db/                       # historial y favoritos (JSON en disco)  (T22, T42)
 docs/
   firmas/                   # firmas reales por paquete (httpx.md, models.md, ...)
   BITACORA.md               # historial; NO se lee por defecto
@@ -39,15 +39,16 @@ frontend/src/
 Regla de dependencias entre paquetes (sentido único, prohibido el ciclo):
 
 ```text
-models  ←  httpx  ←  scraper (interfaz)  ←  scraper/jkanime  ←  internal/app  ←  app.go
-                                           ←  scraper/jkanime/extractors
+models  ←  httpx  ←  extractors          ←  scraper/jkanime  ←  internal/app  ←  app.go
+                  ←  scraper (interfaz)  ←  scraper/jkanime
+                                           ←  scraper/animeav1
 logx ← (todos)
 ```
 
 - `extractors` no importa `jkanime`; recibe `httpx.HTTPDoer` por parámetro.
-- `jkanime` importa `extractors`.
+- `jkanime` importa `extractors`; `animeav1` **no** importa `jkanime` (ni `extractors`).
 - `models` no importa a nadie del proyecto.
-- `internal/app` (el núcleo) importa scraper, cache, db, httpx y stream; **no** importa `github.com/wailsapp/*` (P2). `app.go` es la única capa que habla con Wails.
+- `internal/app` (el núcleo) importa scraper, `scraper/jkanime`, `scraper/animeav1`, `extractors`, cache, db, httpx, models y stream; **no** importa `github.com/wailsapp/*` (P2). `app.go` es la única capa que habla con Wails.
 
 ---
 
