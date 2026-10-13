@@ -12,12 +12,15 @@
    * encabezado se comporta como en T53 (solo `titulo`). T54 reutiliza este
    * componente con las mismas props.
    *
-   * Cada tarjeta es un `<button>`: el clic llama a `onAbrir(anime)`, que es la
-   * MISMA función de "abrir anime" de los resultados de búsqueda (se la pasa
-   * `VistaBusqueda` a `VistaInicio`, sin vía de navegación nueva).
+   * Cada tarjeta es el componente `TarjetaAnime` (extraído en T54 para poder
+   * reutilizarlo en la cuadrícula de favoritos sin duplicar su CSS): el clic
+   * llama a `onAbrir(anime)`, que es la MISMA función de "abrir anime" de los
+   * resultados de búsqueda (se la pasa `VistaBusqueda` a `VistaInicio`, sin
+   * vía de navegación nueva).
    */
   import { onMount, tick } from 'svelte';
   import type { models } from './api';
+  import TarjetaAnime from './TarjetaAnime.svelte';
 
   export let titulo: string;
   export let items: models.Anime[] = [];
@@ -99,10 +102,7 @@
     on:scroll={actualizar}
   >
     {#each items as anime (anime.provider + ':' + anime.id)}
-      <button type="button" class="tarjeta" title={anime.title} on:click={() => onAbrir(anime)}>
-        <img src={anime.cover_url} alt={anime.title} loading="lazy" />
-        <span class="titulo">{anime.title}</span>
-      </button>
+      <TarjetaAnime {anime} {onAbrir} />
     {/each}
   </div>
 </section>
@@ -199,69 +199,6 @@
     -webkit-mask-composite: source-in;
     mask-composite: intersect;
   }
-  /* Misma tarjeta que la de los resultados de búsqueda, a 140 px y portada 2:3. */
-  .tarjeta {
-    box-sizing: border-box;
-    flex: 0 0 140px;
-    width: 140px;
-    padding: 0;
-    border: 1px solid transparent;
-    border-radius: 10px;
-    overflow: hidden;
-    background: var(--cad-superficie);
-    color: var(--cad-texto);
-    font-family: inherit;
-    text-align: center;
-    cursor: pointer;
-    scroll-snap-align: start;
-    display: flex;
-    flex-direction: column;
-    transition:
-      transform 0.2s,
-      border-color 0.2s,
-      box-shadow 0.2s;
-  }
-  .tarjeta:hover {
-    transform: translateY(-3px);
-    border-color: var(--cad-acento);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
-  }
-  .tarjeta:focus-visible {
-    outline: 2px solid var(--cad-acento);
-    outline-offset: 2px;
-  }
-  .tarjeta img {
-    display: block;
-    width: 100%;
-    height: 210px;
-    object-fit: cover;
-    background: #2a2a35;
-  }
-  /* Bloque de título con altura fija de 2 líneas (T53b): todas las tarjetas
-     miden igual aunque el título sea de 1 línea; el clamp (`-webkit-line-clamp`
-     + `line-clamp`) corta con "…" y `overflow: hidden` recorta. El padding
-     inferior se traslada a `margin` para que la 3.ª línea fantasma quede fuera
-     del área de recorte (el clip es en el borde del padding box). */
-  .titulo {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    box-sizing: content-box;
-    height: calc(1.3em * 2);
-    padding: 8px 8px 0;
-    margin-bottom: 10px;
-    font-size: 13px;
-    line-height: 1.3;
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .tarjeta {
-      transition: none;
-    }
-    .tarjeta:hover {
-      transform: none;
-      box-shadow: none;
-    }
-  }
+  /* La tarjeta vive en `TarjetaAnime.svelte` (T54), con su ancho de fila,
+     su portada 2:3 y su bloque de título de 2 líneas. */
 </style>

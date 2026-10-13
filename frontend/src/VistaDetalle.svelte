@@ -16,6 +16,7 @@
     progressToMap,
   } from './stores';
   import { atras, navegarA, seleccion } from './views';
+  import BotonFavorito from './BotonFavorito.svelte';
   import TarjetaEpisodio from './TarjetaEpisodio.svelte';
 
   let cargando = true;
@@ -113,6 +114,14 @@
   <div class="cabecera">
     <button type="button" class="atras" on:click={atras}>← Atrás</button>
     <h2>{$currentDetail?.title ?? $seleccion?.title ?? 'Detalle'}</h2>
+    {#if $currentDetail}
+      <BotonFavorito
+        provider={$currentDetail.provider}
+        animeId={$currentDetail.id}
+        titulo={$currentDetail.title}
+        cover={$currentDetail.cover}
+      />
+    {/if}
   </div>
 
   {#if error}

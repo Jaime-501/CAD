@@ -1,9 +1,9 @@
 <script lang="ts">
   /**
-   * Home "Descubrir" (T53, pulido en T53b): página "Novedades" con una fila
-   * por sección de cada proveedor. Cada proveedor se pinta según SU estado
-   * (`home.ts`): skeletons mientras carga, bloque con "Reintentar" si falla
-   * (el otro sigue visible) y sus filas cuando responde.
+   * Home (T53, pulido en T53b, con pestañas en T54): "Descubrir" es la página
+   * "Novedades" con una fila por sección de cada proveedor. Cada proveedor se
+   * pinta según SU estado (`home.ts`): skeletons mientras carga, bloque con
+   * "Reintentar" si falla (el otro sigue visible) y sus filas cuando responde.
    *
    * La carga es una vez por sesión: al montar solo se pide lo que aún no tiene
    * estado, así que volver del detalle o vaciar la búsqueda no repite la
@@ -11,17 +11,31 @@
    * `VistaBusqueda` (la misma función de "abrir anime" de los resultados).
    *
    * T53b: el contenido va en un único `<section class="inicio">` sin padding
-   * propio, así buscador, "Novedades" y las filas comparten borde (el padding
-   * vive solo en el `main.contenedor` de `VistaBusqueda`). T54 puede envolver
-   * este contenido en un `tabpanel` sin rehacer estilos.
+   * propio, así buscador, las pestañas y las filas comparten borde (el padding
+   * vive solo en el `main.contenedor` de `VistaBusqueda`).
+   *
+   * T54: dos pestañas ARIA ("Descubrir" y "★ Favoritos (N)") con *roving
+   * tabindex*. El panel inactivo NO usa `hidden` (`display: none`): Chrome pone
+   * a cero el `scrollLeft` de las filas y al volver se perdería el desplazamiento;
+   * con `position: absolute` + `visibility: hidden` sale del flujo y del árbol
+   * de accesibilidad conservando la posición de scroll.
    */
   import { onMount } from 'svelte';
   import { get } from 'svelte/store';
   import type { models } from './api';
   import FilaAnimes from './FilaAnimes.svelte';
+  import GridFavoritos from './GridFavoritos.svelte';
+  import { favoritos, cargarFavoritos } from './favoritos';
   import { cargarProveedor, cargarTodo, home, PROVEEDORES_HOME } from './home';
 
   export let onAbrir: (a: models.Anime) => void;
+
+  type Pestana = 'descubrir' | 'favoritos';
+
+  /** Pestaña visible: por defecto "Descubrir" (se reinicia al volver de una búsqueda). */
+  let pestana: Pestana = 'descubrir';
+  let tabDescubrir: HTMLButtonElement;
+  let tabFavoritos: HTMLButtonElement;
 
   onMount(() => {
     const estadoActual = get(home);
@@ -36,63 +50,172 @@
     const estado = $home[p.id];
     return estado !== undefined && estado.estado === 'ok' && estado.secciones.length === 0;
   });
+
+  function seleccionar(destino: Pestana): void {
+    pestana = destino;
+    if (destino === 'favoritos') void cargarFavoritos();
+  }
+
+  /** Flechas ← → y Inicio/Fin entre pestañas (patrón ARIA de *tabs*). */
+  function alTeclar(e: KeyboardEvent, actual: Pestana): void {
+    const orden: Pestana[] = ['descubrir', 'favoritos'];
+    const i = orden.indexOf(actual);
+    let j = -1;
+    if (e.key === 'ArrowRight') j = (i + 1) % orden.length;
+    else if (e.key === 'ArrowLeft') j = (i - 1 + orden.length) % orden.length;
+    else if (e.key === 'Home') j = 0;
+    else if (e.key === 'End') j = orden.length - 1;
+    else return;
+    e.preventDefault();
+    const ref = orden[j] === 'descubrir' ? tabDescubrir : tabFavoritos;
+    ref.focus();
+    seleccionar(orden[j]);
+  }
 </script>
 
 <section class="inicio">
-  <div class="cabecera">
-    <h2>Novedades</h2>
+  <div class="pestanas" role="tablist" aria-label="Secciones del Home">
     <button
       type="button"
-      class="actualizar"
-      on:click={() => cargarTodo(true)}
-      disabled={cargando}
+      class="pestana"
+      role="tab"
+      id="pestana-descubrir"
+      aria-controls="panel-descubrir"
+      aria-selected={pestana === 'descubrir' ? 'true' : 'false'}
+      tabindex={pestana === 'descubrir' ? 0 : -1}
+      bind:this={tabDescubrir}
+      on:click={() => seleccionar('descubrir')}
+      on:keydown={(e) => alTeclar(e, 'descubrir')}
     >
-      Actualizar
+      Descubrir
+    </button>
+    <button
+      type="button"
+      class="pestana"
+      role="tab"
+      id="pestana-favoritos"
+      aria-controls="panel-favoritos"
+      aria-selected={pestana === 'favoritos' ? 'true' : 'false'}
+      tabindex={pestana === 'favoritos' ? 0 : -1}
+      bind:this={tabFavoritos}
+      on:click={() => seleccionar('favoritos')}
+      on:keydown={(e) => alTeclar(e, 'favoritos')}
+    >
+      <span aria-hidden="true">★</span> Favoritos ({$favoritos.length})
     </button>
   </div>
 
-  {#each PROVEEDORES_HOME as proveedor (proveedor.id)}
-    {@const estado = $home[proveedor.id]}
-    {#if estado === undefined || estado.estado === 'loading'}
-      <section class="fila-fantasma" aria-label="{proveedor.nombre} · cargando">
-        <div class="cabecera-fantasma">
-          <span class="proveedor-fantasma">{proveedor.nombre}</span>
-        </div>
-        <div class="carrusel-fantasma">
-          {#each [0, 1, 2, 3, 4, 5, 6, 7] as indice (indice)}
-            <div class="esqueleto" aria-hidden="true"></div>
-          {/each}
-        </div>
-      </section>
-    {:else if estado.estado === 'error'}
-      <div class="error-proveedor">
-        <p class="error-texto">No se pudo cargar {proveedor.nombre}.</p>
-        <p class="error-detalle">{estado.error}</p>
-        <button
-          type="button"
-          class="reintentar"
-          on:click={() => void cargarProveedor(proveedor.id, true)}
-        >
-          Reintentar
-        </button>
-      </div>
-    {:else}
-      {#each estado.secciones as seccion (seccion.id)}
-        <FilaAnimes proveedor={proveedor.nombre} titulo={seccion.title} items={seccion.items} {onAbrir} />
-      {/each}
-    {/if}
-  {/each}
+  <div
+    id="panel-descubrir"
+    role="tabpanel"
+    aria-labelledby="pestana-descubrir"
+    class="panel"
+    class:inactivo={pestana !== 'descubrir'}
+  >
+    <div class="cabecera">
+      <h2>Novedades</h2>
+      <button
+        type="button"
+        class="actualizar"
+        on:click={() => cargarTodo(true)}
+        disabled={cargando}
+      >
+        Actualizar
+      </button>
+    </div>
 
-  {#if sinContenido}
-    <p class="vacio">Sin novedades por ahora.</p>
-  {/if}
+    {#each PROVEEDORES_HOME as proveedor (proveedor.id)}
+      {@const estado = $home[proveedor.id]}
+      {#if estado === undefined || estado.estado === 'loading'}
+        <section class="fila-fantasma" aria-label="{proveedor.nombre} · cargando">
+          <div class="cabecera-fantasma">
+            <span class="proveedor-fantasma">{proveedor.nombre}</span>
+          </div>
+          <div class="carrusel-fantasma">
+            {#each [0, 1, 2, 3, 4, 5, 6, 7] as indice (indice)}
+              <div class="esqueleto" aria-hidden="true"></div>
+            {/each}
+          </div>
+        </section>
+      {:else if estado.estado === 'error'}
+        <div class="error-proveedor">
+          <p class="error-texto">No se pudo cargar {proveedor.nombre}.</p>
+          <p class="error-detalle">{estado.error}</p>
+          <button
+            type="button"
+            class="reintentar"
+            on:click={() => void cargarProveedor(proveedor.id, true)}
+          >
+            Reintentar
+          </button>
+        </div>
+      {:else}
+        {#each estado.secciones as seccion (seccion.id)}
+          <FilaAnimes proveedor={proveedor.nombre} titulo={seccion.title} items={seccion.items} {onAbrir} />
+        {/each}
+      {/if}
+    {/each}
+
+    {#if sinContenido}
+      <p class="vacio">Sin novedades por ahora.</p>
+    {/if}
+  </div>
+
+  <div
+    id="panel-favoritos"
+    role="tabpanel"
+    aria-labelledby="pestana-favoritos"
+    class="panel"
+    class:inactivo={pestana !== 'favoritos'}
+  >
+    <GridFavoritos {onAbrir} />
+  </div>
 </section>
 
 <style>
   /* Sin padding ni max-width propios (T53b): el ancho lo fija el
      `main.contenedor` de `VistaBusqueda`, con el que comparten borde. */
   .inicio {
+    position: relative;
     text-align: left;
+  }
+  /* Panel fuera de flujo (ver cabecera): conserva el scroll de las filas. */
+  .panel.inactivo {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    visibility: hidden;
+  }
+  .pestanas {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--cad-borde);
+    margin-bottom: 1.5rem;
+  }
+  .pestana {
+    padding: 8px 14px;
+    /* Cubre el borde de la fila con el indicador de 2 px. */
+    margin-bottom: -1px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--cad-texto-suave);
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  .pestana:hover {
+    color: var(--cad-texto);
+  }
+  .pestana[aria-selected='true'] {
+    color: var(--cad-texto);
+    border-bottom-color: var(--cad-acento);
+  }
+  .pestana:focus-visible {
+    outline: 2px solid var(--cad-acento);
+    outline-offset: -2px;
   }
   .cabecera {
     display: flex;
