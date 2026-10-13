@@ -43,20 +43,21 @@ npm run build
 ```
 main.go                  entrada Wails; incrusta frontend/dist (//go:embed)
 app.go                   capa Wails delgada: métodos expuestos + ciclo de vida + dirHistorial (T37)
-internal/app             núcleo (package app): orquestación testeable con dobles (registro, proxy, caché, historial)
+internal/app             núcleo (package app): orquestación testeable con dobles (registro, proxy, caché, historial, favoritos, Home)
   nucleo.go              el núcleo; sin dependencia de Wails (reglas P1–P3)
+  retomar.go             "Retomar" y "Siguiente ▸" (lógica de la tabla de acciones, T46)
   portabilidad_test.go   guardia P2/P3 con go/parser: internal/** sin wailsapp ni os.UserConfigDir
 frontend/                Svelte 5 + TS + Vite; wailsjs/ es código GENERADO (no editar)
 internal/logx            logging estructurado con redacción de secretos
 internal/httpx           cliente HTTP con cookiejar, errores tipados y reintentos
 internal/models          modelos de dominio (sin dependencias del proyecto)
 internal/scraper         interfaz Provider, registro y errores comunes
-internal/scraper/jkanime            JKAnime: búsqueda, detalle, episodios AJAX, página de episodio
+internal/scraper/jkanime            JKAnime: búsqueda, detalle, episodios AJAX, página de episodio, Home
 internal/scraper/jkanime/extractors extractores de vídeo (jkplayer, jk.php, var servers, MediaFire)
-internal/scraper/animeav1           AnimeAV1 (SvelteKit): __data.json + devalue, lotes de 50, HLS derivado
+internal/scraper/animeav1           AnimeAV1 (SvelteKit): __data.json + devalue, lotes de 50, HLS derivado, Home
 internal/stream          proxy local de streaming (127.0.0.1) + reescritura de manifiestos
 internal/cache           caché de detalle/episodios con TTL
-internal/db              historial de visualización (JSON en disco)
+internal/db              historial de visualización y favoritos (JSON en disco)
 docs/firmas/<pkg>.md     firmas reales de cada paquete (si chocan con el código, manda el código)
 tareas/                  plan de trabajo por tareas (reglas en 00_REGLAS.md, detalle en Txx.md)
 PROGRESO.md              estado del plan, deudas y pendientes
@@ -97,6 +98,8 @@ docker compose run --rm app wails generate module
 
 `wails dev` y `wails build` también lo regeneran. Los métodos de `app.go` deben devolver `(valor, error)` como máximo (Wails ignora retornos extra). Si el frontend importa algo que no existe, `npm run build` y `npm run check` fallan hasta regenerar. Los payloads de eventos (`episodes:update`, `episodes:complete`) no se generan: se definen a mano en `frontend/src/api.ts`.
 
+Los bindings se regeneraron por última vez en **T47** (v1.2): `App.d.ts`/`App.js` añaden los 11 métodos nuevos (`GetHomeSection`, `AddFavorite`, `RemoveFavorite`, `ListFavorites`, `IsFavorite`, `GetRecentProgress`, `DeleteProgressAnime`, `DeleteProviderProgress`, `ClearProgress`, `ResumeAnime`, `GetNextEpisode`) y `models.ts` las clases `Favorite`, `HomeSection`, `ResumeInfo`, `NextEpisode` más `WatchProgress` con sus 5 campos nuevos. Las envolturas tipadas que usa el frontend viven en `frontend/src/api.ts` (único archivo con imports de `wailsjs`, regla P4).
+
 ## Compilar el .exe de Windows desde Docker
 
 ```sh
@@ -111,17 +114,19 @@ El ejecutable queda en `build/bin/miapp.exe` (ignorado por git). La compilación
 
 ## Datos que guarda la app
 
-- **Historial:** `%AppData%\miapp\historial.json` (`os.UserConfigDir()/miapp`, calculado en `app.go` por la regla P3: el núcleo solo recibe la ruta). Un registro por episodio (`anime_id`, `episode_id`, `current_time`, `total_duration`, `is_watched`; umbral 0.90). Escritura atómica; si el archivo se corrompe se renombra a `historial.json.bak` y se empieza vacío.
+- **Historial:** `%AppData%\miapp\historial.json` (`os.UserConfigDir()/miapp`, calculado en `app.go` por la regla P3: el núcleo solo recibe la ruta). Un registro por episodio (`anime_id`, `episode_id`, `current_time`, `total_duration`, `is_watched`; umbral 0.90) más, desde la v1.2, `provider`, `anime_title`, `cover_url`, `episode_number` y `updated_at` (Unix s; **0 = registro antiguo**, un `historial.json` de la v1.1 sigue cargando). Escritura atómica; si el archivo se corrompe se renombra a `historial.json.bak` y se empieza vacío. El listado de la barra lateral es `LastPerAnime` (un registro por proveedor+slug, ordenado por `updated_at`).
+- **Favoritos:** `%AppData%\miapp\favoritos.json` — mismo directorio que el historial, array JSON **indentado** de `models.Favorite` (`provider`, `anime_id`, `title`, `cover_url`, `added_at`), escritura atómica y el mismo `.bak` ante un archivo corrupto (`internal/db/favoritos.go`, T42).
 - **Carpeta `miapp.exe`:** la crea WebView2 para su perfil (caché, cookies del webview). No es de la app.
-- **Caché de detalle/episodios:** solo en memoria, con TTL; no se persiste.
-- En Docker, el historial se escribe dentro del contenedor, no en `%AppData%`.
+- **Caché de detalle/episodios y de las secciones del Home:** solo en memoria, con TTL de 10 min (`home:<proveedor>` en `internal/app/nucleo.go`); no se persiste.
+- En Docker, estos archivos se escriben dentro del contenedor, no en `%AppData%`.
 
 ## Limitaciones conocidas (técnicas)
 
 1. **Algunos servidores son iframes sin resolver:** los embeds de AnimeAV1 que no son el reproductor propio (UPNShare, Voe, Byse, MP4Upload) y los iframes de JKAnime se publican tal cual: se ven, pero no guardan progreso.
-2. **"Continuar" sin marca de tiempo:** `WatchProgress` no guarda cuándo se guardó, así que el botón elige el episodio de mayor número con progreso. Arreglarlo exige un campo de fecha en `internal/models` + `internal/db` + bindings + frontend.
-3. **Proxy no alcanzable desde el navegador del host en Docker** (ver arriba). A propósito: es loopback y con anti-SSRF.
-4. No hay borrado de registros del historial.
+2. **Proxy no alcanzable desde el navegador del host en Docker** (ver arriba). A propósito: es loopback y con anti-SSRF.
+3. **El botón "Continuar" de la vista de detalle** sigue abriendo el episodio de mayor número con progreso, no el más reciente; la barra lateral del historial sí ordena por recencia (campo `updated_at`, v1.2).
+
+Dos limitaciones de la v1.1 quedaron **resueltas en la v1.2** y ya no figuran aquí: *«"Continuar" sin marca de tiempo»* (`WatchProgress` guarda `updated_at` desde T40/T41) y *«no hay borrado de registros del historial»* (T51–T52: deslizar, ✕ con Deshacer, borrado por proveedor y de todo el historial).
 
 ## Seguridad
 
@@ -147,4 +152,4 @@ Versionado semántico (`vMAYOR.MENOR.PARCHE`).
 
 ## Trabajo con agentes
 
-El proyecto se construyó con un plan de tareas (`tareas/`) ejecutadas por un agente de código: T01–T29 en la v1.0, T30–T36 (AnimeAV1, v1.1.0; T30–T35 en la rama `feature/animeav1`, ya fusionada en `main` — T36 fue el cierre documental) y T37 (preparación para Android: núcleo en `internal/app`, reglas P1–P7). `AGENTS.md` resume las reglas para agentes, `PROGRESO.md` es la memoria entre sesiones (los estados históricos, en `docs/PROGRESO_v1.0.md` y `docs/PROGRESO_v1.1.md`) y `docs/firmas/` contiene las firmas reales de cada paquete.
+El proyecto se construyó con un plan de tareas (`tareas/`) ejecutadas por un agente de código: T01–T29 en la v1.0, T30–T36 (AnimeAV1, v1.1.0; T30–T35 en la rama `feature/animeav1`, ya fusionada en `main` — T36 fue el cierre documental), T37 (preparación para Android: núcleo en `internal/app`, reglas P1–P7) y T39–T56 (v1.2.0: Home por proveedor, historial lateral con retomar, favoritos y el botón "Siguiente ▸", rama `feature/home-historial-favoritos`). `AGENTS.md` resume las reglas para agentes, `PROGRESO.md` es la memoria entre sesiones (los estados históricos, en `docs/PROGRESO_v1.0.md`, `docs/PROGRESO_v1.1.md` y `docs/PROGRESO_v1.2.md`) y `docs/firmas/` contiene las firmas reales de cada paquete.
