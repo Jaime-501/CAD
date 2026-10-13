@@ -73,7 +73,7 @@ P2 y P3 tienen guardia ejecutable: `internal/app/portabilidad_test.go` recorre `
 3. Mantener cookies, User-Agent y sesión durante todo el flujo.
 4. Inyección de dependencias (`httpx.HTTPDoer` + `httptest.Server`) para aislar los tests de la red.
 5. El frontend nunca se bloquea esperando peticiones largas (`runtime.EventsEmit`).
-6. No tocar `frontend/wailsjs/**` salvo en la tarea de regeneración de bindings (T23).
+6. No tocar `frontend/wailsjs/**` salvo en las tareas de regeneración de bindings (T23, T47).
 7. **Regla de escape:** si necesitas modificar un archivo fuera de la lista "Puedes tocar", DETENTE y repórtalo (archivo, motivo, cambio propuesto). No improvises.
 8. **Puerta de calidad global** (se cumple en cada tarea que toque Go): `gofmt -l .` sin salida, `go vet ./...`, `go test ./...`. En tareas con concurrencia (marcadas con 🔒) añade `go test -race ./...`.
 9. Los enlaces de vídeo son temporales: **nunca** se cachean ni se persisten.

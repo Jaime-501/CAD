@@ -5,6 +5,8 @@ Readme · MD
  
 Aplicación de escritorio para Windows (la ventana se titula **CAD · Comfort Anime Desktop**) que te permite **buscar anime, ver la lista de episodios y reproducirlos** en una interfaz sencilla, con tu progreso guardado para retomar donde lo dejaste.
  
+![Inicio](docs/img/Inicio.png)
+
 ![Búsqueda](docs/img/Busqueda.png)
 
 ![Detalles](docs/img/Detalles.png)
@@ -14,13 +16,13 @@ Aplicación de escritorio para Windows (la ventana se titula **CAD · Comfort An
 ## Qué puedes hacer
  
 - **Buscar** anime por nombre (busca a la vez en **JKAnime** y **AnimeAV1**, con los resultados de JKAnime primero).
-- **Descubrir** en la pantalla de inicio: filas de novedades ordenadas por proveedor, en las pestañas **Descubrir** y **Favoritos** (Home pulido: filas alineadas con el buscador, tarjetas sin barra de scroll nativa y con realce al pasar el ratón).
+- **Descubrir** novedades en la pantalla de inicio: filas por proveedor (**En emisión** y **recientes** de JKAnime y AnimeAV1), con botón **Actualizar**. Si un proveedor falla, el otro sigue visible y puedes pulsar **Reintentar**.
 - **Ver el detalle y los episodios** de cada serie (la lista aparece poco a poco mientras carga).
 - **Reproducir** el episodio directamente en la app, con selector de servidor/calidad e idioma (SUB/DUB) si el episodio tiene varias fuentes, y subtítulos cuando la fuente los incluye.
 - **Retomar donde lo dejaste:** la app recuerda el minuto de cada episodio, marca los vistos y tiene un botón **Continuar**. Además, la **barra lateral del historial** agrupa tus animes por proveedor (lo más reciente primero) y **retoma con un clic**: continúa donde estabas o salta al siguiente episodio.
 - **Borrar lo que quieras del historial:** deslizar la tarjeta hacia los lados o pulsar la ✕, con el aviso **Deshacer** durante 5 segundos; también puedes borrar el historial de un proveedor entero o todo el historial, con confirmación.
-- **Marcar favoritos:** la estrella en la vista de detalle y la pestaña **Favoritos** de la pantalla de inicio (se guardan en tu equipo y sobreviven a cerrar y abrir la app).
-- **Saltar al siguiente episodio** con el botón **Siguiente ▸** del reproductor: se resalta cuando el episodio llega al 90 % y nunca aparece en películas ni en el último episodio.
+- **Marcar favoritos:** pulsa la estrella en la vista de detalle y encuéntralos en la pestaña **★ Favoritos** del inicio (se guardan en tu equipo y sobreviven a cerrar y abrir la app).
+- **Saltar al siguiente episodio** con el botón **Siguiente ▸** del reproductor (o la tecla **N**): se ve atenuado mientras reproduces, se aclara al pasar el ratón o al pausar y se resalta cuando el episodio llega al 90 %. No aparece en películas ni en el último episodio.
 ## Instalación
  
 1. Ve a la sección [**Releases**](../../releases) de este repositorio y descarga el archivo `.zip` de la última versión.
@@ -32,10 +34,11 @@ Aplicación de escritorio para Windows (la ventana se titula **CAD · Comfort An
  
 ## Cómo se usa
  
-1. Escribe el nombre de un anime en el buscador (los resultados aparecen solos).
-2. Haz clic en una serie para ver sus episodios.
-3. Haz clic en un episodio para reproducirlo. Si un servidor no carga, elige otro en el selector.
-4. Vuelve atrás cuando quieras: tu progreso se guarda automáticamente cada pocos segundos.
+1. Al abrir la app verás el inicio con novedades; haz clic en una o escribe un nombre en el buscador.
+2. Haz clic en una serie para ver sus episodios y, si quieres, márcala con la estrella.
+3. Haz clic en un episodio para reproducirlo; si un servidor no carga, elige otro.
+4. El progreso se guarda solo cada pocos segundos; para retomar pulsa su tarjeta en la **barra lateral** (a la izquierda; se contrae y, en ventanas estrechas, se abre con el botón ☰).
+5. Para quitar algo del historial pulsa ✕ o desliza la tarjeta; tienes 5 segundos para **Deshacer**.
 ## Tus datos
  
 La app solo guarda tu historial de visualización y tus favoritos, en tu propio equipo:
@@ -52,7 +55,10 @@ No hay cuentas ni registro, y la app no envía tus datos a ningún servidor prop
 | **No aparecen resultados** | Prueba con otro nombre o espera un momento: los sitios de origen pueden estar caídos o haber cambiado. |
 | **El episodio no carga** | Elige otro servidor en el selector. Si ninguno funciona, vuelve a intentarlo más tarde. |
 | **Un servidor aparece como "iframe"** | Es un reproductor externo incrustado: funciona, pero **no guarda tu progreso**. |
-| **"Continuar" no abre el último que vi** | Elige el episodio de mayor número con progreso, no el más reciente. Es una limitación conocida. |
+| **"Continuar" no abre el último que vi** | Desde el detalle elige el episodio de mayor número con progreso, no el más reciente. Para retomar el último que viste usa la barra lateral del historial. Es una limitación conocida. |
+| **El botón Siguiente ▸** se ve borroso | Es intencional mientras reproduces, para no distraer; pasa el ratón o pausa y se aclara. |
+| **El inicio no muestra un proveedor** | Pulsa **Reintentar** o **Actualizar**; el sitio puede estar caído. |
+| **Mi historial de una versión anterior** | Se conserva; sus registros aparecen al final de la barra hasta que los vuelvas a ver. |
  
 ## Limitaciones conocidas
  
