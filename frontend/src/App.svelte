@@ -1,6 +1,8 @@
 <script lang="ts">
   import { onDestroy, onMount, tick } from 'svelte';
+  import { get } from 'svelte/store';
   import BarraLateral from './BarraLateral.svelte';
+  import { cargarFavoritos, favoritosEstado } from './favoritos';
   import { cargarHistorial } from './historial';
   import { retomar } from './retomar';
   import { disposeEvents, initEvents } from './stores';
@@ -31,7 +33,23 @@
     puente = typeof window !== 'undefined' && Boolean((window as any).go);
     initEvents();
     void cargarHistorial();
+    void cargarFavoritosAlArranque();
   });
+
+  /**
+   * T58: los favoritos se cargan al montar (mismo patrón que el historial)
+   * para que el contador de la pestaña "★ Favoritos (N)" no arranque en 0
+   * hasta que alguien abra la pestaña. `cargarFavoritos` no lanza (deja el
+   * estado en `error`); si el primer intento falla (p. ej. el backend aún no
+   * respondió) se reintenta una vez pasados 500 ms; si vuelve a fallar, la
+   * cuadrícula de la pestaña conserva su botón "Reintentar".
+   */
+  async function cargarFavoritosAlArranque(): Promise<void> {
+    await cargarFavoritos();
+    if (get(favoritosEstado) !== 'error') return;
+    await new Promise((resuelve) => setTimeout(resuelve, 500));
+    await cargarFavoritos();
+  }
 
   onDestroy(() => {
     disposeEvents();

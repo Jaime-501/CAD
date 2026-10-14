@@ -6,7 +6,7 @@
   import { getNextEpisode, getProgress, getVideoSources, saveProgress } from './api';
   import type { VideoSourceView } from './api';
   import type { FiltroIdioma } from './etiquetas';
-  import { currentDetail, episodes, progressMap, startAt } from './stores';
+  import { currentDetail, currentProvider, episodes, progressMap, startAt } from './stores';
   import { atras, navegarA, seleccion, type SeleccionAnime } from './views';
   import BotonSiguiente from './BotonSiguiente.svelte';
   import SelectorFuente from './SelectorFuente.svelte';
@@ -525,7 +525,7 @@
       total_duration: total,
       is_watched: false,
       provider: sel.provider,
-      anime_title: sel.title,
+      anime_title: tituloDe(sel),
       cover_url: portadaDe(sel),
       episode_number: numeroDe(sel.episodeID),
       updated_at: 0,
@@ -534,13 +534,40 @@
   }
 
   /**
-   * Portada del anime abierto en la app (T49): sale del detalle que ya cargó
-   * `VistaDetalle` para este (proveedor, slug); '' si no está disponible.
+   * Portada del anime abierto (T58): 1) el detalle SOLO si coincide
+   * proveedor+slug con el episodio abierto; 2) el registro del historial en
+   * memoria (`progressMap` o el último guardado); '' si no hay ninguna. Nunca
+   * se pisa una carátula válida con '' por falta de detalle (el backend
+   * sobrescribe el registro completo al guardar).
    */
   function portadaDe(sel: SeleccionAnime): string {
-    const detalle = get(currentDetail);
-    if (!detalle || detalle.id !== sel.animeID) return '';
-    return detalle.cover ?? '';
+    if (get(currentProvider) === sel.provider) {
+      const detalle = get(currentDetail);
+      if (detalle && detalle.id === sel.animeID) {
+        const portada = detalle.cover ?? '';
+        if (portada !== '') return portada;
+      }
+    }
+    return registroPrevio(sel)?.cover_url ?? '';
+  }
+
+  /** Título (misma regla que la portada, T58): detalle, selección o historial. */
+  function tituloDe(sel: SeleccionAnime): string {
+    if (get(currentProvider) === sel.provider) {
+      const detalle = get(currentDetail);
+      if (detalle && detalle.id === sel.animeID) {
+        const titulo = detalle.title?.trim() ?? '';
+        if (titulo !== '') return titulo;
+      }
+    }
+    const propio = sel.title?.trim() ?? '';
+    if (propio !== '') return propio;
+    return registroPrevio(sel)?.anime_title ?? '';
+  }
+
+  /** Registro del historial en memoria: el del mapa al abrir o el último guardado. */
+  function registroPrevio(sel: SeleccionAnime): models.WatchProgress | null {
+    return get(progressMap)[sel.episodeID ?? ''] ?? progresoPrevio;
   }
 
   /** Número del episodio parseado del id (`…:episode:N` / `…:special:N`); 0 en película. */
