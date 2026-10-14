@@ -1,10 +1,10 @@
-# PROGRESO — Comfort Anime Desktop (T01–T58 hechas)
+# PROGRESO — Comfort Anime Desktop (T01–T59 hechas)
 
 > Este archivo es la **memoria entre sesiones**. Cada sesión lo lee al inicio y lo actualiza al final.
 > Reglas y layout: `tareas/00_REGLAS.md`. Detalle de cada tarea: `tareas/Txx.md`.
 > Firmas reales por paquete: `docs/firmas/<paquete>.md` · Bitácora, desviaciones históricas y pendientes cerrados: `docs/BITACORA.md`.
 > **Si una firma de `docs/firmas` no coincide con el código, manda el código (`go doc`).**
-> **Archivos históricos**: el estado de **T01–T29 + T30** (v1.0) está en **`docs/PROGRESO_v1.0.md`**, el de **T30–T35** (AnimeAV1, v1.1.0, con sus desviaciones por tarea, fixtures y pruebas manuales) en **`docs/PROGRESO_v1.1.md`** y el de **T39–T55** (v1.2.0) en **`docs/PROGRESO_v1.2.md`**. Aquí solo queda lo vigente. Estado del producto: **v1.2.0 PUBLICADA** — ciclo **T39–T57** (incluye T53b y T57); la **prueba manual con el `.exe`** y la **release** las hizo el humano; el cierre documental post-publicación quedó etiquetado **T58** (bloque al final). **Colisión de numeración (T58):** el archivo `tareas/T58.md` define una tarea distinta —dos bugs visuales de la v1.2.0— que es la fila **T58** de la tabla y el bloque "T58 — bugs visuales" al final; el cierre documental conserva su bloque propio titulado "Cierre documental post-v1.2.0 (etiquetado T58)".
+> **Archivos históricos**: el estado de **T01–T29 + T30** (v1.0) está en **`docs/PROGRESO_v1.0.md`**, el de **T30–T35** (AnimeAV1, v1.1.0, con sus desviaciones por tarea, fixtures y pruebas manuales) en **`docs/PROGRESO_v1.1.md`** y el de **T39–T58** (v1.2.0: Home, historial, favoritos, "Siguiente" y sus bugs; incluye los cierres T56/T59) en **`docs/PROGRESO_v1.2.md`**. Aquí solo queda lo vigente. Estado del producto: **v1.2.1 PREPARADA** — ciclo **T39–T59** (v1.2.0 publicada en T56–T58, con T53b y T57; los dos bugs visuales son **T58**; el cierre documental —post-v1.2.0 y de la v1.2.1— es **T59**). La **prueba manual con el `.exe` de la v1.2.0** y la **release** las hizo el humano; T57 se probó con el `.exe` sin incidencias. `wails.json` → `productVersion` **1.2.1**: **sin tag ni release aún** (los hace el humano). **Numeración (colisión resuelta en T59):** `tareas/T58.md` = bugs visuales (fila/bloque T58); el cierre documental pasó de T58 a **T59** (sin borrar contenido).
 
 ## Protocolo de sesión
 
@@ -125,11 +125,12 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha y verificada
 | [x] | T55 | UI: botón "Siguiente ▸" | T46, T50 |
 | [x] | T56 | Cierre v1.2.0: título CAD, docs, firmas, prueba manual, release | todas |
 | [x] | T57 | UI: botón "Siguiente ▸" discreto durante la reproducción | T55 |
-| [x] | T58 | Carátula perdida al retomar y contador de favoritos (ver colisión de numeración en el encabezado) | T57 |
+| [x] | T58 | Carátula perdida al retomar y contador de favoritos | T57 |
+| [x] | T59 | Cierre documental post-v1.2.0 y de la v1.2.1 (renombrado: el cierre era T58; los bugs se quedan con T58) | T58 |
 
 T01–T29 = v1.0 (`docs/PROGRESO_v1.0.md`) · T30–T35 = v1.1.0 AnimeAV1 (`docs/PROGRESO_v1.1.md`) · T36 = cierre de la v1.1.0 · T37 = portabilidad Android · T38 = cierre documental de T37.
-T39–T57 = v1.2.0 (Home, historial lateral, favoritos, "Siguiente" y su estado discreto; **incluye T53b y T57**); plan en `tareas/v1.2_PLAN.md`, detalle T39–T55 archivado en `docs/PROGRESO_v1.2.md`, cierres T56/T57, el cierre documental (etiquetado T58) y la T58 de bugs visuales al final de este archivo.
-La **v1.2.0 está PUBLICADA**: la **prueba manual de la v1.2.0 con el `.exe`** (checklist al final) y la **release** las hizo el humano.
+T39–T57 = v1.2.0 (Home, historial lateral, favoritos, "Siguiente" y su estado discreto; **incluye T53b y T57**); plan en `tareas/v1.2_PLAN.md`, detalle **T39–T58 + cierres T56/T59** archivado en `docs/PROGRESO_v1.2.md`, con resúmenes al final de este archivo.
+La **v1.2.0 está PUBLICADA** (prueba manual con el `.exe` y release hechas por el humano). La **v1.2.1** (T58 bugs + T59 cierre documental) está **preparada**: `productVersion` 1.2.1, sin tag ni release aún — los hace el humano.
 
 ## Auditoría de portabilidad (T37)
 
@@ -257,142 +258,57 @@ Solo `.md`, sin tocar código. Contraste con `go doc ./internal/db`, `go doc ./i
 
 ## Pendientes activos
 
-> Solo lo que una tarea futura debe resolver. Los cerrados/históricos están en `docs/BITACORA.md`; los de T01–T29 en `docs/PROGRESO_v1.0.md`; los de T30–T35 en `docs/PROGRESO_v1.1.md`.
+> Solo lo que una tarea futura debe resolver. Los cerrados/históricos están en `docs/BITACORA.md`; los de T01–T29 en `docs/PROGRESO_v1.0.md`; los de T30–T35 en `docs/PROGRESO_v1.1.md`; los de T39–T58 en `docs/PROGRESO_v1.2.md`.
 
-- **Heredados de la v1.0** (detalle en `docs/PROGRESO_v1.0.md` → "Pendientes activos"): ~~(1) título de la ventana~~ → **cerrado en T56** (`main.go` → `CAD · Comfort Anime Desktop`; el ejecutable sigue siendo `miapp.exe`); ~~(2) marca de tiempo en `WatchProgress`~~ → **cerrado** (`updated_at` desde T40/T41: la barra lateral ordena por recencia; el botón "Continuar" del detalle conserva su criterio de mayor número con progreso y así queda documentado en `docs/DESARROLLO.md` → "Limitaciones conocidas"); ~~(3) borrado de registros del historial~~ → **cerrado en T51–T52** (individual con Deshacer, por proveedor y total). **Sigue activo (4)**: verificación visual de los avisos de error que ningún test provoca (hoy: el aviso `episodesError` con un fallo real del backend).
-- ~~**Prueba manual de la v1.2.0 con el `.exe`** (checklist en "Cierre de la v1.2.0 (T56)" abajo)~~ → **cerrada (T58)**: la prueba manual con el `.exe` y la release las hizo el humano; la v1.2.0 está **publicada**. Cierra de paso los pendientes de la nota T57 (aclara al pausar, al 90 % y estado `reproduciendo` con vídeo real).
-- **Verificación con el `.exe` de los fixes T58** (carátula al retomar y contador de favoritos al arrancar): en el flujo navegador no hay vídeo real (proxy local, AGENTS.md), así que el guardado con posición no se ejercitó; los fixes se verificaron por lógica + log y end-to-end del contador (ver bloque "T58 — bugs visuales"). Probar con el `.exe` en la próxima release (v1.2.1 o posterior).
-- **Cerrados en T38** (cierre documental de T37, ver sección "T38" arriba): ~~firmas desfasadas de **`docs/firmas/db.md`** y **`docs/firmas/cache.md`**~~ → **corregidas**: `db.Open(dir)` con `ErrDirectorioVacio` (sin `rutaPorDefecto` ni `os.UserConfigDir` en el paquete) y el núcleo documentado como `internal/app` con `NuevoNucleo`/`NuevoNucleoPorDefecto(dir)`. Las referencias a `app_nucleo.go` que siguen en `docs/BITACORA.md`, `docs/PROGRESO_v1.0.md`/`v1.1.md`, `docs/investigacion/animeav1.md` y en los bloques T20–T34 de `docs/firmas/app.md` **son históricas o ya llevan la nota del bloque T37**: no se tocan.
-- **Cerrados en T36** (documentados, sin acción pendiente): ~~comentarios de `app.go`/`app_nucleo.go` que presentaban a AnimeFLV como proveedor registrado o fallback~~ → **corregidos** (solo comentarios; ahora describen `jkanime` + `animeav1` con búsqueda combinada en paralelo). ~~Reproducir el HLS de AnimeAV1 end-to-end~~ → **cerrado**: E2E offline + real en verde y **prueba manual con el `.exe` en Windows correcta** (HLS SUB/DUB, SUB/DUB e iframes, búsqueda combinada, mismo slug en ambos proveedores, progreso, JKAnime intacto, sin consola); **release v1.1.0 publicada**.
+- **(4) Verificación visual de los avisos de error** (heredado de la v1.0, detalle en `docs/PROGRESO_v1.0.md` → "Pendientes activos"): los avisos de error que ningún test provoca (hoy: el aviso `episodesError` con un fallo real del backend). Los heredados (1) título de la ventana, (2) marca de tiempo y (3) borrado del historial están **cerrados** (T56, T40/T41 y T51–T52).
+- **Verificación con el `.exe` de los fixes T58** (carátula al retomar y contador de favoritos al arrancar): en el flujo navegador no hay vídeo real (proxy local, AGENTS.md), así que el guardado con posición no se ejercitó; los fixes se verificaron por lógica + log y end-to-end del contador (nota completa en `docs/PROGRESO_v1.2.md` → T58). Probar con el `.exe` en la próxima release (v1.2.1 o posterior).
+- **Release de la v1.2.1**: queda en el humano — compilar, crear el tag y publicar (pasos en `docs/DESARROLLO.md` → "Publicar una versión"); esta sesión no crea tag ni release.
+- **`Type` de `models.Anime`** sigue sin existir (pendiente de producto heredado: los items del Home y la búsqueda salen sin tipo; si el producto lo quiere hay que ampliar `models` en una tarea nueva).
 
 ---
 
-## Cierre de la v1.2.0 (T56)
+## Resumen de los cierres de la v1.2.x (detalle largo en `docs/PROGRESO_v1.2.md`)
 
-Hecha el **2026-10-12** en `feature/home-historial-favoritos`, **sin crear tag ni publicar** (lo hace el humano; ver "Release" abajo). Solo se tocaron archivos de la lista "Puedes tocar" de `tareas/T56.md`:
+> En T59 se movieron a `docs/PROGRESO_v1.2.md` (texto literal) las notas largas de T56, T57, T58 y del cierre documental. Aquí queda lo esencial.
 
-- **`main.go`**: únicamente el `Title` → `"CAD · Comfort Anime Desktop"` (`git diff main.go` = 1 línea). El ejecutable (`miapp.exe`), el módulo y `%AppData%\miapp` **no cambian**.
-- **`wails.json`**: únicamente `info.productVersion` → `"1.2.0"`.
-- **`tareas/00_REGLAS.md`** (reporte pendiente de T38, cerrado aquí): fuera del árbol `animeflv/` (retirado en T35), dentro `animeav1/`, `extractors/` comentado y `db/` = "historial y favoritos (JSON en disco) (T22, T42)"; diagrama de dependencias reescrito con `scraper/animeav1` y `extractors` en la rama de `httpx` y `internal/app` importando scraper, jkanime, animeav1, extractors, cache, db, httpx, models y stream.
-- **`docs/firmas/*.md`**: contrastadas con `go doc -all` (`models` T40, `db` T41/T42, `scraper` T43, `jkanime` T43, `animeav1` T44) → **coincidían**; solo difirió **`docs/firmas/app.md`** (bloque T45): `AgregarFavorito` hace `TrimSpace`, valida campos no vacíos **y proveedor registrado** (vía `n.proveedor`), orden argumentos → proveedor → `ErrFavoritosNoDisponible` → `db.Add`.
-- **`README.md`**: funciones de la v1.2 (Home con pestañas Descubrir/Favoritos, historial lateral con retomar, borrado con Deshacer, favoritos, "Siguiente ▸") y nombre **CAD** en la introducción; "Tus datos" incluye `favoritos.json`; fuera la frase obsoleta de "no hay borrado de entradas individuales del historial".
-- **`docs/DESARROLLO.md`**: `favoritos.json` y `updated_at` en "Datos que guarda la app"; `retomar.go` y `animeav1` en la estructura de paquetes; caché de las secciones del Home (10 min, `home:<proveedor>`); bloque de bindings regenerados en T47; **"Limitaciones conocidas" reescrita** (los puntos "«Continuar» sin marca de tiempo" y "no hay borrado de registros" ya no aplican; queda documentado que el botón "Continuar" del detalle sigue eligiendo por número); "Trabajo con agentes" con T39–T56.
-- **`AGENTS.md`**: estado T1–T56 / v1.2.0, `docs/PROGRESO_v1.2.md` en la lista de historiales y `Title` descrito como `CAD · Comfort Anime Desktop`.
-- **`docs/PROGRESO_v1.2.md`** (nuevo): notas **T39–T55** movidas de aquí (246 líneas, texto literal).
-- **`docs/BITACORA.md`**: fila de sesión de T56 y las desviaciones del ciclo v1.2 (caché `home:<proveedor>`, capture perezoso del puntero, `TarjetaAnime` extraída de `FilaAnimes`).
-- **`PROGRESO.md`** (este archivo): T56 `[x]`, heredados (1)(2)(3) cerrados y este bloque con la compuerta, el checklist manual y la release.
+### Cierre de la v1.2.0 (T56) — resumen
 
-### Compuerta (paso 8) — 2026-10-12, todo en verde
+Hecha el **2026-10-12** en `feature/home-historial-favoritos`: `main.go` solo el `Title` (`CAD · Comfort Anime Desktop`), `wails.json` → `1.2.0`, `00_REGLAS.md`, `README.md`, `DESARROLLO.md`, `AGENTS.md`, firmas contrastadas y notas T39–T55 archivadas. Compuerta en verde (407 tests, `npm run check` 0/0, `wails build` OK). La **prueba manual con el `.exe`** y la **release** las hizo el humano: **v1.2.0 publicada**.
+
+### T57 — botón "Siguiente ▸" discreto durante la reproducción — resumen
+
+`BotonSiguiente.svelte` con prop `discreto` (guardia `discreto && estado === 'listo'`; `opacity 0.4` + `blur(2px)` + transición 200 ms; se aclara con hover/foco; `prefers-reduced-motion` sin transición) y `VistaReproductor.svelte` con estado `reproduciendo` seteado **dentro de los handlers existentes del `<video>`** (`alAvanzar` con `!v.paused`, `alPausar`, `alTerminar`; cero listeners nuevos). **Probada con el `.exe` sin incidencias** (se aclara al pausar, al 90 % y con HLS/MP4 real): anotado en T59.
+
+### T58 — bugs visuales: carátula perdida al retomar y contador de favoritos — resumen
+
+Detectados con el `.exe`. **Bug A**: `portadaDe`/`tituloDe` reescritos en cascada (detalle del mismo proveedor+slug → registro en memoria → vacío) en `VistaReproductor.svelte`; ya no se pisa con `''` la carátula del historial al retomar con el detalle en vuelo o con otro anime abierto. **Bug B**: `App.svelte` carga los favoritos al arrancar (`cargarFavoritosAlArranque` con un reintento a los 500 ms) → el contador "★ Favoritos (N)" es correcto sin abrir la pestaña. **Pendiente**: verificar los dos fixes con el `.exe` (arriba).
+
+### T59 — cierre documental (post-v1.2.0 renumerado + v1.2.1) — bloque de esta sesión
+
+Cierre documental de la **v1.2.1**, solo documentación y versión, sin cambios de comportamiento (fecha **2026-10-14**):
+
+- **Renumeración (paso 1)**: los bugs visuales se quedan como **T58**; el cierre documental post-v1.2.0 pasó de T58 a **T59** (fila de la tabla + títulos de bloque, con línea aclaratoria; ningún contenido borrado). La nota de la colisión del encabezado y la fila/bitácora quedan actualizadas.
+- **T57 (paso 2)**: el apartado de pendientes del `.exe` se sustituyó por la anotación de que **T57 se probó con el `.exe` sin incidencias** (pausar, 90 %, HLS/MP4 real).
+- **Archivo histórico (paso 3)**: notas largas de **T56, T57, T58** y del cierre documental movidas **texto literal** a `docs/PROGRESO_v1.2.md` (con los dos ajustes anteriores); aquí solo resúmenes.
+- **`wails.json` (paso 4)**: `info.productVersion` → **`"1.2.1"`** (único cambio del archivo).
+- **`CHANGELOG.md` (paso 5)**: entrada **1.2.1** con los dos arreglos de T58 y la mejora T57. Comprobado contra el CHANGELOG previo: **solo existía la entrada 1.1.0** (no había 1.2.0 ni la mejora T57) — anotado en la propia entrada.
+- **`AGENTS.md` y `docs/DESARROLLO.md` (paso 6)**: estado **T1–T59 / v1.2.1 preparada** y rango de "Trabajo con agentes" hasta T59; añadido el aviso breve del **fantasma CRLF** (autocrlf sin `.gitattributes`) a ambos (no estaba).
+- **`docs/BITACORA.md` (paso 7)**: fila de sesión de **T58** (bugs) y de **T59**, la desviación de la colisión de numeración y la renumeración del cierre.
+- **Pendientes activos (paso 8)**: solo (4) avisos de error, la verificación `.exe` de los fixes T58, la release de la v1.2.1 (humano) y el `Type` de `models.Anime`.
+- **Archivos tocados**: `PROGRESO.md`, `CHANGELOG.md`, `AGENTS.md`, `docs/DESARROLLO.md`, `docs/PROGRESO_v1.2.md`, `docs/BITACORA.md` y `wails.json` (solo `info.productVersion`). **Nada tocado fuera de "Puedes tocar"** (regla 7 no se activó): `*.go`, `main.go`, `frontend/**`, `tareas/00_REGLAS.md` y `tareas/T58.md` intactos; `frontend/wailsjs/**` sin regenerar ni cambios (el `wails build` no alteró los bindings).
+
+### Comprobación — 2026-10-14, todo en verde
 
 | Comando | Resultado |
 |---|---|
-| `gofmt -l .` | **sin salida** (ningún archivo por CRLF) |
-| `go vet ./...` | limpio |
-| `go vet -tags integration ./...` | limpio |
-| `go build ./...` | OK |
-| `go test -race -count=1 ./...` | **11 paquetes `ok`** (`miapp` sin tests de paquete); **407 `--- PASS`** — mismo recuento que antes de empezar |
-| `go test -tags integration ./... -run "E2E\|Home" -v` | PASS: `TestE2EFlujoCompletoRedReal` (15,75 s), `TestE2EAnimeAV1RedReal` (2,69 s), `TestE2EFlujoCompletoOffline` (0,66 s), `TestE2EAnimeAV1FlujoCompletoOffline` (0,34 s), `TestHomeRedReal` de animeav1 (1,16 s) y de jkanime (1,33 s) más los `TestHome*` de `internal/app`/`models`/`scraper`; **0 FAIL** |
-| `npm run check` | **svelte-check found 0 errors and 0 warnings** |
-| `npm run build` | OK (2,29 s; aviso preexistente de chunk >500 kB) |
-| `wails build -platform windows/amd64` | OK → `build/bin/miapp.exe` (13,34 s) |
-
-Recuento real por paquete (`go test -count=1 -v`, líneas `--- PASS`): `internal/app` **75** · `cache` **9** · `db` **43** · `httpx` **27** · `logx` **7** · `models` **24** · `scraper` **8** · `scraper/animeav1` **70** · `scraper/jkanime` **53** · `scraper/jkanime/extractors` **68** · `stream` **23** · `miapp` 0 → **total 407**.
-
-`git status --porcelain` solo con los archivos listados arriba; `git diff main.go` muestra únicamente la línea del `Title`.
----
-
-## T57 — UI: botón "Siguiente ▸" discreto durante la reproducción
-
-### Paso 0 (antes de tocar código) — 2026-10-12
-
-- **Cómo se sabe hoy si el vídeo reproduce o está en pausa** (`frontend/src/VistaReproductor.svelte`): **no hay estado booleano guardado**; la única vía son los handlers del `<video>` registrados en `onMount` (líneas 84-89) y retirados en `onDestroy` (106-112): `timeupdate` → **`alAvanzar`**, `pause` → **`alPausar`**, `ended` → **`alTerminar`** (más `loadedmetadata` → `alMetadatos`). La fuente de verdad de "en pausa" es la propiedad **`paused` del elemento `videoEl`** (`bind:this`, línea 589). No existe ningún listener `play`/`playing` hoy, y Svelte no reactiva `videoEl.paused` por sí mismo.
-- **De dónde sale el cálculo `currentTime / duration ≥ 0.90`** (lo que activa `resaltado`): la función **`marcarResaltadoSiTermina`** (líneas 233-238), llamada **solo** desde `alAvanzar` (línea 460, `timeupdate`) y `alTerminar` (línea 467, `ended`). Guardas: `resaltadoSiguiente` ya marcado o `modo !== 'video'` → sale; `!(v.duration > 0)` → sale; con `v.currentTime / v.duration >= 0.9` fija **`resaltadoSiguiente = true`** (pegajoso; se limpia en `reiniciarEpisodio`, línea 174).
-- **Vía reutilizada (sin listeners paralelos)**: estado nuevo **`reproduciendo`** que se actualiza **dentro de esos mismos handlers ya montados** — `alAvanzar` → `!v.paused` (un `timeupdate` con `paused` a `true` es un *seek* en pausa, no reproducción), `alPausar` → `false`, `alTerminar` → `false`. Cero listeners nuevos, cero cambios en reproducción, guardado, fuentes, proxy, navegación, `getNextEpisode` ni la tecla `N`.
-- **Conclusión: NO se detiene** (regla 7 no aplica): hay vía para saber "reproduciendo" reutilizando la existente.
-
-### Resultado
-
-- **`frontend/src/BotonSiguiente.svelte`**: prop `discreto = false` y clase aplicada con la guardia **`discreto && estado === 'listo'`** (la ficha: aplica solo a `listo`; `resaltado` nunca es discreto, `cargando`/`oculto` sin cambios). CSS nuevo **solo** condicionado a `.discreto`: `opacity: 0.4` + `filter: blur(2px)` + `transition: opacity 200ms, filter 200ms`; se aclara a `opacity: 1` + `filter: none` con `:hover:not(:disabled)`, `:focus-visible` y `:focus-within`; bloque `@media (prefers-reduced-motion: reduce)` con `transition: none`. Sin colores nuevos (solo tokens `--cad-*` ya usados), sin cambios de posición/tamaño, sin `pointer-events`/`visibility`/`display`.
-- **`frontend/src/VistaReproductor.svelte`** (solo para calcular y pasar la prop): estado `reproduciendo` seteado **dentro de `alAvanzar` (`!v.paused`), `alPausar` y `alTerminar`** (cero listeners nuevos), `$: discretoSiguiente = calcularDiscreto(modo, estadoSiguiente, reproduciendo, resaltadoSiguiente)` y `discreto={discretoSiguiente}` en el `<BotonSiguiente>`. **Sin tocar**: cuándo/cada cuánto se guarda el progreso, fuentes, proxy, navegación, `getNextEpisode` ni la tecla `N`.
-- **Comprobaciones estáticas (Docker, estado final)**: `docker compose run --rm app sh -c "cd frontend && npm run check"` → **svelte-check found 0 errors and 0 warnings**; `… npm run build` → **✓ built in 2.31s** (`index-Deyavszo.js` 687.27 kB, hash idéntico al previo a las ediciones temporales; aviso preexistente de chunk >500 kB). Go sin tocar (tarea de UI).
-- **Verificación con Playwright MCP en `http://localhost:34115`** (sin vídeo real; la prop se forzó editando la línea del template a `discreto={true}`/`discreto={false}` y **se revirtió sin commitear**; con bleach/jkanime Ep. 1–3 y la película Bleach Movie 4):
-  1. **`discreto=true`** — medido primero con el **cálculo real** (fuente iframe mega.nz: la tabla "iframe ⇒ `true` siempre" funcionó sin forzar) y luego con la prop forzada: `opacity: 0.4`, `filter: blur(2px)`, `transition: opacity 0.2s, filter 0.2s` (`transitionDuration: 0.2s, 0.2s`).
-  2. **Hover y foco con Tab** — hover → `opacity: 1`, `filter: none`; Tab (3.ª parada: ← Atrás → iframe → botón) → `:focus-visible: true`, `opacity: 1`, `filter: none`.
-  3. **`discreto=false` forzado** (con el cálculo real en `true` por iframe → la prop manda): sin clase `discreto`, `opacity: 1`, `filter: none`, `transitionProperty: all` con **`transitionDuration: 0s`** (default de CSS = sin transición; aspecto idéntico al de T55).
-  4. **`prefers-reduced-motion: reduce` emulado** → `transition: none`, `transitionDuration: 0s` (el aspecto discreto 0.4/blur(2px) se mantiene); sin emular → `0.2s`.
-  5. **Clic y foco estando discreto** — el botón recibe Tab y el clic navega: cabecera pasa a "Ep. 2 · Bleach - 2" con botón "Siguiente ▸ Ep 3" (repetido también durante la prueba del retardo).
-  6. **`cargando` y `oculto` sin cambios** — con `GetNextEpisode` parcheado a **+4 s** en la sesión (patrón de T53/T55): "Siguiente ▸" con `disabled: true` y `aria-busy="true"` **~4 s** (última muestra disabled a los **3650 ms**) **sin clase `discreto`** pese a `discreto={true}` forzado, con `opacity 0.55`/`filter none` (aspecto T55); a los **4061 ms** pasa a "Siguiente ▸ Ep 3" con clase `discreto` y la transición en curso (`opacity 0.810428`). `oculto` con la prop forzada `true` (película, Episodios (1)): **0 botones "Siguiente"** en el DOM.
-  - Errores de consola: **solo preexistentes/ajenos** — 16 × `ERR_CONNECTION_REFUSED` al proxy local `127.0.0.1:41157/proxy` (limitación conocida del flujo navegador), 2 × `TypeError … 'nodes'` de `wails/ipc.js` (1 por recarga) y 1 × 404 `favicon.ico`. **0 errores nuevos**.
-- **Archivos tocados**: `frontend/src/BotonSiguiente.svelte` (prop `discreto` + guardia de estado + CSS discreto) · `frontend/src/VistaReproductor.svelte` (estado `reproduciendo` en los 3 handlers, `calcularDiscreto`, `discretoSiguiente` y la prop en el `<BotonSiguiente>`) · `PROGRESO.md` (fila T57 + este bloque). `api.ts`, `stores.ts`, `frontend/wailsjs/**`, `*.go` y el resto del frontend **sin tocar**.
-- **Desviaciones**: ningún archivo tocado fuera de "Puedes tocar" (regla 7 no se activó). (1) **Las forzuras `discreto={true}`/`discreto={false}` fueron solo de sesión**: se revirtieron; `git diff` final muestra el cálculo real (`discreto={discretoSiguiente}`) y `git status --porcelain` solo los 3 archivos de la lista. (2) **La transición vive en la regla `.discreto`** (donde la sitúa la ficha): al entrar en discreto y al aclarar por hover/foco transiciona 200 ms; al pasar `discreto` a `false` la regla desaparece y el cambio es instantáneo (resultado final igual: `opacity 1`/`filter none`). (3) **El primer parche de sesión con `getNextEpisode` (camelCase) no surtió efecto** (el binding real es **`GetNextEpisode`**); el estado `cargando` quedó observado con el nombre correcto y, además, la primera muestra (~100 ms) de la recarga inicial lo capturó igualmente. El parche se restauró al terminar. (4) `reproduciendo` se actualiza en `timeupdate` con `!v.paused` (un `timeupdate` de *seek* en pausa no cuenta como reproducción); el primer `timeupdate` tras pulsar reproducir llega en <250 ms.
-- **Pendientes (para el humano con el `.exe`, vídeo real)**: se aclara **al pausar**, **al 90 %** (resaltado de T55 sin desenfoque) y el estado `reproduciendo` durante un **HLS/MP4 real** (en este flujo el proxy local no es alcanzable, AGENTS.md) — ninguno de esos tres casos se declara probado. `frontend/wailsjs/**` sin regenerar (no hizo falta). El `Type` de `models.Anime` sigue sin existir (pendiente de producto). → **Cerrados en T58**: la prueba manual con el `.exe` y la release las hizo el humano (v1.2.0 publicada).
-
----
-
-## Cierre documental post-v1.2.0 (etiquetado T58 en su momento)
-
-> **Nota (colisión de numeración, T58):** esta tarea se documentó con el número T58 al cerrar la v1.2.0; después el humano cargó `tareas/T58.md` con otra tarea (bugs visuales de la v1.2.0) que es la fila **T58** de la tabla y el bloque siguiente. Ambos bloques se conservan; ninguno de los dos desinforma.
-
-Solo `.md`, sin tocar código (la regla 7 no se activó: nada fuera de la lista hizo falta). Nombres de métodos verificados con `go doc -all ./internal/app` y leyendo `app.go` (la lista de los 16 métodos Wails y los exportados del núcleo coinciden con el código; **manda el código**):
-
-- **`PROGRESO.md`** (este archivo): encabezado y estado → **T01–T57 hechas**; **T39–T57 = v1.2.0** (con T53b y T57 dentro del ciclo); v1.2.0 **PUBLICADA** (prueba manual con el `.exe` y release hechas por el humano); la prueba manual sale de "Pendientes activos" (cerrada, y con ella los pendientes de vídeo real de la nota T57); fila **T58 `[x]`**.
-- **`AGENTS.md`**: estado **T1–T57** / v1.2.0 publicada; en "Arquitectura (Go)", la lista de métodos Wails de `app.go` corregida a **16** (los 5 originales + los 11 de la v1.2, con sus firmas) y los métodos exportados del núcleo completados (`Arrancar/Cerrar/Buscar/Detalle/Fuentes/GuardarProgreso/VerProgreso` más `Home`, favoritos, borrados, `Retomar` y `SiguienteEpisodio`).
-- **`docs/BITACORA.md`**: filas de sesión de **T53b**, **T57** y **T58**, y la desviación de **T57** (`reproduciendo` en los handlers existentes del `<video>`; botón discreto también en iframe → pendiente del port a Android por la regla **P6**).
-- **`tareas/00_REGLAS.md`**: regla 6 → "salvo en las tareas de regeneración de bindings (T23, T47)".
-- **`docs/DESARROLLO.md`**: "Trabajo con agentes" llevado hasta **T57** (incluye T53b).
-- **`README.md`**: texto de usuario actualizado (Descubrir por proveedor con Reintentar, favoritos, "Siguiente ▸" discreto, "Cómo se usa" con barra lateral y Deshacer, filas nuevas de "Problemas frecuentes"); **`docs/img/Inicio.png` añadida como primera imagen** (el archivo **existe**; nota: en el worktree estaba sin trackear, `??`, preexistente a la sesión).
-- **`docs/firmas/app.md`**: estaba en la lista de tocables pero **no necesitó cambios** (los bloques T37/T45/T46 ya describen los métodos; la lista resumida y verificada vive en `AGENTS.md`).
-- **Archivos no tocados pese a estar desfasados** (fuera de la lista, regla 7): el pie de `docs/PROGRESO_v1.2.md` aún dice "prueba manual pendiente del humano" — es un archivo histórico de solo lectura; el estado vigente es el de este `PROGRESO.md`.
-- **Comprobación**: `git status --porcelain` solo con los `.md` de "Puedes tocar" (más los artefactos de `docs/img/` que **ya estaban** sin commitear antes de empezar: `Inicio.png` `??`, `Detalles.png`/`Reproduccion.png` `M`); ningún `.go` ni archivo de `frontend/` tocado; nombres citados verificados contra `go doc`/`app.go`.
-
----
-
-## T58 — bugs visuales: carátula perdida al retomar y contador de favoritos
-
-Dos bugs no funcionales de la v1.2.0 detectados con el `.exe` (`tareas/T58.md`). Fecha: **2026-10-14**.
-
-### Paso 0 (diagnóstico) — hipótesis confirmadas contra el código real
-
-**Bug A — CONFIRMADO.** Cadena causal completa:
-1. `retomar.ts` (`cargarDetalleEnSegundoPlano`) lanza `openAnime` en segundo plano —que hace `currentDetail.set(null)` al empezar (`stores.ts`)— y navega al reproductor sin esperar el detalle.
-2. `VistaReproductor.guardarProgreso` construía `cover_url: portadaDe(sel)` y la antigua `portadaDe` devolvía **`''`** si `currentDetail` era null (detalle aún en vuelo, el caso típico del primer `timeupdate`/del desmontaje) o si era de otro anime (slugs compartidos entre proveedores: solo comparaba `detalle.id`, sin proveedor).
-3. `internal/db.SaveProgress` **sobrescribe el registro completo** (solo rellena `UpdatedAt`/`Provider` si vienen en cero) → la carátula válida del historial se pisaba con `''`.
-4. Al "← Atrás", `App.refrescarHistorialAlSalir` recarga la barra y `TarjetaHistorial` pinta el placeholder (initial) porque `cover_url === ''`. El segundo retomar "se arreglaba" solo: `cargarDetalleEnSegundoPlano` no recargaba la pareja ya cargada y `currentDetail` seguía siendo el correcto. `anime_title` **no** se pisaba hoy (salía de `sel.title`, correcto en todos los flujos), pero aplica la misma regla por la ficha.
-
-**Bug B — CONFIRMADO.** `cargarFavoritos` solo se llamaba al entrar en la pestaña Favoritos (`VistaInicio.seleccionar`) o al montar un `BotonFavorito` en el detalle; `App.onMount` solo cargaba el historial. El contador `★ Favoritos ({$favoritos.length})` lee el store, que arrancaba vacío → "(0)" hasta que alguien abría la pestaña.
-
-### Correcciones (solo archivos de "Puedes tocar")
-
-- **`frontend/src/VistaReproductor.svelte`** (Bug A): `portadaDe` reescrita con cascada — 1) `currentDetail` **solo si coincide proveedor+slug** (`currentProvider` + `detalle.id`); 2) el registro del historial en memoria (`progressMap[episodeID]` o el último `progresoPrevio`, que al montar viene de `recuperarProgreso`); 3) `''` solo sin ninguna fuente. `tituloDe` con la misma cascada (detalle → `sel.title` → historial). `guardarProgreso` usa `tituloDe(sel)`; **sin tocar** throttle, disparadores, fuentes, proxy, navegación, `getNextEpisode` ni la tecla N.
-- **`frontend/src/App.svelte`** (Bug B): `onMount` añade `cargarFavoritosAlArranque()` (mismo patrón que `cargarHistorial`); si el primer intento deja el estado en `error` (p. ej. backend aún no respondió), **reintenta una vez** pasados 500 ms; si vuelve a fallar, la cuadrícula de la pestaña conserva su "Reintentar". Sin carrera con la pestaña: `cargarFavoritos` corta en `loading`/`ready`.
-- `historial.ts`, `stores.ts`, `favoritos.ts`, `api.ts`, `*.go` y `frontend/wailsjs/**`: **sin tocar** (regla 7 no se activó).
-
-### Compuerta — 2026-10-14, todo en verde
-
-| Comando | Resultado |
-|---|---|
-| `gofmt -l .` | **sin salida** (antes: 25 `.go` marcados por el fantasma CRLF del aviso T36 —worktree Windows tras el merge de la v1.2—; normalizados a LF con `sed 's/\r$//'`, sin registro en git) |
+| `gofmt -l .` | **sin salida** |
 | `go vet ./...` · `go vet -tags integration ./...` | limpios |
 | `go build ./...` | OK |
-| `go test -race -count=1 ./...` | **11 paquetes `ok`** |
-| recuento `^--- PASS` (`-count=1 -v`) | **407** — idéntico al de la compuerta de T56 |
-| `npm run check` | **0 errores, 0 warnings** (también tras revertir el parche de sesión) |
-| `npm run build` | OK (2,65 s; aviso preexistente de chunk >500 kB) |
+| `go test -race -count=1 ./...` | **11 paquetes `ok`** (`miapp` sin tests de paquete) |
+| recuento `^--- PASS` (`-count=1 -v`) | **407** — idéntico al de T56/T58 (mismo recuento exigido) |
+| `npm run check` (frontend) | **svelte-check found 0 errors and 0 warnings** |
+| `wails build -platform windows/amd64` | **OK** → `build/bin/miapp.exe` en 18,7 s (compila con `productVersion` 1.2.1) |
+| `git status --porcelain` | solo los 6 archivos de "Puedes tocar" (más `tareas/T59.md` sin trackear, previo a la sesión) |
+| `git diff --stat --ignore-cr-at-eol -- '*.go'` | **vacío** (ningún `.go` con cambios reales) |
 
-### Verificación con Playwright (dev server :34115)
-
-- **Bug B end-to-end**: con 2 favoritos ya guardados en el backend del contenedor, la pestaña mostró **"Favoritos (2)"** al arrancar; se añadió **Dark Machine** desde la UI (★ del detalle → "Quitar de favoritos" pressed) → contador **(3)** con Descubrir activa; **recarga de la página** → "★ Favoritos (3)" visible **sin entrar en la pestaña**; con Favoritos activa, lista completa de 3 (Dark Machine, Bleach, Dragon Ball Super: Beerus).
-- **Bug A** (con parche de sesión: log en `arrancar` tras `recuperarProgreso`, **revertido**): registro inyectado con el binding real (`SaveProgress` con `cover_url` de JKAnime para `jkanime:bleach:episode:1`), retomado **desde la barra lateral** —el repro del bug— dos veces (con `currentDetail` en vuelo y con el detalle de **otro** anime abierto): `[T58-check]` con `cover`/`title` **no vacíos** en ambos (`prevCover` con la carátula del historial; `mapCover: null` demostró operativo el fallback de memoria). Tras "← Atrás": la tarjeta de la barra **conserva la portada** (sin placeholder) y `GetRecentProgress` confirma el registro en disco con `cover_url`/`anime_title` intactos.
-- Errores de consola: **solo preexistentes/ajenos** — favicon 404, `TypeError … 'nodes'` de `wails/ipc.js` (1 por recarga) y `ERR_CONNECTION_REFUSED` al proxy local `127.0.0.1` (limitación conocida del flujo navegador). **0 errores nuevos**.
-- Entorno de prueba limpiado al terminar: registro de Bleach y favorito Dark Machine borrados (vuelta a los 2 favoritos previos; historial vacío, como al empezar en el contenedor).
-
-### Desviaciones
-
-- **Colisión de numeración T58** (regla 7, decisión documental): `PROGRESO.md` ya tenía una "T58 — cierre documental post-v1.2.0" hecha; el archivo `tareas/T58.md` (cargado por el humano en el commit previo) define esta otra tarea. Resolución: la **fila T58 de la tabla** es esta de bugs; el cierre documental conserva su bloque con el título aclarado "(etiquetado T58 en su momento)" y una nota de colisión. Ningún contenido se borró.
-- **Fantasma CRLF (T36)**: la compuerta inicial marcó 25 `.go` en `gofmt -l` (merge de la v1.2 hecho desde Windows); normalizados a LF sin registrar diff (mismo procedimiento decidido por el humano en T36). `frontend/wailsjs/**` muestra "M" con diff vacío por el mismo motivo (el `wails dev` los reescribe con LF); **sin cambios de contenido**.
-- **Verificación del Bug A por lógica + log** (la ficha lo autoriza): en el navegador el proxy local no reproduce vídeo (AGENTS.md) → `modo !== 'video'` y el guardado real con posición **no se ejercitó**; el log de `portadaDe`/`tituloDe` en el estado exacto del montaje (detalle null/en vuelo) más el registro en disco intacto cubren la causa; la prueba final del guardado con vídeo real es con el `.exe`.
-
-### Pendientes
-
-- **Verificar con el `.exe`** (v1.2.x futura): retomar → reproducir un poco → "← Atrás" y comprobar que la tarjeta de la barra conserva la carátula, y el contador de Favoritos correcto al arrancar. Ninguno de los dos fixes puede probarse con vídeo real en el flujo navegador.
-- `Type` de `models.Anime` sigue sin existir (pendiente de producto heredado, sin cambio con esta tarea).
+**No se creó tag ni release** (lo hace el humano). Detalle largo de T56/T57/T58/cierre en `docs/PROGRESO_v1.2.md`; sesión en `docs/BITACORA.md`.

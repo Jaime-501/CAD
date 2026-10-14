@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.2.1
+
+### Añadido
+
+- **Botón "Siguiente ▸" discreto durante la reproducción** (T57): en el reproductor, cuando el siguiente episodio está listo el botón queda translúcido y desenfocado hasta que se le pasa el ratón o recibe el foco con el teclado; nunca es discreto al llegar al 90 % del episodio (resaltado) y respeta `prefers-reduced-motion`. (La mejora no figuraba en el CHANGELOG: la 1.2.0 no tenía entrada.)
+
+### Corregido
+
+- **Carátula del historial al retomar** (T58): al retomar un anime desde la barra lateral mientras el detalle aún cargaba (o con otro anime abierto), la tarjeta del historial ya no perdía la portada: título y portada se toman en cascada (detalle actual del mismo anime → registro en memoria → vacío).
+- **Contador de favoritos al arrancar** (T58): "★ Favoritos (N)" muestra el recuento real desde el arranque de la app, sin esperar a abrir la pestaña (con un único reintento si el backend aún no respondía).
+
 ## 1.1.0
 
 ### Añadido
