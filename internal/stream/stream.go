@@ -248,9 +248,13 @@ func aplicarCORS(w http.ResponseWriter, r *http.Request) {
 // conocemos (?e=, ?st=, X-Amz-*, …) y por eso httpx puede registrar sus
 // URLs enteras, pero aquí no se puede enumerar el nombre que use cada CDN
 // → se mantiene sin query (regla: ninguna URL firmada completa al log).
+// T62 añade la redacción del PATH: algunos CDN esconden el token ahí
+// (MP4Upload /d/<token>/video.mp4, zilla /m3u8/<32 hex>); logx.Redact
+// enmascara los segmentos opacos conservando host, puerto y el último
+// segmento con extensión. La URL real del reenvío no se toca.
 func urlSegura(u *url.URL) string {
 	if u == nil {
 		return ""
 	}
-	return u.Scheme + "://" + u.Host + u.Path
+	return logx.Redact(u.Scheme + "://" + u.Host + u.Path)
 }

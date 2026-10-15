@@ -153,3 +153,79 @@ func TestRedactURLFirmada(t *testing.T) {
 		t.Errorf("parámetros inocentes alterados: %q", otros)
 	}
 }
+
+// TestRedactPath: T62. El token de un medio puede ir en el PATH (no solo en
+// la query), así que Redact enmascara los segmentos opacos conservando host,
+// puerto y el último segmento con extensión; los slugs de anime y las
+// queries de firma existentes no se rompen.
+func TestRedactPath(t *testing.T) {
+	casos := []struct {
+		nombre  string
+		in      string
+		quiere  string // subcadena exacta que debe aparecer
+		secrets []string
+	}{
+		{
+			nombre:  "MP4Upload con TOKEN_DE_PRUEBA (fixture)",
+			in:      "https://a2.mp4upload.com:183/d/TOKEN_DE_PRUEBA/video.mp4",
+			quiere:  "https://a2.mp4upload.com:183/d/***/video.mp4",
+			secrets: []string{"TOKEN_DE_PRUEBA"},
+		},
+		{
+			nombre:  "MP4Upload con token realista de 12 alfanuméricos",
+			in:      "https://a2.mp4upload.com:183/d/Xq7bK2mNpR4t/video.mp4",
+			quiere:  "https://a2.mp4upload.com:183/d/***/video.mp4",
+			secrets: []string{"Xq7bK2mNpR4t"},
+		},
+		{
+			nombre:  "MP4Upload con query de firma además del token",
+			in:      "https://a2.mp4upload.com:183/d/TOKEN_DE_PRUEBA/video.mp4?st=FIRMA_ST&other=1",
+			quiere:  "https://a2.mp4upload.com:183/d/***/video.mp4?st=***&other=1",
+			secrets: []string{"TOKEN_DE_PRUEBA", "FIRMA_ST"},
+		},
+		{
+			nombre:  "manifiesto HLS de zilla (/m3u8/<32 hex>)",
+			in:      "https://player.zilla-networks.com/m3u8/65f33e9a44ff7767faf60d1dae9eb1e6",
+			quiere:  "https://player.zilla-networks.com/m3u8/***",
+			secrets: []string{"65f33e9a44ff7767faf60d1dae9eb1e6"},
+		},
+		{
+			nombre: "segmento HLS real (base64) conserva el .ts",
+			in:     "https://cdn5.ducvomes.com/jp/segs/1/v2x/azRGek01N1ZwOXFENll3RFRvL2dIUT09/TVB1LzB1Z2tlaWhvaWdsTnJBYXpmQT09/10v1x.ts",
+			quiere: "https://cdn5.ducvomes.com/jp/segs/1/v2x/***/***/10v1x.ts",
+			secrets: []string{
+				"azRGek01N1ZwOXFENll3RFRvL2dIUT09",
+				"TVB1LzB1Z2tlaWhvaWdsTnJBYXpmQT09",
+			},
+		},
+		{
+			nombre:  "segmento /segs/<id>/NNN.html (id opaco, número conservado)",
+			in:      "https://cdn.example.test/segs/AbC123xY9zQ0wErT/000.html",
+			quiere:  "https://cdn.example.test/segs/***/000.html",
+			secrets: []string{"AbC123xY9zQ0wErT"},
+		},
+		{
+			nombre: "slug corto de anime con número: NO se toca",
+			in:     "https://jkanime.net/bleach/1/",
+			quiere: "https://jkanime.net/bleach/1/",
+		},
+		{
+			nombre: "slug largo con guiones y año: NO se toca",
+			in:     "https://animeav1.com/media/demon-slayer-kimetsu-no-yaiba-2019/1/__data.json",
+			quiere: "https://animeav1.com/media/demon-slayer-kimetsu-no-yaiba-2019/1/__data.json",
+		},
+	}
+	for _, c := range casos {
+		t.Run(c.nombre, func(t *testing.T) {
+			out := Redact(c.in)
+			for _, s := range c.secrets {
+				if strings.Contains(out, s) {
+					t.Errorf("secreto %q visible: %q", s, out)
+				}
+			}
+			if !strings.Contains(out, c.quiere) {
+				t.Errorf("Redact(%q) = %q; quería ver %q", c.in, out, c.quiere)
+			}
+		})
+	}
+}

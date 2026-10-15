@@ -5,6 +5,12 @@
 // (una query que autentica el recurso: ?e=/t=/st=/op= de los players o
 // los X-Amz-* de S3). Todo lo que pase por este paquete (mensaje y
 // atributos) se limpia con Redact antes de escribirse.
+//
+// T62: además de la query, algunos CDN esconden el token en el PATH del
+// medio (MP4Upload: /d/<token>/video.mp4; zilla: /m3u8/<32 hex>), así que
+// Redact también enmascara los segmentos opacos de la ruta conservando
+// host, puerto y el último segmento con extensión (el nombre del archivo,
+// que es lo útil para el diagnóstico).
 package logx
 
 import (
@@ -12,6 +18,7 @@ import (
 	"log/slog"
 	"os"
 	"regexp"
+	"strings"
 	"sync/atomic"
 	"time"
 )
@@ -31,11 +38,28 @@ var (
 	// registra (T29: ?e=..&t=..&op=.. de jkplayer, ?st=.. del CDN,
 	// ?Signature=.. y los X-Amz-*/awsaccesskeyid/policy de S3/CloudFront).
 	reFirma = regexp.MustCompile(`(?i)([?&](?:e|t|st|op|key|sig|signature|sign|expires|expiry|policy|key-pair-id|awsaccesskeyid|x-amz-algorithm|x-amz-credential|x-amz-date|x-amz-expires|x-amz-signedheaders|x-amz-signature|x-amz-security-token|x-amz-key-pair-id)=)[^&\s"'<>]+`)
+	// T62: token embebido en el PATH del medio (no en la query). reURLPath
+	// aísla esquema+host y path de una URL absoluta; la query queda fuera
+	// (la siguen cubriendo reParam/reFirma).
+	reURLPath = regexp.MustCompile(`(?i)https?://[^\s/?#"'<>]+(?:/[^\s?#"'<>]*)?`)
+	// reSegmentoLargo: blob sin separadores de palabra (hex, base64url, ids)
+	// de 12+ caracteres con pinta de token. Los guiones quedan fuera a
+	// propósito: separan las palabras de un slug ("demon-slayer-kimetsu-no-
+	// yaiba-2019") y por eso no se enmascaran (el diagnóstico no se
+	// destruye). `_`/`+`/`=` sí (TOKEN_DE_PRUEBA, padding base64). El umbral
+	// es 12, no 16: los ids reales de MP4Upload son de 12 y el token de
+	// prueba mide 15.
+	reSegmentoLargo = regexp.MustCompile(`^[A-Za-z0-9_+=]{12,}$`)
+	// reSegmentoAlnum: segmento alfanumérico puro, para ids cortos que
+	// mezclan letras y dígitos sin separadores (el token de 12 de MP4Upload).
+	reSegmentoAlnum = regexp.MustCompile(`^[A-Za-z0-9]+$`)
 )
 
 // Redact enmascara secretos en una cadena: cabeceras Cookie/Set-Cookie/
 // Authorization, parámetros csrf/token/_token en URLs y cuerpos, sus
-// variantes JSON y las URLs firmadas (query que autentica el recurso).
+// variantes JSON, las URLs firmadas (query que autentica el recurso) y los
+// segmentos opacos del path de una URL (token de un MP4/HLS escondido en la
+// ruta).
 func Redact(s string) string {
 	if s == "" {
 		return s
@@ -45,7 +69,73 @@ func Redact(s string) string {
 	s = reLine.ReplaceAllString(s, "${1}${2}***")
 	s = reKV.ReplaceAllString(s, "${1}${2}***")
 	s = reFirma.ReplaceAllString(s, "${1}***")
+	s = redactarPath(s)
 	return s
+}
+
+// redactarPath enmascara los segmentos opacos del path de cada URL absoluta
+// que aparezca en s (T62). Conserva esquema, host, puerto, la query y el
+// último segmento con extensión; solo cambia los segmentos intermedios que
+// parecen un token/identificador (no los slugs de un anime).
+func redactarPath(s string) string {
+	return reURLPath.ReplaceAllStringFunc(s, func(u string) string {
+		i := strings.Index(u, "://")
+		if i < 0 {
+			return u
+		}
+		resto := u[i+len("://"):]
+		j := strings.IndexByte(resto, '/')
+		if j < 0 {
+			return u // sin path: nada que redactar
+		}
+		return u[:i+len("://")+j] + redactarSegmentos(resto[j:])
+	})
+}
+
+// redactarSegmentos sustituye por *** los segmentos opacos de un path.
+func redactarSegmentos(path string) string {
+	partes := strings.Split(path, "/")
+	for i, p := range partes {
+		if p != "" && segmentoOpaco(p) {
+			partes[i] = "***"
+		}
+	}
+	return strings.Join(partes, "/")
+}
+
+// segmentoOpaco decide si un segmento del path es un secreto (token, hash,
+// id) que no debe registrarse. Un nombre de archivo con extensión se
+// conserva siempre: es lo útil para el diagnóstico ("video.mp4", "10v1x.ts").
+func segmentoOpaco(s string) bool {
+	if strings.ContainsRune(s, '.') {
+		return false
+	}
+	// Blob sin separadores de palabra (hex/base64/ids) con pinta de token.
+	if reSegmentoLargo.MatchString(s) {
+		return true
+	}
+	// Id corto alfanumérico que mezcla letras y dígitos (token de MP4Upload).
+	if len(s) >= 10 && reSegmentoAlnum.MatchString(s) && mezclaLetrasYDigitos(s) {
+		return true
+	}
+	return false
+}
+
+// mezclaLetrasYDigitos indica si s contiene al menos una letra y un dígito.
+func mezclaLetrasYDigitos(s string) bool {
+	var letra, digito bool
+	for _, r := range s {
+		switch {
+		case r >= '0' && r <= '9':
+			digito = true
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z':
+			letra = true
+		}
+		if letra && digito {
+			return true
+		}
+	}
+	return false
 }
 
 func redactAttr(a slog.Attr) slog.Attr {

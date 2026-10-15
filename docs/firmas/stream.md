@@ -7,6 +7,7 @@
 **Bloques de este archivo y tarea que los creó:**
 
 - `### T19 — internal/stream` → creado por **T19** (Proxy local de streaming).
+- `### T62 — internal/stream` → creado por **T62** (Redactar tokens en el PATH de las URLs de medio): `urlSegura` pasa el resultado por `logx.Redact` (los segmentos opacos del path se enmascaran; la URL real del reenvío no se toca).
 
 ---
 
@@ -41,8 +42,16 @@
 
 **Anti-SSRF** (`red.go`): `net.Dialer.Control` sobre la **IP ya resuelta** (`net.SplitHostPort` + `net.ParseIP`), invocado antes de conectar **y en cada salto de redirect** (mismo transporte). Rechaza `IsLoopback`, `IsPrivate`, `IsLinkLocalUnicast/Multicast`, `IsMulticast`, `IsUnspecified` y todo `0.0.0.0/8` (IPv4 e IPv6, incluidas mapeadas) → envuelve `ErrDestinoBloqueado`. `ipPublica(ip)` es la función pura.
 
-**Tests** (`internal/stream/`, 23 tests, red de nada, `go test -race` verde; `TestMain` instala logger descartable para `logx.Request`):
+**Tests** (`internal/stream/`, 24 tests, red de nada, `go test -race` verde; `TestMain` instala logger descartable para `logx.Request`):
 
 - `stream_test.go`: bind solo loopback · **`Cerrar` termina el goroutine de `Serve` y el puerto queda muerto** (`runtime.NumGoroutine()` vuelve a la base, T29) · inyección de `Referer`/`Headers` de sesión + rechazo de `Cookie`/`Authorization` del cliente + la fuente devuelta **sin cabeceras** (T29) · `Range` → `206` con `Content-Range` · sesión caducada/desconocida → `404` · cancelar al reproductor cancela el upstream · `OPTIONS` → `204` + CORS · CORS también en `404`/`400`/`405` · **destino privado rechazado con la opción por defecto (403, upstream sin tocar)** · **redirect a loopback rechazado por defecto** (primer salto ficticio con un transporte truca para no salir a la red) · `400` con destino no http/https · `.vtt` → `text/vtt` · límite de sesiones · doer inyectado · `Register` sin base.
 - `manifiesto_test.go`: reescritura de tags/relativas (fixture **artificial**, `testdata/manifiesto_etiquetas.m3u8`) · manifiesto **real** (`testdata/manifiesto.m3u8`, 353 segmentos, capturado en el sondeo) · end-to-end con Referer, `Content-Type` y `Content-Length` · límite de 5 MB → `502` · cuerpo sin `#EXTM3U` → se pasa tal cual.
 - `red_test.go`: tabla `ipPublica` (loopback/privada/link-local/no especificada/multicast v4+v6 vs. globales) · `controlRed(false)` activo y `controlRed(true)` nil · dialer del cliente restrictivo bloquea loopback/privadas con `ErrDestinoBloqueado`.
+
+---
+
+### T62 — internal/stream
+
+- **`urlSegura(u *url.URL) string`** (misma firma): ahora devuelve `logx.Redact(u.Scheme + "://" + u.Host + u.Path)`. Antes solo recortaba la query; el token de un medio puede ir en el **path** (`/d/<token>/video.mp4` de MP4Upload, `/m3u8/<32 hex>` de zilla), así que se pasa por `logx.Redact` —que desde T62 también enmascara los segmentos opacos del path (véase `docs/firmas/logx.md`)—. Sigue **sin query** (el nombre del parámetro firma lo elige cada CDN y no se puede enumerar) y conserva host, puerto y el último segmento con extensión. `nil` → `""`.
+- **Sin cambios** en el reenvío: `urlSegura` solo alimenta `logx.Request`; la URL real que se pide al origen (`u.String()` en `reenvio.go`) no se modifica. Como el proxy ya pasa sus logs por el handler de `logx`, la redacción de `urlSegura` es defensa en profundidad (idempotente: `***` no vuelve a coincidir).
+- Test nuevo: `TestURLSeguraRedactaTokensDelPath` (MP4Upload con `TOKEN_DE_PRUEBA` y con token de 12, manifiesto zilla, slug `/bleach/1/` intacto, `nil` → `""`) → `internal/stream` pasa de 23 a **24 tests**.

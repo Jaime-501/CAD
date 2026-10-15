@@ -617,6 +617,46 @@ func TestRegisterSinBaseSeDevuelveIgual(t *testing.T) {
 	}
 }
 
+// TestURLSeguraRedactaTokensDelPath: T62. urlSegura registra la URL de
+// destino del reenvío; algunos CDN esconden el token en el PATH (MP4Upload
+// /d/<token>/video.mp4, zilla /m3u8/<32 hex>), así que se enmascara sin
+// tocar host, puerto ni el último segmento con extensión. Un slug normal no
+// se toca.
+func TestURLSeguraRedactaTokensDelPath(t *testing.T) {
+	casos := []struct {
+		in, quiere string
+	}{
+		{
+			"https://a2.mp4upload.com:183/d/TOKEN_DE_PRUEBA/video.mp4?st=FIRMA_ST",
+			"https://a2.mp4upload.com:183/d/***/video.mp4",
+		},
+		{
+			"https://a2.mp4upload.com:183/d/Xq7bK2mNpR4t/video.mp4",
+			"https://a2.mp4upload.com:183/d/***/video.mp4",
+		},
+		{
+			"https://player.zilla-networks.com/m3u8/65f33e9a44ff7767faf60d1dae9eb1e6",
+			"https://player.zilla-networks.com/m3u8/***",
+		},
+		{
+			"https://jkanime.net/bleach/1/",
+			"https://jkanime.net/bleach/1/",
+		},
+	}
+	for _, c := range casos {
+		u, err := url.Parse(c.in)
+		if err != nil {
+			t.Fatalf("url.Parse(%q): %v", c.in, err)
+		}
+		if got := urlSegura(u); got != c.quiere {
+			t.Errorf("urlSegura(%q) = %q; quería %q", c.in, got, c.quiere)
+		}
+	}
+	if urlSegura(nil) != "" {
+		t.Errorf("urlSegura(nil) = %q; quería vacío", urlSegura(nil))
+	}
+}
+
 // doerFalso responde siempre 200 "ok" y cuenta las llamadas.
 type doerFalso struct {
 	llamadas atomic.Int32

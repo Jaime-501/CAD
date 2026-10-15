@@ -1,4 +1,4 @@
-# PROGRESO — Comfort Anime Desktop (T01–T60 hechas)
+   # PROGRESO — Comfort Anime Desktop (T01–T60 y T62 hechas)
 
 > Este archivo es la **memoria entre sesiones**. Cada sesión lo lee al inicio y lo actualiza al final.
 > Reglas y layout: `tareas/00_REGLAS.md`. Detalle de cada tarea: `tareas/Txx.md`.
@@ -128,6 +128,8 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha y verificada
 | [x] | T58 | Carátula perdida al retomar y contador de favoritos | T57 |
 | [x] | T59 | Cierre documental post-v1.2.0 y de la v1.2.1 (renombrado: el cierre era T58; los bugs se quedan con T58) | T58 |
 | [x] | T60 | Resolver de MP4Upload en paquete neutro `embeds` (sin cableado) | Informe de adds |
+
+| [x] | T62 | Redactar tokens en el PATH de las URLs de medio (`logx` + `stream`) | T60 |
 
 T01–T29 = v1.0 (`docs/PROGRESO_v1.0.md`) · T30–T35 = v1.1.0 AnimeAV1 (`docs/PROGRESO_v1.1.md`) · T36 = cierre de la v1.1.0 · T37 = portabilidad Android · T38 = cierre documental de T37.
 T39–T57 = v1.2.0 (Home, historial lateral, favoritos, "Siguiente" y su estado discreto; **incluye T53b y T57**); plan en `tareas/v1.2_PLAN.md`, detalle **T39–T58 + cierres T56/T59** archivado en `docs/PROGRESO_v1.2.md`, con resúmenes al final de este archivo.
@@ -412,3 +414,38 @@ Hecha el **2026-10-15** (primera tarea del informe de adds que se ejecuta). Crea
 
 - **Cablear el resolver a `jkanime` y `animeav1`** (tarea siguiente): convertir el iframe de MP4Upload en fuente MP4 directa desde ambos proveedores; hoy el paquete `embeds` no lo consume nadie.
 - Sin tag ni release: no aplica a esta tarea.
+
+---
+
+## T62 — Redactar tokens en el PATH de las URLs de medio (logx + stream)
+
+Hecha el **2026-10-15**, tarea propia nacida del tripwire del req6 de T61: al servir un MP4 resuelto de MP4Upload por el proxy, el log registraba `https://a2.mp4upload.com:183/d/<token>/video.mp4` con el token en el **path** (`logx.Redact` solo cubría la query y `stream.urlSegura` conservaba esquema+host+ruta). **No retoma T61.**
+
+**Qué se hizo:**
+
+- **`internal/logx`**: `Redact` aplica ahora `redactarPath` (tras `reFirma`), que enmascara con `***` los **segmentos opacos** del path de cada URL `http(s)`, conservando esquema, host, puerto, la query y el último segmento con extensión. Un segmento es opaco si no tiene punto y (a) encaja en `^[A-Za-z0-9_+=]{12,}$` o (b) es alfanumérico de 10+ que mezcla letras y dígitos. Los guiones quedan fuera de ambas reglas (no se tocan los slugs). Internos nuevos (sin cambio de API): `reURLPath`, `reSegmentoLargo`, `reSegmentoAlnum`, `redactarPath`, `redactarSegmentos`, `segmentoOpaco`, `mezclaLetrasYDigitos`.
+- **`internal/stream`**: `urlSegura` devuelve `logx.Redact(scheme://host/path)` (solo `urlSegura` y sus tests, como autoriza la tarea). Sigue sin query; la URL real que el proxy pide al origen **no se toca**, solo el log.
+- **Tests**: `internal/logx/logx_test.go::TestRedactPath` (8 subtests) y `internal/stream/stream_test.go::TestURLSeguraRedactaTokensDelPath`.
+
+**Compuerta (resultado real):**
+
+| Comando | Resultado |
+|---|---|
+| `gofmt -l .` | **sin salida** |
+| `go build ./...` | OK |
+| `go vet ./...` · `go vet -tags integration ./...` | limpios |
+| `go test -race -count=1 ./...` | **10 de 11 paquetes `ok`**; `internal/app` FAIL por los **2 E2E offline pre-existentes de T61** (salida a `mp4upload.com` en el sitio falso, req7 de T61) — **no** por los logs |
+| recuento `^--- PASS` (`-count=1 -v`) | **432** top-level (**430** antes; +2) y **281** subtests (**273** antes; +8) |
+| `npm run check` (frontend) | **0 errores, 0 avisos** (sin cambios) |
+
+**Desviaciones:**
+
+- **Diseño (b) elegido frente a (a):** regla general de segmentos opacos en vez de un patrón específico `/d/<token>/`. (a) es frágil (un patrón por CDN), no cubre `/m3u8/<32 hex>` ni los segmentos base64 de zilla, y envejece con cada CDN; (b) cubre el caso real de MP4Upload y los manifiestos/segmentos HLS sin enumerar rutas, y se refina excluyendo segmentos con guiones para no destruir el diagnóstico (los slugs `/bleach/1/`, `demon-slayer-kimetsu-no-yaiba-2019` y `__data.json` salen intactos). Detalle en `docs/firmas/logx.md`.
+- **Umbral del blob largo en 12, no 16:** `TOKEN_DE_PRUEBA` mide 15 y los ids reales de MP4Upload, 12.
+- **2 FAIL pre-existentes en `internal/app`:** `TestE2EFlujoCompletoOffline` y `TestE2EAnimeAV1FlujoCompletoOffline` fallan en `app_e2e_test.go:958/1785` ("el flujo intentó salir del sitio falso … mp4upload.com") porque T61 aún no ha hecho su req7 (servidor falso del embed). `comprobarLogsSinSecretos` (paso 8 / paso 6) **sí pasa**: el requisito 4 de T62 se cumple. Fuera del alcance de T62 (`internal/app` no es tocable; no se retoma T61).
+
+**Pendientes:**
+
+- Ninguno propio. **T61** sigue en curso (req5–req8); el fix de T62 **desbloquea su req6**.
+
+**Archivos tocados:** `internal/logx/logx.go`, `internal/logx/logx_test.go`, `internal/stream/stream.go` (**solo `urlSegura`**), `internal/stream/stream_test.go`, `docs/firmas/logx.md`, `docs/firmas/stream.md`, `PROGRESO.md`. Nada fuera de "Puedes tocar" (regla 7 no se activó).
