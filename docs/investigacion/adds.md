@@ -141,7 +141,7 @@ de ejecución).
 
 | Host | Clasificación | Evidencia |
 |---|---|---|
-| MP4Upload | **RESOLVIBLE** | El HTML trae la URL del vídeo en claro. `Range: 0-0` → `206`, `Content-Range: bytes 0-0/114919837` (114 MB), `nginx`, sin comprobación de Referer. **La URL no lleva query**: ni `expires`, ni `ip`, ni ningún otro parámetro — el token va embebido en el path (`/d/<token>/video.mp4`), así que no es una URL firmada visible. Repetida ~45 min después, **volvió a dar `206` con el mismo tamaño total** (idénticos `Last-Modified` y `Cache-Control: no-cache`; sin `Expires` ni `Age`). El elemento del que se extrae es el `src` del `player.src({ type: "video/mp4", src: … })` del setup de videojs: **1 ocurrencia** en la página, **cero** etiquetas `<source>`. Con una sola muestra de HTML no se puede afirmar que la forma del elemento sea idéntica en todos los episodios |
+| MP4Upload | **RESOLVIBLE** | El HTML trae la URL del vídeo en claro. `Range: 0-0` → `206`, `Content-Range: bytes 0-0/114919837` (114 MB), `nginx`, y **sí comprueba `Referer`** (medido en T60, 2026-10-15: sin `Referer` → `403`; con un `Referer` del dominio `mp4upload.com` → `206`; con uno ajeno → `403`). **La URL no lleva query**: ni `expires`, ni `ip`, ni ningún otro parámetro — el token va embebido en el path (`/d/<token>/video.mp4`), así que no es una URL firmada visible. Repetida ~45 min después, **volvió a dar `206` con el mismo tamaño total** (idénticos `Last-Modified` y `Cache-Control: no-cache`; sin `Expires` ni `Age`). El elemento del que se extrae es el `src` del `player.src({ type: "video/mp4", src: … })` del setup de videojs: **1 ocurrencia** en la página, **cero** etiquetas `<source>`. Con una sola muestra de HTML no se puede afirmar que la forma del elemento sea idéntica en todos los episodios |
 | Voe | **RESOLVIBLE FRÁGIL** | Las fuentes vienen en un `<script type="application/json">` **cifrado**; el descifrador está en `/js/loader.<hash>.js` y es determinista: sustitución de pares de 2 caracteres (`@$`, `!!`, `^^`, `%?`, `#&`, `*~`) + ROT13, y luego `atob` + `JSON.parse`. Portable a Go, pero el nombre del loader rota con hash |
 | Byse | **RESOLVIBLE FRÁGIL** | `GET /api/videos/<id>/embed/details` (JSON) devuelve el host del reproductor, que es **el mismo bundle servido desde un dominio espejo rotatorio**; el jugador exige proof-of-work al pulsar play (`/assets/pow-<hash>.js`) |
 | UPNShare | **RESOLVIBLE FRÁGIL** | `GET /api/v1/info?id=…` devuelve un blob **hex cifrado** (1584 B binarios, no JSON). El descifrado vive en el bundle; el jugador es vidstack + hls.js con IMA y con cadenas "Banner Ads"/"Push Ads" |
@@ -202,7 +202,8 @@ parking; solo se observó en navegador.
    y sirven `/blocked`; el resto lo tolera pero sigue sembrando anuncios. Sobre los
    popups tras clic y sobre WebView2, NO CONCLUYENTE.
 4. **MP4Upload es el único RESOLVIBLE limpio**: la URL del MP4 sale en claro del HTML
-   (sin query: el token va en el path) y el CDN responde a `Range` sin mirar Referer
+   (sin query: el token va en el path) y el CDN responde a `Range` con un `Referer` del
+   dominio `mp4upload.com` (sin él da `403`; medido en T60)
    (114 MB confirmados, y sigue respondiendo a los ~45 min).
 5. **Voe, Byse, UPNShare y Streamtape son RESOLVIBLES FRÁGILES**: cada uno exige su
    descifrado o flujo (cifrado de 2 caracteres + ROT13, API + proof-of-work, API

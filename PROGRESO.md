@@ -1,4 +1,4 @@
-# PROGRESO — Comfort Anime Desktop (T01–T59 hechas)
+# PROGRESO — Comfort Anime Desktop (T01–T60 hechas)
 
 > Este archivo es la **memoria entre sesiones**. Cada sesión lo lee al inicio y lo actualiza al final.
 > Reglas y layout: `tareas/00_REGLAS.md`. Detalle de cada tarea: `tareas/Txx.md`.
@@ -127,6 +127,7 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha y verificada
 | [x] | T57 | UI: botón "Siguiente ▸" discreto durante la reproducción | T55 |
 | [x] | T58 | Carátula perdida al retomar y contador de favoritos | T57 |
 | [x] | T59 | Cierre documental post-v1.2.0 y de la v1.2.1 (renombrado: el cierre era T58; los bugs se quedan con T58) | T58 |
+| [x] | T60 | Resolver de MP4Upload en paquete neutro `embeds` (sin cableado) | Informe de adds |
 
 T01–T29 = v1.0 (`docs/PROGRESO_v1.0.md`) · T30–T35 = v1.1.0 AnimeAV1 (`docs/PROGRESO_v1.1.md`) · T36 = cierre de la v1.1.0 · T37 = portabilidad Android · T38 = cierre documental de T37.
 T39–T57 = v1.2.0 (Home, historial lateral, favoritos, "Siguiente" y su estado discreto; **incluye T53b y T57**); plan en `tareas/v1.2_PLAN.md`, detalle **T39–T58 + cierres T56/T59** archivado en `docs/PROGRESO_v1.2.md`, con resúmenes al final de este archivo.
@@ -310,7 +311,7 @@ fricción, H3 se sostiene).
   extractores de medio directo (T60–T64 abajo) o dejar los iframes como están y solo
   purgar los hosts muertos.
 - **Tareas propuestas** (sin renumerar la tabla de arriba; se numeran cuando se arranquen):
-  **T60** extractor MP4Upload (más barato, ya validado) · **T61** extractor Voe (portar el
+  **T60 hecha** (resolver MP4Upload en paquete neutro `embeds`, sin cableado; más barato, ya validado) · **T61** extractor Voe (portar el
   descifrado del `loader`) · **T62** extractor Byse (`/api/videos/<id>/embed/details`;
   el proof-of-work queda fuera) · **T63** UPNShare (API cifrada) · **T64** Streamtape
   (token + captcha) · **T65** purga de hosts muertos del inventario (`sfastwish.com`;
@@ -365,3 +366,49 @@ Cierre documental de la **v1.2.1**, solo documentación y versión, sin cambios 
 | `git diff --stat --ignore-cr-at-eol -- '*.go'` | **vacío** (ningún `.go` con cambios reales) |
 
 **No se creó tag ni release** (lo hace el humano). Detalle largo de T56/T57/T58/cierre en `docs/PROGRESO_v1.2.md`; sesión en `docs/BITACORA.md`.
+
+---
+
+## T60 — Resolver de MP4Upload en paquete neutro `embeds` (sin cableado)
+
+Hecha el **2026-10-15** (primera tarea del informe de adds que se ejecuta). Crea el paquete **neutro** `internal/scraper/embeds` con la interfaz `Resolver` y el resolver de MP4Upload —el único host RESOLVIBLE limpio del informe— y **sin cablearlo** a ningún proveedor (eso es la tarea siguiente). Depende solo de `models`, `httpx` y `logx`; no importa `jkanime`, `extractors` ni `animeav1`.
+
+**Qué se hizo:**
+
+- **Fixture (requisito 1)**: copiado `docs/investigacion/adds/mp4upload_embed.html` → `internal/scraper/embeds/testdata/mp4upload_embed.html`. Comprobado que contiene el elemento del que se extrae la URL: el `src` del `player.src({ type: "video/mp4", src: "https://a2.mp4upload.com:183/d/TOKEN_DE_PRUEBA/video.mp4" })` (token ya sanitizado). Sin ejecutar JS.
+- **Interfaz `Resolver`** (`embeds.go`): `Name() string`, `CanHandle(url string) bool`, `Resolve(ctx, url, referer string) ([]models.VideoSource, error)`.
+- **Resolver MP4Upload** (`mp4upload.go`): descarga el embed con el `httpx.HTTPDoer` inyectado (límite `2 << 20`), extrae la URL del bloque `player.src({ … })` con dos regex (bloque + atributo `src`) y devuelve una fuente `Type: "mp4"`, `Server: "MP4Upload"` y `Referer` = la URL del embed. `CanHandle` reconoce `mp4upload.com`/`www.mp4upload.com` en las formas `/embed-<id>.html` y `/<id>`.
+- **Errores tipados** (`errors.Is`): `ErrSinMedio`, `ErrCuerpoGrande`, `ErrURLInvalida`; 4xx/5xx y `ctx` cancelado llegan de `httpx` como `*ScraperError` (`ErrNotFound`/`ErrServerError`/`ErrNilDoer`/`context.Canceled`); nunca pánico.
+- **Tests**: `embeds_test.go` (2: interfaz + guardia de dependencias con `go list -deps .`), `mp4upload_test.go` (11: tabla de `CanHandle`, fixture real con `httptest.Server`, forma directa, Referer de la petición, 404, 500, página sin medio, ctx cancelado, cuerpo enorme, sin doer, URL inválida) y `embeds_integration_test.go` (1 con `-tags integration`).
+- **Smoke con red**: resuelve un embed real y verifica `Range: bytes=0-0` → **206**. La URL del embed **no se persiste**: sale de la variable de entorno `MIAPP_MP4UPLOAD_EMBED` (id de un episodio real vigente); sin ella el test se salta.
+
+**Pasos de extracción verificados contra el fixture:** descargar el HTML → aislar `player.src({ … })` → leer su `src` (URL del MP4 en claro) → devolver `VideoSource{Type: mp4, Server: MP4Upload, Referer: <embed>}`. Coinciden con `adds.md` (1 ocurrencia de `player.src`, cero `<source>`).
+
+**Cabeceras del CDN y temporalidad:** el CDN responde a `Range: bytes=0-0` con **206** (`nginx`, `Content-Range: bytes 0-0/114919837`, 114 MB). **Desviación del informe**: en vivo (2026-10-15) el CDN **exige Referer** —403 sin él y 206 con cualquier Referer del dominio `mp4upload.com`; 403 con un Referer ajeno—, por eso la fuente lleva `Referer` = la URL del embed (`Headers` vacío). La URL del MP4 **no lleva query** (el token va en el path `/d/<token>/video.mp4`): no hay `expires`/`ip` visibles, pero se trata como temporal (regla 9, no se cachea ni persiste; no se registra completa —`logx.Redact`—).
+
+**Compuerta (resultado real):**
+
+| Comando | Resultado |
+|---|---|
+| `gofmt -l .` | **sin salida** |
+| `go vet ./...` · `go vet -tags integration ./...` | limpios |
+| `go build ./...` | OK |
+| `go test -race -count=1 ./...` | **11 paquetes `ok`** |
+| recuento `^--- PASS` (`-count=1 -v`) | **420** (antes **407**; +13 de `embeds`) |
+| `go test -tags integration ./internal/scraper/embeds/ -v` | **PASS** con `MIAPP_MP4UPLOAD_EMBED` (smoke real 206); **SKIP** sin ella |
+| `go list -deps ./internal/scraper/embeds` (grep jkanime/extractors/animeav1/wailsapp) | **vacío** |
+| `npm run check` (frontend) | **0 errores, 0 avisos** (sin cambios) |
+
+**Archivos tocados:** `internal/scraper/embeds/**` (nuevo: `embeds.go`, `mp4upload.go`, `embeds_test.go`, `mp4upload_test.go`, `embeds_integration_test.go`, `testdata/mp4upload_embed.html`), `docs/firmas/embeds.md` (nuevo), `tareas/00_REGLAS.md` (árbol + regla de dependencias: `embeds` neutro) y `PROGRESO.md`. **Nada tocado fuera de "Puedes tocar"** (regla 7 no se activó): `extractors/**`, `jkanime/**`, `animeav1/**`, `internal/app/**`, `stream/**`, `frontend/**`, `app.go`, `main.go`, `wails.json` y `AGENTS.md` intactos.
+
+**Desviaciones:**
+
+- **El CDN sí exige Referer** (el informe lo daba por no exigido): manda la medición en vivo; la fuente lo lleva. Anotado en `docs/firmas/embeds.md`.
+- **HTML artificial declarado**: el caso "página sin medio" (embed degradado) y las tablas de `CanHandle` con URLs ficticias; el resto usa el fixture real. No hay fixture real para esos casos.
+- **El id del smoke no se persiste**: se pasa en `MIAPP_MP4UPLOAD_EMBED`; ejecutado con un embed vivo (PASS) sin pegar el id en el repositorio ni en `PROGRESO.md`.
+- **No se midió** si la URL del MP4 caduca por tiempo o si se ata a la IP (solo el 206 desde la misma sesión/IP).
+
+**Pendientes:**
+
+- **Cablear el resolver a `jkanime` y `animeav1`** (tarea siguiente): convertir el iframe de MP4Upload en fuente MP4 directa desde ambos proveedores; hoy el paquete `embeds` no lo consume nadie.
+- Sin tag ni release: no aplica a esta tarea.

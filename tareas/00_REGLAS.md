@@ -22,6 +22,9 @@ internal/
     models.go  ids.go  v12.go
   scraper/                # SOLO interfaz Provider y registro             (T04)
     provider.go  registry.go
+    embeds/               # resolutores neutros de embeds de terceros     (T60)
+      embeds.go  mp4upload.go
+      testdata/           # HTML crudo sanitizado de los embeds
     animeav1/             # todo lo de AnimeAV1 (paquete animeav1)
       animeav1.go  detail.go  devalue.go  episodes.go  home.go  sources.go
       testdata/           # fixtures __data.json y HTML crudos
@@ -66,12 +69,14 @@ Regla de dependencias entre paquetes (sentido único, prohibido el ciclo):
 ```text
 models  ←  httpx  ←  extractors          ←  scraper/jkanime  ←  internal/app  ←  app.go
                   ←  scraper (interfaz)  ←  scraper/jkanime
-                                           ←  scraper/animeav1
+                  ←  embeds              ←  scraper/jkanime
+                                         ←  scraper/animeav1
 logx ← (todos)
 ```
 
 - `extractors` no importa `jkanime`; recibe `httpx.HTTPDoer` por parámetro.
 - `jkanime` importa `extractors`; `animeav1` **no** importa `jkanime` (ni `extractors`).
+- `embeds` es un paquete **neutro**: solo importa `models`, `httpx` y `logx` (nunca `jkanime`, `extractors` ni `animeav1`), de modo que ambos proveedores puedan consumirlo por igual (T60).
 - `models` no importa a nadie del proyecto.
 - `internal/app` (el núcleo) importa scraper, `scraper/jkanime`, `scraper/animeav1`, `extractors`, cache, db, httpx, models y stream; **no** importa `github.com/wailsapp/*` (P2). `app.go` es la única capa que habla con Wails.
 
