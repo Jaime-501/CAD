@@ -274,21 +274,30 @@ Solo `.md`, sin tocar código. Contraste con `go doc ./internal/db`, `go doc ./i
 > archivo de código (regla 7 no se activó).
 
 **Resultado en una línea**: ni el `sandbox` ni un proxy de HTML evitan el anuncio; lo que
-funciona es resolver el medio a MP4/HLS en Go, host a host (H1 cae, H2 se sostiene con
+funciona es resolver el medio a MP4/HLS en Go, host a host (H1 no sirve como solución
+general y queda no concluyente sobre popups tras clic y WebView2, H2 se sostiene con
 fricción, H3 se sostiene).
 
 - **Qué se midió**: 13 páginas de episodio de JKAnime + 10 `__data.json` de AnimeAV1
-  (inventario de hosts), 7 hosts × 3 cargas sin sandbox (P2), 7 hosts × 4 variantes de
-  `sandbox` (P3) y resolución del medio por host con `Range: 0-0` (P4). ~70 peticiones
+  (inventario de hosts + P1c), 7 hosts × 3 cargas sin sandbox (P2), 7 hosts × 4 variantes
+  de `sandbox` (P3) y resolución del medio por host con `Range: 0-0` (P4). ~71 peticiones
   deliberadas, **sin 429**. No se pulsó "play" ni ningún anuncio.
+- **P1c (qué elige hoy el selector)**: `SelectBestSource` (`selector.go:26`, HLS 4 > MP4 3
+  > iframe 2 > resto) es el del núcleo; sobre las 23 muestras el iframe es la **única**
+  opción en **0 de 10** de AnimeAV1 (las 10 traen HLS derivado de zilla) y en **13 de 13**
+  de JKAnime con lo que el HTML determina sin red (JKPlayer está presente en las 13 pero
+  su aporte necesita la página del player: no concluyente).
 - **Hallazgos fuertes**: (1) Voe y Streamtape **detectan el sandbox** y sirven `/blocked`;
-  (2) con `allow-scripts`+`allow-same-origin` el sandbox **no aísla** (aviso de Chrome);
-  (3) **MP4Upload es RESOLVIBLE limpio** (URL del MP4 en claro + CDN que responde a
-  `Range`, 114 MB confirmados); (4) Voe/Byse/UPNShare/Streamtape son **RESOLVIBLES
+  (2) **MP4Upload es RESOLVIBLE limpio** (URL del MP4 en claro, **sin query** — el token va
+  en el path — y CDN que responde a `Range` sin mirar Referer, 114 MB confirmados y sigue
+  respondiendo a los ~45 min); (3) Voe/Byse/UPNShare/Streamtape son **RESOLVIBLES
   FRÁGILES** (cifrado de 2 caracteres + ROT13 / API + proof-of-work / API cifrada /
-  token + captcha); (5) **Mega es NO RESOLVIBLE** (E2E) y, de paso, **no cargó ni un
-  dominio de anuncio**; (6) **`sfastwish.com` está parkado** (GoDaddy + Yahoo Ads) pese a
-  ser el host con más apariciones en JKAnime; (7) ningún host envía `X-Frame-Options`.
+  token + captcha); (4) **Mega es NO RESOLVIBLE** (E2E) y, de paso, **no cargó ni un
+  dominio de anuncio**; (5) **`sfastwish.com` está parkado** (GoDaddy + Yahoo Ads) pese a
+  ser el host con más apariciones en JKAnime; (6) ningún host envía `X-Frame-Options`;
+  (7) el anuncio del reproductor vive en el JS del host, **pero** Streamtape trae sus
+  scripts de popunder en el HTML crudo del embed y la página de episodio de AnimeAV1
+  trae GTM + un script de anuncio (que la app no ejecuta).
 - **Fixtures** (`docs/investigacion/adds/`, sanitizados; escaneo final **0 coincidencias
   reales**): `jkanime_var_servers.html`, `animeav1_embeds.json`, `voe_e_redirect.html`,
   `voe_destino_embed.html`, `mp4upload_embed.html`, `byse_embed.html`,
@@ -306,7 +315,8 @@ fricción, H3 se sostiene).
   el proof-of-work queda fuera) · **T63** UPNShare (API cifrada) · **T64** Streamtape
   (token + captcha) · **T65** purga de hosts muertos del inventario (`sfastwish.com`;
   vigilar `mixdrop`/`dsvplay`/`vidhidevip`, no muestreados) · **T66** (solo si se quiere)
-  `sandbox` **por host** y sin `allow-same-origin`, nunca global.
+  `sandbox` **por host** y sin `allow-same-origin`, nunca global — **NO PROBADA** en esta
+  investigación: solo se probó en Chromium de escritorio, sin clic y sin WebView2.
 
 ---
 

@@ -22,7 +22,10 @@
   `allow-scripts allow-same-origin allow-forms allow-presentation` · C = B +
   `allow-popups allow-popups-to-escape-sandbox` · D = B + `allow="fullscreen"`.
 - **No se hizo clic en ningún anuncio** ni se pulsó "play": solo carga y observación.
-- Presupuesto: ~70 peticiones deliberadas al conjunto de sitios (43 HTTP + 27
+- **P1c** se resolvió **sin red**: lectura de `SelectBestSource` en el código y análisis
+  local de las 23 muestras ya descargadas (más un segundo `Range: 0-0` a la URL de
+  MP4Upload para comprobar si caducaba, ~45 min después).
+- Presupuesto: ~71 peticiones deliberadas al conjunto de sitios (44 HTTP + 27
   navegaciones del navegador). **Sin 429 ni `Retry-After` en ninguna.**
 
 ## P1 — Inventario: quién siembra iframes
@@ -62,6 +65,30 @@ Se muestrearon 7 hosts en P2–P4: los 6 de la lista del encargo (Voe, MP4Upload
 UPNShare, Streamtape, Mega) más `sfastwish.com` por ser el host con más apariciones en
 JKAnime y no estar en esa lista.
 
+## P1c — Qué elige hoy `SelectBestSource` y cuándo es el iframe lo único
+
+**El selector (leído del código, sin modificarlo)**: `SelectBestSource` está en
+`internal/scraper/jkanime/extractors/selector.go:26` y es el selector que el núcleo
+inyecta (`internal/app/nucleo.go:231`). Ordena por rango de tipo
+(`rangoDeTipo`, `selector.go:48`): **HLS 4 > MP4 3 > iframe 2 > resto 1** (un `Type`
+vacío o desconocido queda **por detrás del iframe**). Descarta las fuentes sin URL, gana
+mayor `Quality` dentro del mismo rango y, a igualdad, se queda con la primera de la
+lista. Un iframe **nunca se autoelige** si hay HLS o MP4 en la lista. AnimeAV1 no llama
+a esa función, pero ordena sus fuentes "igual que lo elegiría `SelectBestSource`"
+(`internal/scraper/animeav1/sources.go:138`), con el grupo que trae HLS primero.
+
+**Sobre las 23 muestras** (13 páginas de episodio de JKAnime + 10 `__data.json` de
+AnimeAV1), en cuántos episodios el iframe es la **única** opción:
+
+| Proveedor | Muestras | Iframe = única opción | Detalle |
+|---|---:|---:|---|
+| AnimeAV1 | 10 | **0 de 10** | Las 10 traen el embed de `player.zilla-networks.com`, que `fuenteDeEmbed` convierte en **HLS directo** (SUB y DUB). `SelectBestSource` elegiría ese HLS; el iframe solo se usaría si el reproductor falla al reproducirlo |
+| JKAnime | 13 | **13 de 13 con lo que el HTML permite determinar sin red** | En las 13, `var servers` solo publica **iframes** vía `ServersExtractor` (`servers.go:167`): `mediafire`/`1fichier` se delegan (12 de 13 páginas) y solo MediaFire tiene resolver. **Matiz**: en las 13 está presente el iframe `jkplayer/um` del extractor JKPlayer, que con una segunda petición a la página del player **puede** añadir HLS/MP4 directo; `jk.php` no aparece en ninguna (0 de 13). Ese aporte no es determinable sin red → "Lo que no se verificó" |
+
+Es decir: en AnimeAV1 el iframe **nunca** es la única opción; en JKAnime lo es **si
+solo miramos el HTML de la página**, y deja de serlo en los episodios en los que
+JKPlayer devuelva un directo.
+
 ## P2 — Observación del anuncio (sin sandbox, 3 cargas por host)
 
 Las 3 réplicas de cada host fueron idénticas (mismo número de peticiones y mismos
@@ -100,11 +127,8 @@ reproducir). Popups: 0 en todas las variantes.
 | SFastWish | lander de parking | idéntico | idéntico | idéntico |
 | Mega | reproductor E2E (solo hosts `mega.co.nz`) | idéntico | idéntico | idéntico |
 
-Dos evidencias adicionales del navegador, en **todas** las variantes con sandbox:
+Evidencia adicional del navegador, en **todas** las variantes con sandbox:
 
-- Chrome avisa: *"An iframe which has both `allow-scripts` and `allow-same-origin` for
-  its sandbox attribute can escape its sandboxing."* → la variante B/C/D **no aísla de
-  verdad**: con esos dos permisos juntos el iframe puede salirse del sandbox.
 - Streamtape además falla con
   *"requestStorageAccess: Refused … the document is sandboxed, and the
   'allow-storage-access-by-user-activation' keyword is not set"*.
@@ -117,7 +141,7 @@ de ejecución).
 
 | Host | Clasificación | Evidencia |
 |---|---|---|
-| MP4Upload | **RESOLVIBLE** | El HTML trae la URL del `<video>` en claro. `Range: 0-0` → `206`, `Content-Range: bytes 0-0/114919837` (114 MB), `nginx`, sin comprobación de Referer |
+| MP4Upload | **RESOLVIBLE** | El HTML trae la URL del vídeo en claro. `Range: 0-0` → `206`, `Content-Range: bytes 0-0/114919837` (114 MB), `nginx`, sin comprobación de Referer. **La URL no lleva query**: ni `expires`, ni `ip`, ni ningún otro parámetro — el token va embebido en el path (`/d/<token>/video.mp4`), así que no es una URL firmada visible. Repetida ~45 min después, **volvió a dar `206` con el mismo tamaño total** (idénticos `Last-Modified` y `Cache-Control: no-cache`; sin `Expires` ni `Age`). El elemento del que se extrae es el `src` del `player.src({ type: "video/mp4", src: … })` del setup de videojs: **1 ocurrencia** en la página, **cero** etiquetas `<source>`. Con una sola muestra de HTML no se puede afirmar que la forma del elemento sea idéntica en todos los episodios |
 | Voe | **RESOLVIBLE FRÁGIL** | Las fuentes vienen en un `<script type="application/json">` **cifrado**; el descifrador está en `/js/loader.<hash>.js` y es determinista: sustitución de pares de 2 caracteres (`@$`, `!!`, `^^`, `%?`, `#&`, `*~`) + ROT13, y luego `atob` + `JSON.parse`. Portable a Go, pero el nombre del loader rota con hash |
 | Byse | **RESOLVIBLE FRÁGIL** | `GET /api/videos/<id>/embed/details` (JSON) devuelve el host del reproductor, que es **el mismo bundle servido desde un dominio espejo rotatorio**; el jugador exige proof-of-work al pulsar play (`/assets/pow-<hash>.js`) |
 | UPNShare | **RESOLVIBLE FRÁGIL** | `GET /api/v1/info?id=…` devuelve un blob **hex cifrado** (1584 B binarios, no JSON). El descifrado vive en el bundle; el jugador es vidstack + hls.js con IMA y con cadenas "Banner Ads"/"Push Ads" |
@@ -129,9 +153,9 @@ de ejecución).
 
 | Hipótesis | Veredicto | Por qué |
 |---|---|---|
-| **H1** — el `sandbox` evita el anuncio | **RECHAZADA como solución única** | Voe y Streamtape **detectan el sandbox y sirven `/blocked`**. Y cuando el host lo tolera (MP4Upload, Byse, UPNShare, Mega), el sandbox no quita el anuncio: `overlayads`, IMA y las peticiones de ad-tech siguen saliendo. Además `allow-scripts`+`allow-same-origin` anula el aislamiento (aviso de Chrome) |
+| **H1** — el `sandbox` evita el anuncio | **NO sirve como solución general; NO CONCLUYENTE en el resto** | Voe y Streamtape **detectan el sandbox y sirven `/blocked`**, y cuando el host lo tolera (MP4Upload, Byse, UPNShare, Mega) el anuncio dentro del frame **no desaparece**: `overlayads`, IMA y las peticiones de ad-tech siguen saliendo. Queda **NO CONCLUYENTE** si el sandbox bloquea los popups **tras clic** (no se midió: regla de no tocar anuncios) y **no se midió en WebView2** |
 | **H2** — resolver a MP4/HLS directo | **SOSTENIDA, con fricción** | MP4Upload sí, sin nada más. Voe/Byse/UPNShare/Streamtape sí, pero exigen portar un descifrado/flujo por host y se rompen cuando el host rota. Mega no |
-| **H3** — proxy de HTML no viable | **SOSTENIDA** | Ningún embed manda `X-Frame-Options` (por eso se pueden embeber), pero el medio no está en el HTML: está tras JS que debe ejecutarse **en el origin del host** (POW de Byse, cifrado de UPNShare, blob+loader de Voe, captcha+token de Streamtape). Un proxy que solo sirve HTML no ejecuta ese JS, y si lo ejecutara tendría que reimplementar cada host y rompería los comprobaciones de origen/CORS/cookies del proveedor |
+| **H3** — proxy de HTML no viable | **SOSTENIDA** | Ningún embed manda `X-Frame-Options` (por eso se pueden embeber), pero el medio no está en el HTML: está tras JS que debe ejecutarse **en el origin del host** (POW de Byse, cifrado de UPNShare, blob+loader de Voe, captcha+token de Streamtape). Un proxy que solo sirve HTML no ejecuta ese JS, y si lo ejecutara tendría que reimplementar cada host y rompería los comprobaciones de origen/CORS/cookies del proveedor. **Impacto en el anti-SSRF**: servir el HTML desde nuestro origen convertiría cada visita del usuario en una petición saliente **nuestra** hacia el host del tercero; los proveedores podrían tachar ese patrón de SSRF (y el usuario quedaría asociado a un origen que no es el del sitio), además de tener que reenviar cookies y cabeceras de origen para que el JS del host siga funcionando |
 
 Evidencia de cabeceras (resumen en `adds/cabeceras_embeds.txt`): **ningún** host envía
 `X-Frame-Options`; los CSP relevantes son `upgrade-insecure-requests` (Voe), ausente
@@ -166,27 +190,32 @@ Mega son los enlaces públicos del proveedor, igual que en
 No se guardó fixture de `sfastwish.com`: `curl.exe` falló dos veces (`000`) contra el
 parking; solo se observó en navegador.
 
-## Resumen (10 líneas)
+## Resumen (9 líneas)
 
-1. El anuncio de estos embeds **no está en el HTML que ve la app**, está en el JS del host:
-   IMA/DoubleClick, Connatix, Criteo, TripleLift, ID5 y overlays (`overlayads`).
+1. El anuncio del **reproductor** no está en el HTML que la app embebe, sino en el JS
+   del host (IMA/DoubleClick, Connatix, Criteo, TripleLift, ID5, overlays). **Pero hay
+   dos excepciones**: Streamtape trae sus scripts de popunder **en el HTML crudo del
+   embed**, y la página de episodio de AnimeAV1 trae GTM + un script de anuncio en claro
+   (que la app no ejecuta: hace scraping del `__data.json`, no renderiza la página).
 2. **Ningún host envía `X-Frame-Options`**, por eso los iframes funcionan hoy.
-3. **El `sandbox` no sirve como solución única**: Voe y Streamtape detectan el sandbox y
-   sirven `/blocked`; el resto lo tolera pero sigue sembrando anuncios.
-4. Con `allow-scripts` + `allow-same-origin` el sandbox es **nominal** (aviso de Chrome).
-5. **MP4Upload es el único RESOLVIBLE limpio**: la URL del MP4 sale en claro del HTML y
-   el CDN responde a `Range` sin mirar Referer (114 MB confirmados).
-6. **Voe, Byse, UPNShare y Streamtape son RESOLVIBLES FRÁGILES**: cada uno exige su
+3. **El `sandbox` no sirve como solución general**: Voe y Streamtape detectan el sandbox
+   y sirven `/blocked`; el resto lo tolera pero sigue sembrando anuncios. Sobre los
+   popups tras clic y sobre WebView2, NO CONCLUYENTE.
+4. **MP4Upload es el único RESOLVIBLE limpio**: la URL del MP4 sale en claro del HTML
+   (sin query: el token va en el path) y el CDN responde a `Range` sin mirar Referer
+   (114 MB confirmados, y sigue respondiendo a los ~45 min).
+5. **Voe, Byse, UPNShare y Streamtape son RESOLVIBLES FRÁGILES**: cada uno exige su
    descifrado o flujo (cifrado de 2 caracteres + ROT13, API + proof-of-work, API
    cifrada, token + captcha).
-7. **Mega es NO RESOLVIBLE** (cifrado E2E en cliente) y, de paso, **no sembró ni un
+6. **Mega es NO RESOLVIBLE** (cifrado E2E en cliente) y, de paso, **no sembró ni un
    dominio de anuncio** en las mediciones.
-8. **SFastWish ya no existe**: el dominio está parkado y sirve anuncios de Yahoo; es el
+7. **SFastWish ya no existe**: el dominio está parkado y sirve anuncios de Yahoo; es el
    host con más apariciones en JKAnime.
-9. Sin clic no se abrieron pestañas en ninguna variante, pero el anuncio **se carga y se
+8. Sin clic no se abrieron pestañas en ninguna variante, pero el anuncio **se carga y se
    pinta** igual.
-10. **H1 cae, H2 se sostiene con fricción, H3 se sostiene**: la vía real es resolver el
-   medio en Go host a host, no aislar el iframe ni montar un proxy.
+9. **H1 cae como solución general (y queda no concluyente en el resto), H2 se sostiene
+   con fricción, H3 se sostiene**: la vía real es resolver el medio en Go host a host,
+   no aislar el iframe ni montar un proxy.
 
 ## Riesgos
 
@@ -197,8 +226,10 @@ parking; solo se observó en navegador.
   tests de red periódicos no se detecta el cambio.
 - **Legal/ToS**: resolver el medio directo salta la monetización del proveedor; es una
   decisión de producto, no solo técnica.
-- **Sandbox como mitigación parcial**: si se añade, hay que hacerlo **por host** (solo
-  los que lo toleran) y sin `allow-same-origin`, o no aísla nada.
+- **Sandbox como mitigación parcial**: **NO PROBADA**. Si algún día se pruebe, hay que
+  hacerlo **por host** (solo los que lo toleran: Voe y Streamtape lo rechazan) y sin
+  `allow-same-origin`; queda por medir el efecto sobre los popups tras clic y sobre
+  WebView2.
 
 ## Recomendación final y tareas siguientes
 
@@ -217,16 +248,25 @@ por este orden (coste creciente / beneficio decreciente):
 6. **Higiene**: purgar del inventario los hosts muertos (`sfastwish.com` y, si siguen
    cayendo, `mixdrop`/`dsvplay`/`vidhidevip`, no muestreados aquí) para que la app no
    ofrezca fuentes que ya no existen.
-7. **Si algún día se añade `sandbox`**, hacerlo con una tabla por host y sin
-   `allow-same-origin`.
+7. **`sandbox` (NO PROBADA)**: no está implementada y aquí solo se probó en navegador
+   (no en WebView2). Si se experimenta algún día, tabla por host, sin
+   `allow-same-origin`, y midiendo además los popups tras clic.
 
 ## Lo que no se verificó
 
 - **No se pulsó "play"** en ningún reproductor (regla: no tocar anuncios). Por eso no se
   midieron pre-rolls que empiezan al reproducir ni popups tras clic; sí se midió todo lo
-  que se carga y se pinta antes del clic.
+  que se carga y se pinta antes del clic. En particular, **no se midió si el `sandbox`
+  bloquea los popups tras clic**, que era el efecto que más interesaba de H1.
+- **WebView2**: toda la medición de P2/P3 fue en Chromium de escritorio (Playwright).
+  **No se midió en WebView2**, que es donde embebe la app de verdad.
 - **Fullscreen efectivo**: solo se leyó `document.fullscreenEnabled` (true en todas las
   variantes salvo la D de Voe, que además estaba en `/blocked`).
+- **Forma del elemento de MP4Upload entre episodios**: solo se analizó un HTML de embed;
+  el `player.src({ type, src })` se observó una sola vez.
+- **JKPlayer sobre las 13 páginas de JKAnime**: la presencia del iframe `jkplayer/um`
+  está confirmada en las 13, pero su aporte real (HLS/MP4 directo) requiere la petición
+  a la página del player y no se hizo aquí.
 - **Hosts no muestreados**: `vidhidevip.com`, `mixdrop.*`, `dsvplay.com`/`d-s.io`,
   `1fichier.com`, `mediafire.com`, `transfer.it` y `player.zilla-networks.com` (este
   último ya resuelto a HLS directo en T29).
