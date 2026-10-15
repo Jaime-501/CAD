@@ -430,8 +430,3 @@ Dos bugs no funcionales de la v1.2.0 detectados con el `.exe` (`tareas/T58.md`).
 - **Colisión de numeración T58** (regla 7, decisión documental): `PROGRESO.md` ya tenía una "T58 — cierre documental post-v1.2.0" hecha; el archivo `tareas/T58.md` (cargado por el humano en el commit previo) define esta otra tarea. Resolución: la **fila T58 de la tabla** es esta de bugs; el cierre documental conserva su bloque con el título aclarado "(etiquetado T58 en su momento)" y una nota de colisión. Ningún contenido se borró. *(Ampliada en T59: el cierre documental pasó a **T59**.)*
 - **Fantasma CRLF (T36)**: la compuerta inicial marcó 25 `.go` en `gofmt -l` (merge de la v1.2 hecho desde Windows); normalizados a LF sin registrar diff (mismo procedimiento decidido por el humano en T36). `frontend/wailsjs/**` muestra "M" con diff vacío por el mismo motivo (el `wails dev` los reescribe con LF); **sin cambios de contenido**.
 - **Verificación del Bug A por lógica + log** (la ficha lo autoriza): en el navegador el proxy local no reproduce vídeo (AGENTS.md) → `modo !== 'video'` y el guardado real con posición **no se ejercitó**; el log de `portadaDe`/`tituloDe` en el estado exacto del montaje (detalle null/en vuelo) más el registro en disco intacto cubren la causa; la prueba final del guardado con vídeo real es con el `.exe`.
-
-### Pendientes
-
-- **Verificar con el `.exe`** (v1.2.x futura): retomar → reproducir un poco → "← Atrás" y comprobar que la tarjeta de la barra conserva la carátula, y el contador de Favoritos correcto al arrancar. Ninguno de los dos fixes puede probarse con vídeo real en el flujo navegador.
-- `Type` de `models.Anime` sigue sin existir (pendiente de producto heredado, sin cambio con esta tarea).

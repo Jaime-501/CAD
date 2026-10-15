@@ -11,6 +11,21 @@
 - **Carátula del historial al retomar** (T58): al retomar un anime desde la barra lateral mientras el detalle aún cargaba (o con otro anime abierto), la tarjeta del historial ya no perdía la portada: título y portada se toman en cascada (detalle actual del mismo anime → registro en memoria → vacío).
 - **Contador de favoritos al arrancar** (T58): "★ Favoritos (N)" muestra el recuento real desde el arranque de la app, sin esperar a abrir la pestaña (con un único reintento si el backend aún no respondía).
 
+## 1.2.0
+
+### Añadido
+
+- **Nombre visible "CAD · Comfort Anime Desktop"** en la ventana (el ejecutable sigue siendo `miapp.exe`).
+- **Inicio "Descubrir"** por proveedor (JKAnime y AnimeAV1): filas de "En emisión" y de novedades con carrusel, botón "Actualizar" y "Reintentar" si un proveedor falla.
+- **Barra lateral "Continuar viendo"** con el historial agrupado por proveedor, ordenado por recencia, con barra de progreso. Un clic retoma el episodio donde lo dejaste (o abre el siguiente si ya lo viste).
+- **Borrado del historial**: ✕ por anime, deslizar, borrar por proveedor y borrar todo, con aviso "Deshacer".
+- **Favoritos**: estrella en el detalle y pestaña "★ Favoritos" con cuadrícula (se guardan en `favoritos.json`).
+- **Botón "Siguiente ▸"** en el reproductor (también con la tecla N), resaltado al llegar al 90 %.
+
+### Cambiado
+
+- El historial guarda ahora proveedor, título, portada, número de episodio y fecha (`updated_at`). Los `historial.json` anteriores siguen cargando.
+- 
 ## 1.1.0
 
 ### Añadido

@@ -12,28 +12,53 @@ internal/
     nucleo.go             registro, proxy, caché, historial, favoritos, Home
     retomar.go            "Retomar" y "Siguiente ▸"                       (T46)
     portabilidad_test.go  guardia P2/P3 con go/parser
-  logx/                     # slog + redacción de secretos           (T01)
-  httpx/                    # cliente HTTP, errores, reintentos      (T02)
-  models/                   # modelos de dominio                     (T03, T05)
-  scraper/                  # SOLO interfaz Provider y registro      (T04)
+    app_e2e_test.go       E2E offline (flujo completo / AnimeAV1)
+    *_integration_test.go  E2E y smoke con red real (tag integration)
+  logx/                   # slog + redacción de secretos                  (T01)
+    logx.go
+  httpx/                  # cliente HTTP, errores, reintentos             (T02)
+    httpx.go  errors.go  retry.go
+  models/                 # modelos de dominio                            (T03, T05)
+    models.go  ids.go  v12.go
+  scraper/                # SOLO interfaz Provider y registro             (T04)
+    provider.go  registry.go
     animeav1/             # todo lo de AnimeAV1 (paquete animeav1)
-    jkanime/                # todo lo de JKAnime (paquete jkanime)
-      exceptions.go
-      search.go
-      detail.go
-      episodes.go
-      episode_page.go
-      extractors/           # paquete extractors
-        extractor.go
-        jkanime.go
-        jkphp.go
-  stream/                   # proxy local de streaming               (T19)
-  cache/                    # caché en memoria con TTL               (T21)
-  db/                       # historial y favoritos (JSON en disco)  (T22, T42)
+      animeav1.go  detail.go  devalue.go  episodes.go  home.go  sources.go
+      testdata/           # fixtures __data.json y HTML crudos
+    jkanime/              # todo lo de JKAnime (paquete jkanime)
+      jkanime.go  search.go  detail.go  episodes.go  episode_page.go
+      exceptions.go  home.go
+      testdata/           # fixtures HTML/JSON crudos
+      extractors/         # paquete extractors
+        extractor.go  jkplayer.go  jkphp.go  servers.go
+        mediafire.go  normalize.go  selector.go
+        testdata/         # fixtures HTML de servidores
+  stream/                 # proxy local de streaming                      (T19)
+    stream.go  manifiesto.go  reenvio.go  sesiones.go  red.go
+    testdata/             # manifiestos .m3u8 de prueba
+  cache/                  # caché en memoria con TTL                      (T21)
+    cache.go
+  db/                     # historial y favoritos (JSON en disco)         (T22, T42)
+    db.go  favoritos.go
 docs/
-  firmas/                   # firmas reales por paquete (httpx.md, models.md, ...)
-  BITACORA.md               # historial; NO se lee por defecto
-frontend/src/
+  firmas/                 # firmas reales por paquete (httpx.md, models.md, ...)
+  investigacion/          # notas de investigación (animeav1.md, home.md)
+  img/                    # capturas para la documentación
+  BITACORA.md             # historial; NO se lee por defecto
+  DESARROLLO.md           # guía de desarrollo
+  PROGRESO_v1.0.md  PROGRESO_v1.1.md  PROGRESO_v1.2.md  # historiales por versión
+frontend/
+  index.html              # documento HTML (meta referrer no-referrer)
+  src/
+    api.ts                # ÚNICO punto de acceso al backend (P4)
+    stores.ts  main.ts  views.ts  ui.ts  style.css
+    favoritos.ts  historial.ts  home.ts  retomar.ts  toasts.ts
+    etiquetas.ts  deslizar.ts  vite-env.d.ts  (+ *.test.ts)
+    App.svelte  Vista*.svelte  Tarjeta*.svelte  Boton*.svelte
+    BarraLateral.svelte  FilaAnimes.svelte  GridFavoritos.svelte
+    SelectorFuente.svelte  Toast.svelte
+    assets/               # fuentes y logo
+  wailsjs/                # bindings generados por Wails — NO EDITAR
 ```
 
 Regla de dependencias entre paquetes (sentido único, prohibido el ciclo):
