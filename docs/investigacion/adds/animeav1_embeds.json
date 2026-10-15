@@ -1,0 +1,79 @@
+{
+ "nota": "Embeds extraídos de /media/<slug>/__data.json (AnimeAV1, av_1). \"zilla\" se resuelve a HLS en el cliente (T29).",
+ "embeds": {
+  "DUB": [
+   {
+    "s": "HLS",
+    "u": "https://player.zilla-networks.com/play/62f0bdd0728f76b50d49348a17baea3a"
+   },
+   {
+    "s": "UPNShare",
+    "u": "https://animeav1.uns.bio/#vyveci"
+   },
+   {
+    "s": "Voe",
+    "u": "https://voe.sx/e/mwpqlc2nfdwp"
+   },
+   {
+    "s": "Byse",
+    "u": "https://byselapuix.com/e/efptdd773cdu"
+   },
+   {
+    "s": "MP4Upload",
+    "u": "https://www.mp4upload.com/embed-i8l69rmmcvhi.html"
+   }
+  ],
+  "SUB": [
+   {
+    "s": "HLS",
+    "u": "https://player.zilla-networks.com/play/65f33e9a44ff7767faf60d1dae9eb1e6"
+   },
+   {
+    "s": "UPNShare",
+    "u": "https://animeav1.uns.bio/#t1tib8"
+   },
+   {
+    "s": "Voe",
+    "u": "https://voe.sx/e/mhuxdfwigwqp"
+   },
+   {
+    "s": "Byse",
+    "u": "https://byselapuix.com/e/38ajw9wez0hk"
+   },
+   {
+    "s": "MP4Upload",
+    "u": "https://www.mp4upload.com/embed-wuf5r9fzzo9q.html"
+   }
+  ]
+ },
+ "downloads": {
+  "SUB": [
+   {
+    "s": "Mega",
+    "u": "https://mega.nz/file/TOKEN_DE_PRUEBA#S7bOxcuqATbqU2kmxjDa0O8LTYXG15rimmsy9JlgiC8"
+   },
+   {
+    "s": "1Fichier",
+    "u": "https://1fichier.com/?2tk4mozvp5y31cfb2fcb"
+   },
+   {
+    "s": "MP4Upload",
+    "u": "https://www.mp4upload.com/wuf5r9fzzo9q"
+   }
+  ],
+  "DUB": [
+   {
+    "s": "Mega",
+    "u": "https://mega.nz/file/TOKEN_DE_PRUEBA#gICrd_eFpNbCv-DucC1P3qguHqM66X1v-XY3nGtwSGw"
+   },
+   {
+    "s": "1Fichier",
+    "u": "https://1fichier.com/?gugaobszlhkhpbc6jw2y"
+   },
+   {
+    "s": "MP4Upload",
+    "u": "https://www.mp4upload.com/i8l69rmmcvhi"
+   }
+  ]
+ }
+}

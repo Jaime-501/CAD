@@ -1,0 +1,39 @@
+Resumen de cabeceras anti-framing de cada embed (capturado con curl.exe, UA Chrome, sin cookies).
+Sanitizado: sin set-cookie ni valores firmados.
+
+=== Voe (voe.sx/e) ===
+HTTP/1.1 200 OK
+Server: ddos-guard
+Content-Security-Policy: upgrade-insecure-requests;
+
+=== Voe (dominio destino) ===
+HTTP/1.1 200 OK
+Server: ddos-guard
+Content-Security-Policy: upgrade-insecure-requests;
+
+=== MP4Upload ===
+HTTP/1.1 200 OK
+Server: cloudflare
+
+=== Byse ===
+HTTP/1.1 200 OK
+Server: cloudflare
+
+=== UPNShare ===
+HTTP/1.1 200 OK
+Server: cloudflare
+
+=== Streamtape ===
+HTTP/1.1 200 OK
+Server: cloudflare
+
+=== Mega ===
+HTTP/1.1 200 OK
+Content-Security-Policy: default-src 'self' blob: *.mega.co.nz *.mega.nz *.mega.io http://*.mega.co.nz http://*.mega.nz http://*.mega.io wss://*.mega.co.nz wss://*.karere.mega.nz *.karere.mega.nz:1380 http://127.0.0.1:6341 localhost.megasyncloopback.mega.nz:6342; script-src 'self' 'wasm-unsafe-eval' *.static.mega.co.nz mega.nz blob:; style-src 'self' 'unsafe-inline' *.mega.co.nz *.mega.nz *.mega.io data: blob:; frame-src 'self' *.megapay.nz ad.mega.nz mega: *.megaad.nz https://mega.nz/ https://mega.io/; img-src 'self' *.mega.co.nz *.mega.nz *.mega.io data: blob: mega.nz; connect-src 'self' *.mega.co.nz *.mega.nz *.mega.io *.megas4.com http://*.mega.co.nz http://*.mega.nz http://*.mega.io wss://*.mega.co.nz wss://*.karere.mega.nz *.karere.mega.nz:1380 blob: http://127.0.0.1:6341 localhost.megasyncloopback.mega.nz:6342
+
+=== SFastWish ===
+
+
+=== MP4Upload /d/ (Range 0-0) ===
+HTTP/1.1 206 Partial Content
+Server: nginx

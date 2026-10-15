@@ -1,0 +1,24 @@
+<!-- HTML crudo del embed de Voe. Redirige por JS al dominio CDN actual del proveedor (voe.sx es un alias). -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Redirecting...</title>
+</head>
+<body>
+<script>
+        if (typeof localStorage !== 'undefined') {
+            const permanentToken = localStorage.getItem('permanentToken');
+            if (permanentToken) {
+                const currentUrl = new URL(window.location.href);
+                currentUrl.searchParams.set('permanentToken', permanentToken);
+                window.location.href = currentUrl.toString();
+            } else {
+                window.location.href = 'https://megankiddifference.com/e/mwpqlc2nfdwp';
+            }
+        } else {
+            window.location.href = 'https://megankiddifference.com/e/mwpqlc2nfdwp';
+        }
+    </script>
+</body>
+</html>

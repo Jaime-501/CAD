@@ -266,6 +266,50 @@ Solo `.md`, sin tocar código. Contraste con `go doc ./internal/db`, `go doc ./i
 
 ---
 
+## Informe de adds (14/10/2026)
+
+> Investigación **solo de lectura** sobre la publicidad que traen los iframes de terceros.
+> Informe completo (metodología, tablas y evidencias): **`docs/investigacion/adds.md`**;
+> fixtures y la página de prueba: **`docs/investigacion/adds/`**. No se tocó **ningún**
+> archivo de código (regla 7 no se activó).
+
+**Resultado en una línea**: ni el `sandbox` ni un proxy de HTML evitan el anuncio; lo que
+funciona es resolver el medio a MP4/HLS en Go, host a host (H1 cae, H2 se sostiene con
+fricción, H3 se sostiene).
+
+- **Qué se midió**: 13 páginas de episodio de JKAnime + 10 `__data.json` de AnimeAV1
+  (inventario de hosts), 7 hosts × 3 cargas sin sandbox (P2), 7 hosts × 4 variantes de
+  `sandbox` (P3) y resolución del medio por host con `Range: 0-0` (P4). ~70 peticiones
+  deliberadas, **sin 429**. No se pulsó "play" ni ningún anuncio.
+- **Hallazgos fuertes**: (1) Voe y Streamtape **detectan el sandbox** y sirven `/blocked`;
+  (2) con `allow-scripts`+`allow-same-origin` el sandbox **no aísla** (aviso de Chrome);
+  (3) **MP4Upload es RESOLVIBLE limpio** (URL del MP4 en claro + CDN que responde a
+  `Range`, 114 MB confirmados); (4) Voe/Byse/UPNShare/Streamtape son **RESOLVIBLES
+  FRÁGILES** (cifrado de 2 caracteres + ROT13 / API + proof-of-work / API cifrada /
+  token + captcha); (5) **Mega es NO RESOLVIBLE** (E2E) y, de paso, **no cargó ni un
+  dominio de anuncio**; (6) **`sfastwish.com` está parkado** (GoDaddy + Yahoo Ads) pese a
+  ser el host con más apariciones en JKAnime; (7) ningún host envía `X-Frame-Options`.
+- **Fixtures** (`docs/investigacion/adds/`, sanitizados; escaneo final **0 coincidencias
+  reales**): `jkanime_var_servers.html`, `animeav1_embeds.json`, `voe_e_redirect.html`,
+  `voe_destino_embed.html`, `mp4upload_embed.html`, `byse_embed.html`,
+  `upnshare_embed.html`, `streamtape_embed.html`, `mega_embed.html`,
+  `cabeceras_embeds.txt` y `sandbox_probe.html` (la página de prueba, con
+  `?h=host,host&v=A,B,C,D`). El token de `/d/` de MP4Upload, los `expires`/`ip`/`token`
+  de Streamtape, el blob cifrado y el CSRF de Voe y la clave de descifrado de Mega están
+  como `TOKEN_DE_PRUEBA`; el enlace de Mega **no se guarda** en el repositorio.
+- **Pendiente de producto** (decisión del humano, no técnica): si se quiere invertir en
+  extractores de medio directo (T60–T64 abajo) o dejar los iframes como están y solo
+  purgar los hosts muertos.
+- **Tareas propuestas** (sin renumerar la tabla de arriba; se numeran cuando se arranquen):
+  **T60** extractor MP4Upload (más barato, ya validado) · **T61** extractor Voe (portar el
+  descifrado del `loader`) · **T62** extractor Byse (`/api/videos/<id>/embed/details`;
+  el proof-of-work queda fuera) · **T63** UPNShare (API cifrada) · **T64** Streamtape
+  (token + captcha) · **T65** purga de hosts muertos del inventario (`sfastwish.com`;
+  vigilar `mixdrop`/`dsvplay`/`vidhidevip`, no muestreados) · **T66** (solo si se quiere)
+  `sandbox` **por host** y sin `allow-same-origin`, nunca global.
+
+---
+
 ## Resumen de los cierres de la v1.2.x (detalle largo en `docs/PROGRESO_v1.2.md`)
 
 > En T59 se movieron a `docs/PROGRESO_v1.2.md` (texto literal) las notas largas de T56, T57, T58 y del cierre documental. Aquí queda lo esencial.

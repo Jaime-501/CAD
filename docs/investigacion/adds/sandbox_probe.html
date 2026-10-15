@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
+<title>Probe de sandbox para embeds de terceros (investigación de adds)</title>
+<style>
+  body { font: 14px/1.5 system-ui, sans-serif; margin: 16px; background: #111; color: #eee; }
+  h1 { font-size: 18px; }
+  table { border-collapse: collapse; width: 100%; margin-bottom: 12px; }
+  th, td { border: 1px solid #444; padding: 4px 8px; text-align: left; vertical-align: top; }
+  td.fila { white-space: nowrap; }
+  iframe { width: 900px; height: 506px; border: 1px solid #666; background: #000; display: block; }
+  .ok { color: #7c7; } .falta { color: #c77; }
+  .aviso { color: #fc6; }
+</style>
+</head>
+<body>
+<h1>Probe de sandbox (adds)</h1>
+<p>
+  Página de prueba para las fases P2/P3 del informe de adds.
+  Parámetros: <code>?h=host1,host2&amp;v=A,B,C,D</code>.
+  Cada celda crea un iframe <b>sin <code>sandbox</code></b> (variante A = estado actual de la app) o con
+  <code>sandbox</code> y permisos distintos (B/C/D).
+  El iframe lleva <code>referrerpolicy="no-referrer"</code> y <code>allowfullscreen</code> como la app.
+  Los <code>src</code> se escalonan 400&nbsp;ms para atribuir peticiones/pops por frame.
+</p>
+<p class="aviso">
+  No interactuar con anuncios: esta página solo carga los embeds y observa.
+</p>
+<div id="grid">Cargando…</div>
+<script>
+"use strict";
+
+const HOSTS = {
+  voe:        { etiqueta: "Voe",         url: "https://voe.sx/e/mwpqlc2nfdwp" },
+  mp4u:       { etiqueta: "MP4Upload",   url: "https://www.mp4upload.com/embed-i8l69rmmcvhi.html" },
+  byse:       { etiqueta: "Byse",        url: "https://byselapuix.com/e/efptdd773cdu" },
+  upnshare:   { etiqueta: "UPNShare",    url: "https://animeav1.uns.bio/#vyveci" },
+  streamtape: { etiqueta: "Streamtape",  url: "https://streamtape.com/e/be9yBR9xL2HPjOq/01.mp4" },
+  sfastwish:  { etiqueta: "SFastWish",   url: "https://sfastwish.com/e/evqmkewf1izz" }
+};
+
+const SANDBOX_B = "allow-scripts allow-same-origin allow-forms allow-presentation";
+
+const VARIANTES = {
+  A: { sandbox: null,                                     allow: null,          allowfullscreen: true,  nota: "sin sandbox (estado actual de la app)" },
+  B: { sandbox: SANDBOX_B,                                allow: null,          allowfullscreen: true,  nota: "sandbox sin popups" },
+  C: { sandbox: SANDBOX_B + " allow-popups allow-popups-to-escape-sandbox", allow: null, allowfullscreen: true, nota: "sandbox con popups que escapan" },
+  D: { sandbox: SANDBOX_B,                                allow: "fullscreen", allowfullscreen: true,  nota: "sandbox + allow=\"fullscreen\"" }
+};
+
+const params = new URLSearchParams(location.search);
+const selHosts = (params.get("h") || Object.keys(HOSTS).join(",")).split(",").map(s => s.trim()).filter(Boolean);
+const selVars  = (params.get("v")  || "A,B,C,D").split(",").map(s => s.trim().toUpperCase()).filter(Boolean);
+
+const grid = document.getElementById("grid");
+const tabla = document.createElement("table");
+tabla.innerHTML = "<thead><tr><th>host</th><th>variante</th><th>iframe</th></tr></thead>";
+const tbody = document.createElement("tbody");
+tabla.appendChild(tbody);
+grid.replaceWith(tabla);
+
+let n = 0;
+const celdas = [];
+
+for (const hk of selHosts) {
+  const host = HOSTS[hk];
+  if (!host) continue;
+  for (const vk of selVars) {
+    const v = VARIANTES[vk];
+    if (!v) continue;
+    const tr = document.createElement("tr");
+    const td1 = document.createElement("td"); td1.className = "fila"; td1.textContent = host.etiqueta + " (" + hk + ")";
+    const td2 = document.createElement("td"); td2.className = "fila";
+    td2.innerHTML = "<b>" + vk + "</b><br><span style='color:#999;font-size:11px'>" + v.nota + "</span>" +
+                    (v.sandbox ? "<br><code style='font-size:10px'>" + v.sandbox + "</code>" : "");
+    const td3 = document.createElement("td");
+    const f = document.createElement("iframe");
+    f.title = host.etiqueta + " " + vk;
+    f.referrerPolicy = "no-referrer";
+    if (v.sandbox) f.setAttribute("sandbox", v.sandbox);
+    if (v.allow) f.setAttribute("allow", v.allow);
+    f.allowFullscreen = v.allowfullscreen;
+    f.setAttribute("allowfullscreen", "true");
+    td3.appendChild(f);
+    tr.append(td1, td2, td3);
+    tbody.appendChild(tr);
+
+    const estado = { host: hk, variante: vk, cargado: false, tiempoCargaMs: null };
+    celdas.push({ f, estado });
+    f.addEventListener("load", () => { estado.cargado = true; estado.tiempoCargaMs = Date.now() - t0; });
+    const t0 = Date.now();
+    setTimeout(() => { f.src = host.url; }, 400 * (n++));
+  }
+}
+
+window.__probe = { celdas, selHosts, selVars, hosts: HOSTS };
+</script>
+</body>
+</html>
