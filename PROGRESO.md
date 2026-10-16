@@ -1,4 +1,4 @@
-    # PROGRESO — Comfort Anime Desktop (T01–T65 hechas)
+    # PROGRESO — Comfort Anime Desktop (T01–T66 hechas)
 
 > Este archivo es la **memoria entre sesiones**. Cada sesión lo lee al inicio y lo actualiza al final.
 > Reglas y layout: `tareas/00_REGLAS.md`. Detalle de cada tarea: `tareas/Txx.md`.
@@ -133,12 +133,13 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha y verificada
 | [x] | T63 | UI: selector de fuentes (principales primero, iframes como extra) | T61 |
 | [x] | T64 | Lógica pura de ventana de episodios (`ventana.ts` + tests) | — |
 | [x] | T65 | Revelado animado de tarjetas de episodio por visibilidad (sin paginar) | T64 |
+| [x] | T66 | Clave de scroll del detalle por proveedor + slug | T65 |
 
 T01–T29 = v1.0 (`docs/PROGRESO_v1.0.md`) · T30–T35 = v1.1.0 AnimeAV1 (`docs/PROGRESO_v1.1.md`) · T36 = cierre de la v1.1.0 · T37 = portabilidad Android · T38 = cierre documental de T37.
 T39–T57 = v1.2.0 (Home, historial lateral, favoritos, "Siguiente" y su estado discreto; **incluye T53b y T57**); plan en `tareas/v1.2_PLAN.md`, detalle **T39–T58 + cierres T56/T59** archivado en `docs/PROGRESO_v1.2.md`, con resúmenes al final de este archivo.
 La **v1.2.0 está PUBLICADA** (prueba manual con el `.exe` y release hechas por el humano). La **v1.2.1** (T58 bugs + T59 cierre documental) está **preparada**: `productVersion` 1.2.1, sin tag ni release aún — los hace el humano.
 
-**v1.3.0 — episodios incrementales** (rama `feature/episodios-incrementales`): serie **T64–T69** para mostrar los episodios del detalle de forma incremental y con animación de entrada. **T64** (lógica pura de `ventana.ts` + tests) y **T65** (revelado animado por visibilidad, sin paginar) hechas; el resto pendiente, con **T68 opcional**. Recomendación sobre T66–T67 (paginar/client-side window): **no** por rendimiento (ver bloque de T65).
+**v1.3.0 — episodios incrementales** (rama `feature/episodios-incrementales`): serie **T64–T69** para mostrar los episodios del detalle de forma incremental y con animación de entrada. **T64** (lógica pura de `ventana.ts` + tests), **T65** (revelado animado por visibilidad, sin paginar) y **T66** (clave de scroll del detalle por proveedor + slug) hechas. Los **T66–T67 originales** (paginado / ventana client-side) quedan **descartados** por las mediciones de T65 (sin jank y con 0 saltos de scroll; el coste real es de red, ya cubierto por el mostrado por lotes); **T68 opcional, a reevaluar** y T69 pendiente.
 
 ## Auditoría de portabilidad (T37)
 
@@ -688,6 +689,56 @@ Acción Svelte `use:revelar={{ id, indice, columnas }}` para el envoltorio de ca
 ### Pendientes
 
 - **Ninguno propio.** La compuerta de Go que T64 dejó pendiente por el daemon de Docker se ha **repetido aquí en verde** (435 tests, 11 paquetes ok): queda cerrada esa deuda.
+- Sin tag ni release.
+
+
+## T66 — Clave de scroll del detalle por proveedor + slug
+
+Hecha el **2026-10-16**. Tercera tarea de la serie **T64–T69** (v1.3.0, rama `feature/episodios-incrementales`). **Solo frontend**: `frontend/src/views.ts` (clave de scroll) y `frontend/src/views.test.ts` (nuevo). Ningún Go.
+
+Contexto: T65 decidió **no paginar** y descartó los **T66–T67 originales** (paginado / ventana client-side). Esta tarea recicla el número **T66** para corregir un bug de la revisión: `claveScroll('detalle')` usaba solo el slug y «bleach» existe en JKAnime y AnimeAV1, así que **compartían posición de scroll**.
+
+### Cambio
+
+- **`claveScroll` (`views.ts`)**: `detalle:${sel?.provider ?? ''}:${sel?.animeID ?? ''}` y `reproductor:${sel?.provider ?? ''}:${sel?.episodeID ?? ''}`; `busqueda` sin cambios. Actualizado el comentario de cabecera («Claves: …`) y el de la propia función (T26/T66).
+- El `episodeID` ya lleva el prefijo del proveedor (`<proveedor>:…`, T34), así que añadir el proveedor a la clave del reproductor es **redundante pero inocuo** (la clave es solo una cadena del `Record` interno y se usa el **mismo** `claveScroll` para guardar y recuperar); se añadió por coherencia con la del detalle.
+
+### Tests (`views.test.ts`, esbuild de Vite, mismo mecanismo que `etiquetas.test.ts`/`ventana.test.ts`)
+
+**13 comprobaciones**: mismo slug con distinto proveedor ⇒ claves distintas (detalle y reproductor); mismo proveedor con distinto slug ⇒ distintas; `guardarScroll`/`recuperarScroll` con las dos claves del mismo slug **no se pisan** (800 frente a 0); clave inexistente ⇒ **0**; selección `null` ⇒ `detalle::` / `reproductor::` **estables sin lanzar**; `busqueda` es única. `views.ts` importa `svelte/store`: el bundle de esbuild lo resuelve desde `frontend/node_modules` (verificado; el comando de la cabecera lo demuestra).
+
+### Verificación (Playwright, `localhost:34115`)
+
+- **JKAnime «bleach», Ep. 1**: bajar a `scrollY = 800` y volver (búsqueda → reabrir el detalle) ⇒ **conserva 800** (**3/3** ciclos; `scrollTo(0, 800)` sobre el detalle ya pintado, ~14 458 px).
+- **AnimeAV1 «bleach», Ep. 1**: abrir ⇒ **empieza en 0**, no en 800 (`scrollTo(0, 0)` con la clave propia `detalle:animeav1:bleach`). Esa es la evidencia del fix: con la clave antigua por slug, AnimeAV1 habría heredado el 800 de JKAnime.
+- **Observación (comportamiento previo, no de T66)**: al saltar **JKAnime → AnimeAV1 → JKAnime**, el detalle de JKAnime se **recarga** (`VistaDetalle`/`stores.ts` distinguen proveedor: `openAnime` vacía la lista y refetch), y el `scrollTo` de restauración corre tras `await tick()` **antes** de que la lista esté pintada (altura = viewport), por lo que se recorta a **0**. Sin el cambio de T66 el mismo salto daba IGUAL 0 en la vuelta (la lista también se recargaba), pero además AnimeAV1 heredaba el 800; con T66 el 800 se conserva en su clave y la vuelta **directa** (mismo proveedor, lista ya en los stores) lo restaura de forma estable. Es una característica del restaurado con detalle asíncrono, fuera del alcance de T66.
+- **Consola**: solo el `favicon.ico` 404, el `TypeError` de `wails/ipc.js` y los `ERR_CONNECTION_REFUSED` al proxy local (todos preexistentes y documentados); **sin errores nuevos** de nuestro código.
+
+### Compuerta (resultado real)
+
+| Comando | Resultado |
+|---|---|
+| `views.test.ts` (esbuild + node) | **OK (13 comprobaciones)** |
+| `ventana.test.ts` (esbuild + node) | **OK (48 comprobaciones)** (sin cambios) |
+| `npm run check` (frontend) | **0 errores, 0 avisos** |
+| `npm run build` (frontend) | **OK** (aviso de chunk >500 kB preexistente) |
+| `grep -rn wailsjs frontend/src` | **solo `api.ts`** |
+| `gofmt -l .` | **sin salida** |
+| `go vet ./...` · `go vet -tags integration ./...` | limpios |
+| `go build ./...` | OK |
+| `go test -race -count=1 ./...` | **11 paquetes `ok`** (Go intacto) |
+| recuento `^--- PASS` (`-count=1 -v`) | **435** — idéntico a T63/T65 (T66 no toca Go) |
+| `git status --porcelain` | `frontend/src/views.ts` (M), `frontend/src/views.test.ts` (nuevo), `tareas/T66.md` (sin trackear, previo) |
+
+### Desviaciones
+
+- **Clave del reproductor con proveedor aunque el `episodeID` ya lo lleve**: redundante pero inocuo (misma función para guardar y recuperar); se añadió por coherencia con la del detalle.
+- **El restaurado del detalle se recorta a 0 si la lista no está pintada** (típicamente tras cambiar de proveedor y forzar un refetch). Previo a T66; no se tocó `App.svelte`, `stores.ts` ni `VistaDetalle.svelte` (fuera de «Puedes tocar»). Se documenta como observación, no como requisito de T66.
+- **T66–T67 originales descartadas**: el paginado/ventana client-side no aporta nada según las mediciones de T65 (366–1180 tarjetas sin jank y con 0 saltos de scroll; el coste real de JKAnime es de **red**, ya cubierto por el mostrado por lotes). La ventana de `ventana.ts` (T64) queda disponible por si se revierte la decisión.
+
+### Pendientes
+
+- **T68 opcional, a reevaluar**; T69 de la serie v1.3.0 pendiente. **Ningún pendiente propio** de T66.
 - Sin tag ni release.
 
 
