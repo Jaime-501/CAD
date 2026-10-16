@@ -1,4 +1,4 @@
-    # PROGRESO — Comfort Anime Desktop (T01–T66 hechas)
+    # PROGRESO — Comfort Anime Desktop (T01–T67 hechas)
 
 > Este archivo es la **memoria entre sesiones**. Cada sesión lo lee al inicio y lo actualiza al final.
 > Reglas y layout: `tareas/00_REGLAS.md`. Detalle de cada tarea: `tareas/Txx.md`.
@@ -134,12 +134,13 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha y verificada
 | [x] | T64 | Lógica pura de ventana de episodios (`ventana.ts` + tests) | — |
 | [x] | T65 | Revelado animado de tarjetas de episodio por visibilidad (sin paginar) | T64 |
 | [x] | T66 | Clave de scroll del detalle por proveedor + slug | T65 |
+| [x] | T67 | Restaurar el scroll del detalle tras la recarga por lotes | T66 |
 
 T01–T29 = v1.0 (`docs/PROGRESO_v1.0.md`) · T30–T35 = v1.1.0 AnimeAV1 (`docs/PROGRESO_v1.1.md`) · T36 = cierre de la v1.1.0 · T37 = portabilidad Android · T38 = cierre documental de T37.
 T39–T57 = v1.2.0 (Home, historial lateral, favoritos, "Siguiente" y su estado discreto; **incluye T53b y T57**); plan en `tareas/v1.2_PLAN.md`, detalle **T39–T58 + cierres T56/T59** archivado en `docs/PROGRESO_v1.2.md`, con resúmenes al final de este archivo.
 La **v1.2.0 está PUBLICADA** (prueba manual con el `.exe` y release hechas por el humano). La **v1.2.1** (T58 bugs + T59 cierre documental) está **preparada**: `productVersion` 1.2.1, sin tag ni release aún — los hace el humano.
 
-**v1.3.0 — episodios incrementales** (rama `feature/episodios-incrementales`): serie **T64–T69** para mostrar los episodios del detalle de forma incremental y con animación de entrada. **T64** (lógica pura de `ventana.ts` + tests), **T65** (revelado animado por visibilidad, sin paginar) y **T66** (clave de scroll del detalle por proveedor + slug) hechas. Los **T66–T67 originales** (paginado / ventana client-side) quedan **descartados** por las mediciones de T65 (sin jank y con 0 saltos de scroll; el coste real es de red, ya cubierto por el mostrado por lotes); **T68 opcional, a reevaluar** y T69 pendiente.
+**v1.3.0 — episodios incrementales** (rama `feature/episodios-incrementales`): serie **T64–T69** para mostrar los episodios del detalle de forma incremental y con animación de entrada. **T64** (lógica pura de `ventana.ts` + tests), **T65** (revelado animado por visibilidad, sin paginar), **T66** (clave de scroll del detalle por proveedor + slug) y **T67** (restauración del scroll del detalle cuando la lista se recarga) hechas. Los **T66–T67 originales** (paginado / ventana client-side) quedan **descartados** por las mediciones de T65 (sin jank y con 0 saltos de scroll; el coste real es de red, ya cubierto por el mostrado por lotes); **T68 opcional, a reevaluar** y T69 pendiente.
 
 ## Auditoría de portabilidad (T37)
 
@@ -740,6 +741,60 @@ Contexto: T65 decidió **no paginar** y descartó los **T66–T67 originales** (
 
 - **T68 opcional, a reevaluar**; T69 de la serie v1.3.0 pendiente. **Ningún pendiente propio** de T66.
 - Sin tag ni release.
+
+
+## T67 — Restaurar el scroll del detalle tras la recarga por lotes
+
+Hecha el **2026-10-16**. Cuarta tarea de la serie **T64–T69** (v1.3.0, rama `feature/episodios-incrementales`). **Solo frontend**: `frontend/src/VistaDetalle.svelte`. Ningún Go.
+
+Contexto: cierra la observación que dejó T66. Al volver a un detalle cuyos stores **no** están intactos (típicamente tras cambiar de proveedor o reabrir el anime), `openAnime` vacía la lista de episodios y el `scrollTo` de `App.svelte` corre tras `await tick()` **antes** de que la lista esté pintada (altura = viewport), así que la posición guardada se recortaba a **0**. La lista luego crece por lotes y el usuario se quedaba arriba.
+
+### Cambio
+
+- **Restauración pendiente** (`scrollPendiente`, `0` = desarmado): en `onMount` se lee `recuperarScroll(claveScroll('detalle'))` **antes** de decidir la rama. La rama "stores intactos" (vuelta del reproductor) no se toca; en la rama de recarga, si el objetivo es `> 0` se arma la restauración antes de `openAnime`.
+- **Reintento por cambio de lista**: `$: intentarRestaurarScroll(episodios.length, $episodesComplete)`. En cada lote (y al completar) mide dentro de un `requestAnimationFrame`; si `document.documentElement.scrollHeight - window.innerHeight >= scrollPendiente` aplica `scrollTo(0, scrollPendiente)` y desarma; si el stream **terminó** y no alcanza, baja al máximo posible y desarma (sin bucle).
+- **Cancelación por gesto**: `armarRestauracionScroll` registra oyentes `wheel`/`touchstart`/`keydown`/`pointerdown` (todos `{ passive: true }`) que desarman al primer gesto del usuario; se limpian siempre (`quitarOyentesScroll`) y también en `onDestroy`.
+- **Sin cambios** en `views.ts`, `stores.ts`, `App.svelte`, `api.ts`, `TarjetaEpisodio.svelte` ni ningún `.go`.
+
+### Verificación (Playwright, `localhost:34115`; 6/6)
+
+1. **Recarga por lotes con objetivo 800** (JKAnime "bleach" en frío, lotes de 16): bajar a 800, salir, abrir otro anime (evictor) y reabrir ⇒ restauración aplicada en el **2.º lote** (t≈1010 ms, altura 1951), `finalY=800` estable hasta 366 episodios. Con detalle **cacheado** (hit instantáneo) también `finalY=800`.
+2. **Interrupción por gesto**: Dragon Ball Z (Original) en frío, `page.mouse.wheel(0,150)` a ~300 ms ⇒ `finalY=0`, `maxY=0` (no fuerza scroll; la restauración se canceló).
+3. **Detalle → reproductor → "← Atrás"** (stores intactos): JKAnime "bleach" conserva `scrollY=800` (rama intacta, sin restauración).
+4. **Objetivo inalcanzable**: objetivo 11007 con viewport 1280×2000 (max 9649) ⇒ `finalY=9644` (≈máximo), sin bucle ni error.
+5. **Primera apertura (objetivo 0)**: Fairy Tail JKAnime ⇒ `finalY=0`, solo el `scrollTo(0,0)` de `App.svelte`; sin restauración ni oyentes.
+6. **Consola**: sin errores nuevos de nuestro código (solo `favicon.ico` 404, `TypeError` de `wails/ipc.js` y `ERR_CONNECTION_REFUSED` del proxy local, todos preexistentes y documentados).
+
+### Compuerta (resultado real)
+
+| Comando | Resultado |
+|---|---|
+| `npm run check` | **0 errores, 0 avisos** |
+| `npm run build` | **OK** (aviso de chunk >500 kB preexistente) |
+| `views.test.ts` (esbuild + node) | **OK (13 comprobaciones)** — sin cambios |
+| `ventana.test.ts` (esbuild + node) | **OK (48 comprobaciones)** — sin cambios |
+| `grep -rn wailsjs frontend/src` | **solo `api.ts`** |
+| `gofmt -l .` | **sin salida** |
+| `go vet ./...` · `go vet -tags integration ./...` | limpios |
+| `go build ./...` | OK |
+| `go test -race -count=1 ./...` | **11 paquetes `ok`** (Go intacto) |
+| recuento `^--- PASS` (`-count=1 -v`) | **435** — idéntico a T63/T65/T66 (T67 no toca Go) |
+| `git status --porcelain` | `frontend/src/VistaDetalle.svelte` (M) y `tareas/T67.md` (sin trackear, previo) |
+
+### Desviaciones
+
+- **La caché de detalle del backend (TTL 10 min) hace que la 2.ª apertura no cargue por lotes** (hit instantáneo). Para poder probar "recarga por lotes con objetivo>0" se usó un anime **frío** y un **evictor** (abrir otro anime borra la entrada incompleta, `soltarStreamDistinto`); con detalle ya cacheado la restauración igualmente se aplica (la lista llega completa de golpe).
+- **`browser_click` de Playwright auto-scrollea el elemento a la vista**, lo que rompe el `scrollY` a guardar; se interactuó con `element.click()` vía `browser_evaluate`/`browser_run_code_unsafe`.
+- **Objetivo inalcanzable simulado con `resize` del viewport** (1280×2000) porque en pantalla normal el máximo siempre supera 800; confirma el camino "completo y no alcanza ⇒ máximo".
+- **Interrupción simulada con `page.mouse.wheel`** (no hay forma de teclear/scroll nativo fiable en el navegador de Playwright sin alterar la posición).
+- **Reiniciar el contenedor recarga la página** (pierde el estado JS y el scroll guardado), así que no sirve para conservar el scroll entre pruebas; se documenta para futuras sesiones.
+
+### Pendientes
+
+- **Ninguno propio.** Resuelve la observación de T66 ("el restaurado se recorta a 0 si la lista no está pintada").
+- **T68 opcional, a reevaluar**; **T69** de la serie v1.3.0 pendiente.
+- Sin tag ni release.
+
 
 
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
   import { get } from 'svelte/store';
   import type { models } from './api';
   import { getProgress } from './api';
@@ -15,7 +15,7 @@
     progressMap,
     progressToMap,
   } from './stores';
-  import { atras, navegarA, seleccion } from './views';
+  import { atras, claveScroll, navegarA, recuperarScroll, seleccion } from './views';
   import { COLUMNAS_POR_DEFECTO } from './ventana';
   import { medirColumnas, revelar } from './revelar';
   import BotonFavorito from './BotonFavorito.svelte';
@@ -28,6 +28,14 @@
   let rejillaEl: HTMLDivElement | undefined = undefined;
   let columnas = COLUMNAS_POR_DEFECTO;
   let frameResize: number | null = null;
+
+  // T67: restauración del scroll del detalle cuando la lista se recarga. Al
+  // volver a un detalle cuyos stores no están intactos, `openAnime` vacía la
+  // lista y el `scrollTo` de `App.svelte` se recorta a 0 (todavía no hay
+  // altura). Aquí se arma una restauración pendiente que se aplica en cuanto
+  // la lista crece lo suficiente. `0` = desarmado.
+  let scrollPendiente = 0;
+  let quitarOyentesScroll: (() => void) | null = null;
 
   function medirColumnasRejilla(): void {
     if (rejillaEl) columnas = medirColumnas(rejillaEl);
@@ -53,6 +61,53 @@
   // La rejilla sólo existe cuando hay episodios; se mide al montar y tras el resize.
   $: if (rejillaEl) medirColumnasRejilla();
 
+  /** Desarma la restauración pendiente y quita sus oyentes (sin mover el scroll). */
+  function desarmarRestauracionScroll(): void {
+    scrollPendiente = 0;
+    if (quitarOyentesScroll) {
+      quitarOyentesScroll();
+      quitarOyentesScroll = null;
+    }
+  }
+
+  /** Arma la restauración y registra los oyentes que la cancelan al primer gesto del usuario. */
+  function armarRestauracionScroll(objetivo: number): void {
+    scrollPendiente = objetivo;
+    if (quitarOyentesScroll) return;
+    const cancelar = (): void => desarmarRestauracionScroll();
+    window.addEventListener('wheel', cancelar, { passive: true });
+    window.addEventListener('touchstart', cancelar, { passive: true });
+    window.addEventListener('keydown', cancelar, { passive: true });
+    window.addEventListener('pointerdown', cancelar, { passive: true });
+    quitarOyentesScroll = () => {
+      window.removeEventListener('wheel', cancelar);
+      window.removeEventListener('touchstart', cancelar);
+      window.removeEventListener('keydown', cancelar);
+      window.removeEventListener('pointerdown', cancelar);
+    };
+  }
+
+  /**
+   * Intenta aplicar la restauración pendiente. Se llama en cada cambio de la
+   * lista (lotes de episodios) y al completar. Mide dentro de un rAF para que
+   * el layout ya esté pintado; si la altura alcanza, aplica y desarma; si el
+   * stream terminó y no alcanza, baja al máximo posible y desarma.
+   */
+  function intentarRestaurarScroll(_longitud: number, completo: boolean): void {
+    if (scrollPendiente <= 0) return;
+    requestAnimationFrame(() => {
+      if (scrollPendiente <= 0) return;
+      const maximo = document.documentElement.scrollHeight - window.innerHeight;
+      if (maximo >= scrollPendiente) {
+        window.scrollTo(0, scrollPendiente);
+        desarmarRestauracionScroll();
+      } else if (completo) {
+        window.scrollTo(0, Math.max(0, maximo));
+        desarmarRestauracionScroll();
+      }
+    });
+  }
+
   onMount(() => {
     const sel = get(seleccion);
     if (!sel) {
@@ -60,6 +115,8 @@
       error = 'No hay ningún anime seleccionado.';
       return;
     }
+    // T67: la posición que hay que recuperar, antes de decidir la rama.
+    const objetivo = recuperarScroll(claveScroll('detalle'));
     // Vuelta desde el reproductor: el detalle y los episodios siguen en los
     // stores, se conservan tal cual (y con ellos la lista y su scroll); solo
     // se refresca el historial, que puede haber cambiado en el reproductor.
@@ -74,6 +131,9 @@
       refrescarProgreso(sel.animeID, sel.provider);
       return;
     }
+    // Rama de recarga: la lista se vacía y crece por lotes, así que el scroll
+    // se aplica cuando haya altura suficiente.
+    if (objetivo > 0) armarRestauracionScroll(objetivo);
     openAnime(sel.provider, sel.animeID)
       .catch((e) => {
         error = String(e);
@@ -81,6 +141,10 @@
       .finally(() => {
         cargando = false;
       });
+  });
+
+  onDestroy(() => {
+    desarmarRestauracionScroll();
   });
 
   /** Recarga `progressMap` sin vaciar la lista (mismo criterio de descarte que `openAnime`). */
@@ -99,6 +163,9 @@
   // Los episodios llegan deduplicados por T24 (y con lotes que pueden llegar
   // desordenados o antes de resolver la llamada): aquí solo se ordenan.
   $: episodios = [...$episodes].sort((a, b) => a.number - b.number || a.id.localeCompare(b.id));
+
+  // T67: reintenta la restauración pendiente con cada cambio de la lista.
+  $: intentarRestaurarScroll(episodios.length, $episodesComplete);
 
   /** Tipo del detalle en texto amable (T34): `tv-anime` → `TV`; vacío si no hay. */
   $: tipoEtiqueta = etiquetaTipo($currentDetail?.type ?? '');
