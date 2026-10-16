@@ -51,6 +51,10 @@ const (
 	rutaFixtureMediaFire      = "../scraper/jkanime/extractors/testdata/mediafire.html"
 	rutaFixtureHomePortada    = "../scraper/jkanime/testdata/home_portada.html"
 	rutaFixtureHomeDirectorio = "../scraper/jkanime/testdata/home_directorio_emision.html"
+	// Fixture REAL del embed de MP4Upload (mismo archivo que usa T60). El
+	// sitio falso lo sirve tal cual; el fixture trae el CDN con la URL en
+	// claro (token sanitizado TOKEN_DE_PRUEBA embebido en el path).
+	rutaFixtureEmbedMP4 = "../scraper/embeds/testdata/mp4upload_embed.html"
 )
 
 // Rutas del sitio falso.
@@ -68,6 +72,55 @@ const (
 	rutaHomePortada    = "/"           // Home de JKAnime: sección recientes (T43)
 	rutaHomeDirectorio = "/directorio" // Home de JKAnime: sección emision (T43)
 )
+
+// Contrato de MP4Upload que el sitio falso reproduce (T61). El id del embed
+// y la ruta del CDN salen del fixture real (var servers de JKAnime y embeds
+// de AnimeAV1 → internal/scraper/embeds/testdata/mp4upload_embed.html); las
+// peticiones se cortan al sitio falso en el transporte porque el host del
+// embed y el del CDN son ajenos.
+const (
+	hostEmbedMP4 = "www.mp4upload.com"
+	hostCDNMP4   = "a2.mp4upload.com:183" // puerto NO estándar del CDN
+	// rutaEmbedMP4JK es la ruta del embed que trae el `var servers` real de
+	// JKAnime (remote base64 del fixture episode_page.html).
+	rutaEmbedMP4JK = "/embed-7uaibtwfgccu.html"
+	// rutaEmbedMP4AV1 es la ruta del embed que traen los `embeds` reales de
+	// AnimeAV1 (fixture episode_data.json), una por idioma (SUB/DUB).
+	rutaEmbedMP4AV1  = "/embed-i8l69rmmcvhi.html"
+	rutaEmbedMP4AV1b = "/embed-wuf5r9fzzo9q.html"
+	// rutaCDNMP4 es la ruta del medio que publica el fixture real de embeds:
+	// el token va en el PATH, no en la query (regla 9 y guard de T61/T62).
+	rutaCDNMP4 = "/d/TOKEN_DE_PRUEBA/video.mp4"
+)
+
+// refererEmbedMP4 es el Referer que la fuente resuelta lleva al CDN (la URL
+// del embed): el proxy lo inyecta desde la sesión.
+func refererEmbedMP4(rutaEmbed string) string { return "https://" + hostEmbedMP4 + rutaEmbed }
+
+// esRutaEmbedMP4 reconoce la ruta de un embed de MP4Upload y esRutaCDNMP4 la
+// del medio del CDN.
+func esRutaEmbedMP4(ruta string) bool {
+	return strings.HasPrefix(ruta, "/embed-") && strings.HasSuffix(ruta, ".html")
+}
+
+func esRutaCDNMP4(ruta string) bool {
+	return strings.HasPrefix(ruta, "/d/") && strings.HasSuffix(ruta, "/video.mp4")
+}
+
+// videoMP4Prueba es el cuerpo artificial que sirve el CDN falso (no hay
+// fixture de vídeo: no se descargan vídeos, regla 12).
+var videoMP4Prueba = bytes.Repeat([]byte("MP4_DE_PRUEBA\n"), 512)
+
+// respuestaVideoMP4 reproduce el contrato del CDN verificado en T60: 206
+// para Range bytes=0-0 (con Content-Range) y 200 con el cuerpo entero para
+// cualquier otra petición.
+func respuestaVideoMP4(cuerpo []byte, rango string) (int, string, []byte, string) {
+	if rango == "bytes=0-0" {
+		return http.StatusPartialContent, "video/mp4",
+			append([]byte(nil), cuerpo[:1]...), fmt.Sprintf("bytes 0-0/%d", len(cuerpo))
+	}
+	return http.StatusOK, "video/mp4", append([]byte(nil), cuerpo...), ""
+}
 
 // Constantes del contrato del AJAX (T09): cookie de sesión y token CSRF, que
 // el sitio exige con 419 si faltan. El token se extrae del propio fixture del
@@ -121,20 +174,41 @@ func fixturePrueba(t *testing.T, ruta string) string {
 
 type transporteSoloLocal struct {
 	servidor string // host:puerto del sitio falso
-	base     http.RoundTripper
+	// alias son hosts ajenos que sí se atienden, traduciéndolos al sitio
+	// falso (el embed y el CDN de MP4Upload, T61). Cualquier otro host se
+	// sigue cortando antes de conectar.
+	alias map[string]struct{}
+	base  http.RoundTripper
 
 	mu    sync.Mutex
 	fuera []string
 }
 
 func (t *transporteSoloLocal) RoundTrip(r *http.Request) (*http.Response, error) {
-	if r.URL.Host != t.servidor {
-		t.mu.Lock()
-		t.fuera = append(t.fuera, r.URL.String())
-		t.mu.Unlock()
-		return nil, fmt.Errorf("petición fuera del sitio falso: %s", r.URL)
+	if r.URL.Host == t.servidor {
+		return t.base.RoundTrip(r)
 	}
-	return t.base.RoundTrip(r)
+	if _, ok := t.alias[r.URL.Host]; ok {
+		return t.base.RoundTrip(trasladarHost(r, t.servidor))
+	}
+	t.mu.Lock()
+	t.fuera = append(t.fuera, r.URL.String())
+	t.mu.Unlock()
+	return nil, fmt.Errorf("petición fuera del sitio falso: %s", r.URL)
+}
+
+// trasladarHost clona la petición con el host sustituido por el del sitio
+// falso (esquema http, que es el del httptest) conservando método, cuerpo,
+// cabeceras y ctx. La usa el transporte para atender un host ajeno
+// reconocido sin salir a la red.
+func trasladarHost(r *http.Request, host string) *http.Request {
+	destino := *r.URL
+	destino.Scheme = "http"
+	destino.Host = host
+	copia := r.Clone(r.Context())
+	copia.URL = &destino
+	copia.Host = host
+	return copia
 }
 
 // intentosFuera devuelve las peticiones que el transporte cortó (ninguna debe
@@ -166,10 +240,16 @@ type sitioFalso struct {
 	htmlMediaFir    string
 	htmlHomePortada string
 	htmlHomeDir     string
+	htmlEmbedMP4    string
 	paginas         map[string]string
 	csrf            string
 	idNumerico      string
 	segmento        []byte
+	video           []byte
+
+	// Lo que el CDN falso vio en la última petición del medio (T61): el
+	// Referer que inyecta el proxy desde la sesión.
+	cdnReferer string
 }
 
 // nuevoSitioFalso monta el servidor y prepara el contenido (que necesita la
@@ -223,6 +303,9 @@ func (s *sitioFalso) preparar(t *testing.T) {
 	s.playerUM = playerUM
 	s.playerUMv = playerUMv
 	s.htmlMediaFir = fixturePrueba(t, rutaFixtureMediaFire)
+	// Embed de MP4Upload (T61): se sirve el fixture REAL sin tocarlo.
+	s.htmlEmbedMP4 = fixturePrueba(t, rutaFixtureEmbedMP4)
+	s.video = videoMP4Prueba
 	// Home (T43): portada y directorio filtrado, con la misma reescritura de
 	// jkanime.net que el resto del HTML.
 	s.htmlHomePortada = strings.ReplaceAll(fixturePrueba(t, rutaFixtureHomePortada), "https://jkanime.net", base)
@@ -262,9 +345,12 @@ func extraer(t *testing.T, re *regexp.Regexp, html, que string) string {
 }
 
 func (s *sitioFalso) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	status, tipo, cuerpo, cookie := s.responder(r)
+	status, tipo, cuerpo, cookie, contentRange := s.responder(r)
 	if cookie != "" {
 		http.SetCookie(w, &http.Cookie{Name: cookieSesion, Value: cookie, Path: "/"})
+	}
+	if contentRange != "" {
+		w.Header().Set("Content-Range", contentRange)
 	}
 	w.Header().Set("Content-Type", tipo)
 	w.WriteHeader(status)
@@ -273,7 +359,8 @@ func (s *sitioFalso) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // responder decide la respuesta con el mutex puesto: así el registro de
 // peticiones y la lectura del contenido quedan sincronizados con preparar.
-func (s *sitioFalso) responder(r *http.Request) (int, string, []byte, string) {
+// Devuelve (status, content-type, cuerpo, cookie, content-range).
+func (s *sitioFalso) responder(r *http.Request) (int, string, []byte, string, string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.peticiones = append(s.peticiones, r.Method+" "+r.URL.Path)
@@ -283,57 +370,117 @@ func (s *sitioFalso) responder(r *http.Request) (int, string, []byte, string) {
 	case r.Method == http.MethodPost && strings.HasPrefix(ruta, rutaAJAX):
 		return s.episodiosAJAX(r)
 	case ruta == rutaExcepciones:
-		return http.StatusOK, "application/json", []byte("{}"), ""
+		return http.StatusOK, "application/json", []byte("{}"), "", ""
 	case strings.HasPrefix(ruta, rutaBusqueda):
-		return http.StatusOK, "text/html; charset=utf-8", []byte(s.htmlBusqueda), ""
+		return http.StatusOK, "text/html; charset=utf-8", []byte(s.htmlBusqueda), "", ""
 	case ruta == rutaDetalle:
 		// El detalle abre sesión: sin esta cookie el AJAX responde 419.
-		return http.StatusOK, "text/html; charset=utf-8", []byte(s.htmlDetalle), valorSesion
+		return http.StatusOK, "text/html; charset=utf-8", []byte(s.htmlDetalle), valorSesion, ""
 	case ruta == rutaEpisodio:
-		return http.StatusOK, "text/html; charset=utf-8", []byte(s.htmlEpisodio), ""
+		return http.StatusOK, "text/html; charset=utf-8", []byte(s.htmlEpisodio), "", ""
 	case ruta == rutaPlayerUM:
-		return http.StatusOK, "text/html; charset=utf-8", []byte(s.playerUM), ""
+		return http.StatusOK, "text/html; charset=utf-8", []byte(s.playerUM), "", ""
 	case ruta == rutaPlayerUMv:
-		return http.StatusOK, "text/html; charset=utf-8", []byte(s.playerUMv), ""
+		return http.StatusOK, "text/html; charset=utf-8", []byte(s.playerUMv), "", ""
 	case ruta == rutaMediaFire:
-		return http.StatusOK, "text/html; charset=utf-8", []byte(s.htmlMediaFir), ""
+		return http.StatusOK, "text/html; charset=utf-8", []byte(s.htmlMediaFir), "", ""
 	case ruta == rutaManifiesto:
-		return http.StatusOK, "application/vnd.apple.mpegurl", []byte(manifiestoPrueba), ""
+		return http.StatusOK, "application/vnd.apple.mpegurl", []byte(manifiestoPrueba), "", ""
 	case ruta == rutaSegmento:
-		return http.StatusOK, "video/mp2t", append([]byte(nil), s.segmento...), ""
+		return http.StatusOK, "video/mp2t", append([]byte(nil), s.segmento...), "", ""
+	case esRutaEmbedMP4(ruta):
+		// Embed de MP4Upload (T61): el fixture real, sin tocarlo.
+		return http.StatusOK, "text/html; charset=utf-8", []byte(s.htmlEmbedMP4), "", ""
+	case esRutaCDNMP4(ruta):
+		// CDN de MP4Upload: se registra lo que vio (Referer de la sesión).
+		s.cdnReferer = r.Header.Get("Referer")
+		status, tipo, cuerpo, cr := respuestaVideoMP4(s.video, r.Header.Get("Range"))
+		return status, tipo, cuerpo, "", cr
 	case ruta == rutaHomePortada:
-		return http.StatusOK, "text/html; charset=utf-8", []byte(s.htmlHomePortada), ""
+		return http.StatusOK, "text/html; charset=utf-8", []byte(s.htmlHomePortada), "", ""
 	case ruta == rutaHomeDirectorio:
-		return http.StatusOK, "text/html; charset=utf-8", []byte(s.htmlHomeDir), ""
+		return http.StatusOK, "text/html; charset=utf-8", []byte(s.htmlHomeDir), "", ""
 	case r.Method == http.MethodPost:
-		return http.StatusMethodNotAllowed, "text/plain; charset=utf-8", []byte("method not allowed"), ""
+		return http.StatusMethodNotAllowed, "text/plain; charset=utf-8", []byte("method not allowed"), "", ""
 	default:
-		return http.StatusNotFound, "text/plain; charset=utf-8", []byte("no encontrado"), ""
+		return http.StatusNotFound, "text/plain; charset=utf-8", []byte("no encontrado"), "", ""
 	}
 }
 
 // episodiosAJAX reproduce el contrato de T09: POST, cookie de sesión y
 // _token correctos; sin ellos responde 419 como el sitio real.
-func (s *sitioFalso) episodiosAJAX(r *http.Request) (int, string, []byte, string) {
+func (s *sitioFalso) episodiosAJAX(r *http.Request) (int, string, []byte, string, string) {
 	sesion, err := r.Cookie(cookieSesion)
 	if err != nil || sesion.Value != valorSesion {
-		return http.StatusGone, "text/plain; charset=utf-8", []byte("session expired"), ""
+		return http.StatusGone, "text/plain; charset=utf-8", []byte("session expired"), "", ""
 	}
 	if err := r.ParseForm(); err != nil {
-		return http.StatusBadRequest, "text/plain; charset=utf-8", []byte("bad request"), ""
+		return http.StatusBadRequest, "text/plain; charset=utf-8", []byte("bad request"), "", ""
 	}
 	if r.FormValue("_token") != s.csrf {
-		return http.StatusGone, "text/plain; charset=utf-8", []byte("bad token"), ""
+		return http.StatusGone, "text/plain; charset=utf-8", []byte("bad token"), "", ""
 	}
 	parte := strings.Split(strings.Trim(r.URL.Path, "/"), "/") // ajax episodes <id> <n>
 	if len(parte) != 4 || parte[2] != s.idNumerico {
-		return http.StatusNotFound, "text/plain; charset=utf-8", []byte("no encontrado"), ""
+		return http.StatusNotFound, "text/plain; charset=utf-8", []byte("no encontrado"), "", ""
 	}
 	cuerpo, ok := s.paginas[parte[3]]
 	if !ok {
-		return http.StatusNotFound, "text/plain; charset=utf-8", []byte("no encontrado"), ""
+		return http.StatusNotFound, "text/plain; charset=utf-8", []byte("no encontrado"), "", ""
 	}
-	return http.StatusOK, "application/json", []byte(cuerpo), ""
+	return http.StatusOK, "application/json", []byte(cuerpo), "", ""
+}
+
+// contenidoVideo es el cuerpo artificial que sirve el CDN falso.
+func (s *sitioFalso) contenidoVideo() []byte {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return append([]byte(nil), s.video...)
+}
+
+// refererCDN es el Referer que el CDN falso registró en la última petición
+// del medio (lo inyecta el proxy desde la sesión).
+func (s *sitioFalso) refererCDN() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.cdnReferer
+}
+
+// fuenteMP4Upload busca la fuente mp4 resuelta por el resolver de MP4Upload
+// (Server "MP4Upload", Type mp4) y falla si no está (T61).
+func fuenteMP4Upload(t *testing.T, fuentes []models.VideoSource) models.VideoSource {
+	t.Helper()
+	for _, f := range fuentes {
+		if f.Type == models.ResourceMP4 && f.Server == "MP4Upload" {
+			return f
+		}
+	}
+	t.Fatalf("no hay fuente mp4 de MP4Upload entre las %d fuentes: %s", len(fuentes), resumenFuentes(fuentes))
+	return models.VideoSource{}
+}
+
+// fuentePorTipoIdioma busca una fuente de MP4Upload por tipo e idioma (T61).
+func fuentePorTipoIdioma(t *testing.T, fuentes []models.VideoSource, tipo models.ResourceType, idioma string) models.VideoSource {
+	t.Helper()
+	for _, f := range fuentes {
+		if f.Type == tipo && f.Server == "MP4Upload" && f.Language == idioma {
+			return f
+		}
+	}
+	t.Fatalf("no hay fuente %s/%s de MP4Upload: %s", tipo, idioma, resumenFuentes(fuentes))
+	return models.VideoSource{}
+}
+
+// cuentaServidor cuenta las fuentes de un servidor y tipo concretos (medida
+// de req8 de T61).
+func cuentaServidor(fuentes []models.VideoSource, server string, tipo models.ResourceType) int {
+	n := 0
+	for _, f := range fuentes {
+		if f.Server == server && f.Type == tipo {
+			n++
+		}
+	}
+	return n
 }
 
 func (s *sitioFalso) listaPeticiones() []string {
@@ -546,6 +693,10 @@ func comprobarLogsSinSecretos(t *testing.T, reg *registroSeguro) {
 		"_token=",
 		"csrf-token",
 		"Authorization:",
+		// T61/T62: el token del CDN de MP4Upload va en el PATH de la URL
+		// resuelta; ni al registrar la fuente ni al servirla por el proxy
+		// puede quedar en claro en un log.
+		"TOKEN_DE_PRUEBA",
 	}
 	lower := strings.ToLower(salida)
 	for _, secreto := range bloqueadas {
@@ -563,19 +714,25 @@ func comprobarLogsSinSecretos(t *testing.T, reg *registroSeguro) {
 // streaming de episodios y eventos) → GetVideoSources → SelectBestSource →
 // petición HTTP real a través del proxy local (T19), todo sobre un
 // httptest.Server que hace de jkanime completo. Sin red: el transporte del
-// proveedor corta cualquier host ajeno y el proxy solo se le pide el
-// manifiesto y el segmento del propio sitio.
+// proveedor corta cualquier host ajeno, salvo el embed y el CDN de
+// MP4Upload (T61), que se traducen al propio sitio falso; el proxy solo se
+// le pide el manifiesto, el segmento y el mp4 resuelto.
 func TestE2EFlujoCompletoOffline(t *testing.T) {
 	registro := capturarLogs(t)
 	sitio := nuevoSitioFalso(t)
 
-	transporte := &transporteSoloLocal{servidor: hostDe(sitio.srv.URL), base: http.DefaultTransport}
+	transporte := &transporteSoloLocal{
+		servidor: hostDe(sitio.srv.URL),
+		alias:    map[string]struct{}{hostEmbedMP4: {}, hostCDNMP4: {}},
+		base:     http.DefaultTransport,
+	}
 	doer := httpx.NewClient(httpx.ClientOptions{Transport: transporte})
 
-	// El proxy se construye con la opción de red privada SOLO aquí: el
-	// httptest escucha en 127.0.0.1 y el valor por defecto lo bloquearía
-	// (T19). En producción la app usa NewProxy(nil) sin esa opción.
-	px := stream.NewProxy(nil, stream.PermitirRedPrivada())
+	// El proxy recibe el mismo transporte que el proveedor: así el embed y el
+	// CDN de MP4Upload (T61) se atienden en el sitio falso y cualquier otro
+	// host se corta ANTES de conectar. Un doer inyectado hace que el proxy no
+	// monte su anti-SSRF (T19), pero aquí el guardia es el propio transporte.
+	px := stream.NewProxy(httpx.NewClient(httpx.ClientOptions{Transport: transporte}))
 
 	reg := scraper.NewRegistry()
 	// Solo JKAnime: este E2E recorre el flujo completo del proveedor
@@ -770,8 +927,10 @@ func TestE2EFlujoCompletoOffline(t *testing.T) {
 		t.Errorf("fuentes HLS = %d; se esperaba 1 (um y umv comparten el .m3u8 y deduplican)",
 			conteo[models.ResourceHLS])
 	}
-	if conteo[models.ResourceMP4] != 1 {
-		t.Errorf("fuentes MP4 = %d; se esperaba 1 (el remote de Mediafire)", conteo[models.ResourceMP4])
+	// 2 MP4: el remote de Mediafire y el MP4Upload resuelto (T61).
+	if conteo[models.ResourceMP4] != 2 {
+		t.Errorf("fuentes MP4 = %d; se esperaban 2 (Mediafire + MP4Upload resuelto de T61)",
+			conteo[models.ResourceMP4])
 	}
 	if fuentes[0].Type != models.ResourceHLS {
 		t.Errorf("la primera fuente (la mejor) es %q (%s); se esperaba hls",
@@ -792,6 +951,10 @@ func TestE2EFlujoCompletoOffline(t *testing.T) {
 	}
 	t.Logf("fuentes: %d; mejor = %s (%s) vía proxy\n%s",
 		len(fuentes), mejor.Type, mejor.Server, resumenFuentes(fuentes))
+	// req8 de T61: en esta muestra el episodio SÍ ofrecía MP4Upload, quedó
+	// resuelto a mp4, pero NO es la fuente elegida por SelectBestSource (HLS).
+	t.Logf("T61 medida: MP4Upload presente = sí; mp4 resueltos = %d; elegido como mejor = %v",
+		cuentaServidor(fuentes, "MP4Upload", models.ResourceMP4), mejor.Server == "MP4Upload")
 
 	// --- 5. Petición HTTP real a través del proxy -------------------------
 	cliente := &http.Client{Timeout: 30 * time.Second}
@@ -838,6 +1001,44 @@ func TestE2EFlujoCompletoOffline(t *testing.T) {
 	}
 	t.Logf("proxy: manifiesto de %d bytes con el segmento reescrito y descargado (%d bytes, %s)",
 		len(cuerpo), len(cuerpoSeg), respSeg.Header.Get("Content-Type"))
+
+	// --- 5b. MP4Upload resuelto, elegido a mano (T61, req6) ---------------
+	// La mejor sigue siendo HLS; el usuario puede elegir a mano el mp4 de la
+	// lista. Se pide por el proxy con Range: el CDN falso responde 206 y
+	// recibe el Referer de la sesión. El token del path viaja en runtime
+	// (regla 9, no se cachea) pero NO puede quedar en ningún log: lo
+	// comprueba comprobarLogsSinSecretos al final.
+	mp4 := fuenteMP4Upload(t, fuentes)
+	if destino := destinoProxy(t, mp4.URL); !strings.HasPrefix(destino, "https://"+hostCDNMP4+"/d/") {
+		t.Errorf("el mp4 resuelto apunta a %q; se esperaba el CDN %s (puerto no estándar)", destino, hostCDNMP4)
+	}
+	reqMP4, err := http.NewRequest(http.MethodGet, mp4.URL, nil)
+	if err != nil {
+		t.Fatalf("preparando la petición del mp4: %v", err)
+	}
+	reqMP4.Header.Set("Range", "bytes=0-0")
+	respMP4, err := cliente.Do(reqMP4)
+	if err != nil {
+		t.Fatalf("GET del mp4 de MP4Upload a través del proxy: %v", recortarError(err, mp4.URL))
+	}
+	cuerpoMP4, err := io.ReadAll(respMP4.Body)
+	respMP4.Body.Close()
+	if err != nil {
+		t.Fatalf("leyendo el mp4: %v", err)
+	}
+	if respMP4.StatusCode != http.StatusPartialContent {
+		t.Errorf("el proxy respondió %d para el mp4 con Range; se esperaba 206", respMP4.StatusCode)
+	}
+	if cr := respMP4.Header.Get("Content-Range"); !strings.HasPrefix(cr, "bytes 0-0/") {
+		t.Errorf("Content-Range del mp4 = %q; se esperaba bytes 0-0/<tamaño>", cr)
+	}
+	if !bytes.Equal(cuerpoMP4, sitio.contenidoVideo()[:1]) {
+		t.Errorf("el mp4 con Range tiene %d bytes y no es el primero del CDN falso", len(cuerpoMP4))
+	}
+	if ref := sitio.refererCDN(); ref != refererEmbedMP4(rutaEmbedMP4JK) {
+		t.Errorf("el CDN falso vio Referer %q; se esperaba %q", ref, refererEmbedMP4(rutaEmbedMP4JK))
+	}
+	t.Logf("MP4Upload: mp4 resuelto pedido por el proxy; Range → 206 (%d byte) con el Referer de la sesión", len(cuerpoMP4))
 
 	// --- 6. Historial de visualización (T22) ------------------------------
 	if err := n.GuardarProgreso(models.WatchProgress{
@@ -972,8 +1173,10 @@ func TestE2EFlujoCompletoOffline(t *testing.T) {
 		"GET " + rutaPlayerUM,
 		"GET " + rutaPlayerUMv,
 		"GET " + rutaMediaFire,
+		"GET " + rutaEmbedMP4JK, // embed de MP4Upload resuelto (T61)
 		"GET " + rutaManifiesto,
 		"GET " + rutaSegmento,
+		"GET " + rutaCDNMP4, // CDN del mp4 resuelto, pedido por el proxy
 	}
 	for _, q := range queria {
 		if !contiene(peticiones, q) {
@@ -1133,7 +1336,11 @@ var reManifiestoAV1 = regexp.MustCompile("^" + rutaManifiestoAV1 + `[0-9a-fA-F]{
 type transporteJugador struct {
 	jugador string // host del reproductor (sin puerto)
 	sitio   string // host:puerto del sitio falso
-	base    http.RoundTripper
+	// alias son hosts ajenos que sí se atienden, traduciéndolos al sitio
+	// falso (el CDN de MP4Upload resuelto, T61). Cualquier otro destino se
+	// corta antes de conectar.
+	alias map[string]struct{}
+	base  http.RoundTripper
 
 	mu    sync.Mutex
 	fuera []string
@@ -1147,18 +1354,15 @@ func (t *transporteJugador) RoundTrip(r *http.Request) (*http.Response, error) {
 		// Misma petición, otro destino. La resolución de URIs relativas del
 		// manifiesto no importa (el E2E las sirve absolutas) y el host del
 		// jugador nunca llega al sitio.
-		destino := *r.URL
-		destino.Scheme = "http"
-		destino.Host = t.sitio
-		copia := r.Clone(r.Context())
-		copia.URL = &destino
-		return t.base.RoundTrip(copia)
-	default:
-		t.mu.Lock()
-		t.fuera = append(t.fuera, r.URL.String())
-		t.mu.Unlock()
-		return nil, fmt.Errorf("petición del proxy fuera del reproductor y del sitio falso: %s", r.URL)
+		return t.base.RoundTrip(trasladarHost(r, t.sitio))
 	}
+	if _, ok := t.alias[r.URL.Host]; ok {
+		return t.base.RoundTrip(trasladarHost(r, t.sitio))
+	}
+	t.mu.Lock()
+	t.fuera = append(t.fuera, r.URL.String())
+	t.mu.Unlock()
+	return nil, fmt.Errorf("petición del proxy fuera del reproductor, del CDN de MP4Upload y del sitio falso: %s", r.URL)
 }
 
 // intentosFuera devuelve las peticiones que el transporte cortó (ninguna
@@ -1200,7 +1404,10 @@ type sitioAV1 struct {
 	homePortada     string
 	detalle         string
 	episodio        string
+	htmlEmbedMP4    string
 	segmento        []byte
+	video           []byte
+	cdnReferer      string
 }
 
 // nuevoSitioAV1 monta el servidor y prepara el contenido (que necesita la
@@ -1222,6 +1429,8 @@ func (s *sitioAV1) preparar(t *testing.T) {
 	episodio := fixturePrueba(t, rutaFixtureEpisodioAV1)
 	emision := fixturePrueba(t, rutaFixtureHomeEmisionAV1)
 	portada := fixturePrueba(t, rutaFixtureHomePortadaAV1)
+	// Embed de MP4Upload (T61): se sirve el fixture REAL sin tocarlo.
+	embedMP4 := fixturePrueba(t, rutaFixtureEmbedMP4)
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -1231,7 +1440,9 @@ func (s *sitioAV1) preparar(t *testing.T) {
 	s.homePortada = portada
 	s.detalle = detalle
 	s.episodio = episodio
+	s.htmlEmbedMP4 = embedMP4
 	s.segmento = bytes.Repeat([]byte("SEGMENTO_AV1_DE_PRUEBA\n"), 256)
+	s.video = videoMP4Prueba
 }
 
 func (s *sitioAV1) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -1289,6 +1500,13 @@ func (s *sitioAV1) contenido(r *http.Request, ruta, fetch, rango string) (int, s
 		return http.StatusOK, "application/vnd.apple.mpegurl", []byte(manifiestoAV1Prueba), ""
 	case r.Method == http.MethodGet && ruta == rutaSegmentoAV1:
 		return s.segmentoRespuesta(fetch, rango)
+	case r.Method == http.MethodGet && esRutaEmbedMP4(ruta):
+		// Embed de MP4Upload (T61): el fixture real, sin tocarlo.
+		return http.StatusOK, "text/html; charset=utf-8", []byte(s.htmlEmbedMP4), ""
+	case r.Method == http.MethodGet && esRutaCDNMP4(ruta):
+		// CDN de MP4Upload: se registra lo que vio (Referer de la sesión).
+		s.cdnReferer = r.Header.Get("Referer")
+		return respuestaVideoMP4(s.video, rango)
 	default:
 		return http.StatusNotFound, "text/plain; charset=utf-8", []byte("no encontrado"), ""
 	}
@@ -1342,6 +1560,21 @@ func (s *sitioAV1) contenidoSegmento() []byte {
 	return append([]byte(nil), s.segmento...)
 }
 
+// contenidoVideo es el cuerpo artificial que sirve el CDN falso (T61).
+func (s *sitioAV1) contenidoVideo() []byte {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return append([]byte(nil), s.video...)
+}
+
+// refererCDN es el Referer que el CDN falso registró en la última petición
+// del medio (lo inyecta el proxy desde la sesión).
+func (s *sitioAV1) refererCDN() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.cdnReferer
+}
+
 // peticionesEn filtra las peticiones registradas por ruta.
 func peticionesEn(ps []peticionAV1, ruta string) []peticionAV1 {
 	var out []peticionAV1
@@ -1362,9 +1595,20 @@ func TestE2EAnimeAV1FlujoCompletoOffline(t *testing.T) {
 	registro := capturarLogs(t)
 	sitio := nuevoSitioAV1(t)
 
-	transporte := &transporteSoloLocal{servidor: hostDe(sitio.srv.URL), base: http.DefaultTransport}
+	transporte := &transporteSoloLocal{
+		servidor: hostDe(sitio.srv.URL),
+		alias:    map[string]struct{}{hostEmbedMP4: {}},
+		base:     http.DefaultTransport,
+	}
 	doer := httpx.NewClient(httpx.ClientOptions{Transport: transporte})
-	transportePx := &transporteJugador{jugador: hostJugadorPrueba, sitio: hostDe(sitio.srv.URL), base: http.DefaultTransport}
+	// El proxy sí atiende el CDN de MP4Upload resuelto (T61), además del
+	// reproductor propio y del sitio falso.
+	transportePx := &transporteJugador{
+		jugador: hostJugadorPrueba,
+		sitio:   hostDe(sitio.srv.URL),
+		alias:   map[string]struct{}{hostCDNMP4: {}},
+		base:    http.DefaultTransport,
+	}
 	px := stream.NewProxy(&http.Client{Timeout: 30 * time.Second, Transport: transportePx})
 
 	reg := scraper.NewRegistry()
@@ -1591,9 +1835,11 @@ func TestE2EAnimeAV1FlujoCompletoOffline(t *testing.T) {
 		}
 		conteo[f.Type]++
 	}
-	if len(fuentes) != 10 || conteo[models.ResourceHLS] != 2 || conteo[models.ResourceIframe] != 8 {
-		t.Errorf("fuentes = %d (hls %d, iframe %d); el fixture de bleach/1 trae 10 (2 HLS + 8 iframes)",
-			len(fuentes), conteo[models.ResourceHLS], conteo[models.ResourceIframe])
+	// T61: a las 10 de siempre (2 HLS + 8 iframe) se suman los 2 mp4 de
+	// MP4Upload resueltos (SUB y DUB), que comparten URL pero no idioma.
+	if len(fuentes) != 12 || conteo[models.ResourceHLS] != 2 || conteo[models.ResourceIframe] != 8 || conteo[models.ResourceMP4] != 2 {
+		t.Errorf("fuentes = %d (hls %d, iframe %d, mp4 %d); el fixture de bleach/1 trae 12 (2 HLS + 8 iframes + 2 MP4Upload de T61)",
+			len(fuentes), conteo[models.ResourceHLS], conteo[models.ResourceIframe], conteo[models.ResourceMP4])
 	}
 	if fuentes[0].Type != models.ResourceHLS || fuentes[0].Language != models.LanguageSub {
 		t.Errorf("la primera fuente es %s (%s, %s); se esperaba hls/SUB del reproductor propio",
@@ -1620,6 +1866,10 @@ func TestE2EAnimeAV1FlujoCompletoOffline(t *testing.T) {
 	rutaManifest = du.Path
 	t.Logf("fuentes: %d; mejor = %s (%s, %s) vía proxy\n%s",
 		len(fuentes), mejor.Type, mejor.Server, mejor.Language, resumenFuentes(fuentes))
+	// req8 de T61: el episodio ofrecía MP4Upload en SUB y DUB, quedaron
+	// resueltos a mp4, pero la fuente elegida por SelectBestSource es la HLS.
+	t.Logf("T61 medida: MP4Upload presente = sí; mp4 resueltos = %d; elegido como mejor = %v",
+		cuentaServidor(fuentes, "MP4Upload", models.ResourceMP4), mejor.Server == "MP4Upload")
 
 	// --- 5. Manifiesto y segmento a través del proxy ----------------------
 	cliente := &http.Client{Timeout: 30 * time.Second}
@@ -1708,7 +1958,46 @@ func TestE2EAnimeAV1FlujoCompletoOffline(t *testing.T) {
 	t.Logf("proxy: manifiesto de %d bytes con el segmento reescrito; Range → 206 (%d byte), directo → 403/200 según Sec-Fetch-Site",
 		len(cuerpo), len(cuerpoRango))
 
-	// --- 5b. Favoritos (T42) y borrados de historial (T41/T45) -----------
+	// --- 5b. MP4Upload resuelto, elegido a mano (T61, req6) ---------------
+	// La mejor sigue siendo HLS; se toma a mano el mp4 SUB y se pide por el
+	// proxy con Range. El Referer que ve el CDN es la URL del embed del
+	// mismo idioma (la fuente iframe que lo originó), inyectada desde la
+	// sesión. El token del path viaja en runtime y NO puede quedar en un log
+	// (lo comprueba comprobarLogsSinSecretos al final).
+	mp4 := fuentePorTipoIdioma(t, fuentes, models.ResourceMP4, models.LanguageSub)
+	embedSub := fuentePorTipoIdioma(t, fuentes, models.ResourceIframe, models.LanguageSub)
+	if destino := destinoProxy(t, mp4.URL); !strings.HasPrefix(destino, "https://"+hostCDNMP4+"/d/") {
+		t.Errorf("el mp4 SUB apunta a %q; se esperaba el CDN %s (puerto no estándar)", destino, hostCDNMP4)
+	}
+	reqMP4, err := http.NewRequest(http.MethodGet, mp4.URL, nil)
+	if err != nil {
+		t.Fatalf("preparando la petición del mp4: %v", err)
+	}
+	reqMP4.Header.Set("Range", "bytes=0-0")
+	respMP4, err := cliente.Do(reqMP4)
+	if err != nil {
+		t.Fatalf("GET del mp4 de MP4Upload a través del proxy: %v", recortarError(err, mp4.URL))
+	}
+	cuerpoMP4, err := io.ReadAll(respMP4.Body)
+	respMP4.Body.Close()
+	if err != nil {
+		t.Fatalf("leyendo el mp4: %v", err)
+	}
+	if respMP4.StatusCode != http.StatusPartialContent {
+		t.Errorf("el proxy respondió %d para el mp4 con Range; se esperaba 206", respMP4.StatusCode)
+	}
+	if cr := respMP4.Header.Get("Content-Range"); !strings.HasPrefix(cr, "bytes 0-0/") {
+		t.Errorf("Content-Range del mp4 = %q; se esperaba bytes 0-0/<tamaño>", cr)
+	}
+	if !bytes.Equal(cuerpoMP4, sitio.contenidoVideo()[:1]) {
+		t.Errorf("el mp4 con Range tiene %d bytes y no es el primero del CDN falso", len(cuerpoMP4))
+	}
+	if ref := sitio.refererCDN(); ref != embedSub.URL {
+		t.Errorf("el CDN falso vio Referer %q; se esperaba el embed SUB %q", ref, embedSub.URL)
+	}
+	t.Logf("MP4Upload: mp4 SUB resuelto pedido por el proxy; Range → 206 (%d byte) con el Referer del embed", len(cuerpoMP4))
+
+	// --- 5c. Favoritos (T42) y borrados de historial (T41/T45) -----------
 	favorito := models.Favorite{
 		Provider: proveedorComplemento,
 		AnimeID:  slug,
@@ -1801,10 +2090,13 @@ func TestE2EAnimeAV1FlujoCompletoOffline(t *testing.T) {
 		"GET " + rutaHomeAV1,
 		"GET " + rutaDetalleAV1,
 		"GET " + rutaEpisodioAV1,
+		"GET " + rutaEmbedMP4AV1,  // embed SUB resuelto (T61)
+		"GET " + rutaEmbedMP4AV1b, // embed DUB resuelto (T61)
 		"GET " + rutaManifest,
 		"GET " + rutaSegmentoAV1,
 		"GET " + rutaSegmentoAV1,
 		"GET " + rutaSegmentoAV1,
+		"GET " + rutaCDNMP4, // CDN del mp4 SUB, pedido por el proxy
 	}
 	esperadas := append([]string(nil), queria...)
 	hubieron := append([]string(nil), peticiones...)
@@ -1822,8 +2114,11 @@ func TestE2EAnimeAV1FlujoCompletoOffline(t *testing.T) {
 		rutaHomeAV1:             1,
 		rutaDetalleAV1:          1,
 		rutaEpisodioAV1:         1,
+		rutaEmbedMP4AV1:         1, // intento SUB
+		rutaEmbedMP4AV1b:        1, // intento DUB
 		rutaManifest:            1,
 		rutaSegmentoAV1:         3,
+		rutaCDNMP4:              1, // el mp4 SUB pedido por el proxy
 	}
 	for ruta, querido := range exactas {
 		if n := contar(peticiones, "GET "+ruta); n != querido {

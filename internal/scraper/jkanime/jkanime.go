@@ -7,6 +7,7 @@ import (
 	"miapp/internal/httpx"
 	"miapp/internal/models"
 	"miapp/internal/scraper"
+	"miapp/internal/scraper/embeds"
 	"miapp/internal/scraper/jkanime/extractors"
 )
 
@@ -35,6 +36,12 @@ type JkAnime struct {
 	// Resolver aplica el mapa remoto de excepciones (T06) a las URL de los
 	// resultados; nil → ExceptionResolver con el mismo doer.
 	Resolver *ExceptionResolver
+	// Embeds resuelve las fuentes iframe de hosts reconocidos (T61) para
+	// publicar además su mp4 directo, conservando el iframe. New deja uno
+	// de MP4Upload con el mismo doer; una lista distinta (o vacía) la usan
+	// los tests para inyectar un resolver falso o desactivar el
+	// enriquecimiento.
+	Embeds []embeds.Resolver
 }
 
 var _ scraper.Provider = (*JkAnime)(nil)
@@ -47,6 +54,9 @@ func New(doer httpx.HTTPDoer, baseURL string, resolver *ExceptionResolver) *JkAn
 	j.BaseURL = j.siteURL()
 	if j.Resolver == nil {
 		j.Resolver = &ExceptionResolver{Doer: doer}
+	}
+	if j.Embeds == nil {
+		j.Embeds = []embeds.Resolver{embeds.NewMP4Upload(doer)}
 	}
 	return j
 }
@@ -65,6 +75,8 @@ func (j *JkAnime) GetAnimeDetails(ctx context.Context, id string) (models.AnimeD
 // cadena de extractores —JKPlayer → JKPHP → Servers con MediaFire— y
 // devuelve las fuentes ya normalizadas: la validación, la deduplicación
 // y la completado de tipos los hace Normalize dentro de Resolve (T16).
+// Después enriquece la lista (T61): por cada iframe que reconozca un
+// resolver de embeds se añade su mp4 directo, conservando el iframe.
 // No se cachea nada: los enlaces son temporales (regla 9), por lo que
 // opts.NoCache hoy no cambia el comportamiento.
 //
@@ -76,7 +88,11 @@ func (j *JkAnime) GetVideoSources(ctx context.Context, episodeID string, opts sc
 	if err != nil {
 		return nil, err
 	}
-	return j.cadenaDeExtractores().Resolve(ctx, paginaExtractores(pagina))
+	fuentes, err := j.cadenaDeExtractores().Resolve(ctx, paginaExtractores(pagina))
+	if err != nil {
+		return nil, err
+	}
+	return j.enriquecerConEmbeds(ctx, fuentes), nil
 }
 
 // cadenaDeExtractores monta la cadena de T17 con el doer del proveedor

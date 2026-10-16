@@ -187,6 +187,10 @@ func TestGetVideoSourcesFlujoCompleto(t *testing.T) {
 
 	cli := clienteFlujo(f.srv.URL)
 	j := New(cli, f.srv.URL, &ExceptionResolver{Doer: cli})
+	// Sin resolvers de embeds: este test fija la extracción y la
+	// normalización (T10–T16) sin la capa de T61, que tiene sus propias
+	// pruebas offline con un resolver falso.
+	j.Embeds = nil
 
 	fuentes, err := j.GetVideoSources(context.Background(), "jkanime:bleach:episode:1", scraper.SourceOpts{})
 	if err != nil {
@@ -241,6 +245,9 @@ func TestGetVideoSourcesCadenaCompletaConJKPHP(t *testing.T) {
 
 	cli := clienteFlujo(f.srv.URL)
 	j := New(cli, f.srv.URL, &ExceptionResolver{Doer: cli})
+	// Sin resolvers de embeds: este test fija la cadena completa de
+	// extractores (T11–T15) sin la capa de T61 (pruebas propias).
+	j.Embeds = nil
 
 	fuentes, err := j.GetVideoSources(context.Background(), "jkanime:bleach:episode:1", scraper.SourceOpts{})
 	if err != nil {

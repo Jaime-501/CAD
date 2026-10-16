@@ -257,3 +257,122 @@ func TestAnimeAV1CabecerasSoloVivenEnElProxy(t *testing.T) {
 		t.Errorf("AnimeAV1 no declara Referer y no debe inventarse: %v", originRecibidas)
 	}
 }
+
+// TestMP4UploadRefererSoloViveEnElProxy es la prueba del requisito 5 de T61:
+// la fuente mp4 resuelta de MP4Upload lleva un Referer (la URL del embed) que
+// EXIGE el CDN y va en un host con puerto NO estándar. Con el proxy REAL se
+// comprueba que (a) la fuente que cruza a Wails sale sin Referer ni Headers,
+// (b) el origen SÍ recibe el Referer (no 403/000) y (c) el Range viaja y el
+// origen responde 206. Si el Referer no se guardara en la sesión, MP4Upload
+// devolvería 403 y el mp4 no se vería.
+func TestMP4UploadRefererSoloViveEnElProxy(t *testing.T) {
+	var mu sync.Mutex
+	var recibidas http.Header
+	var metodo, rango string
+	origen := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		recibidas = r.Header.Clone()
+		metodo, rango = r.Method, r.Header.Get("Range")
+		mu.Unlock()
+		w.Header().Set("Content-Type", "video/mp4")
+		if r.Header.Get("Range") == "bytes=0-0" {
+			w.Header().Set("Content-Range", "bytes 0-0/1024")
+			w.WriteHeader(http.StatusPartialContent)
+			_, _ = w.Write([]byte("M"))
+			return
+		}
+		_, _ = w.Write([]byte("MP4_DE_PRUEBA"))
+	}))
+	t.Cleanup(origen.Close)
+
+	// Proxy real como en producción (T19). El CDN falso vive en el 127.0.0.1
+	// del httptest con un puerto NO estándar: hace falta PermitirRedPrivada
+	// (solo aquí) y sirve además para probar que el puerto se conserva.
+	px := stream.NewProxy(nil, stream.PermitirRedPrivada())
+	base, err := px.Escuchar()
+	if err != nil {
+		t.Fatalf("Escuchar: %v", err)
+	}
+	t.Cleanup(func() { _ = px.Cerrar() })
+
+	const embedURL = "https://www.mp4upload.com/embed-i8l69rmmcvhi.html"
+	cdnURL := origen.URL + "/d/TOKEN_DE_PRUEBA/video.mp4"
+	fake := animeAV1DePrueba(
+		func(context.Context, string, scraper.SourceOpts) ([]models.VideoSource, error) {
+			return []models.VideoSource{{
+				URL:      cdnURL,
+				Type:     models.ResourceMP4,
+				Server:   "MP4Upload",
+				Language: models.LanguageSub,
+				Referer:  embedURL,
+				Headers:  map[string]string{"Sec-Fetch-Site": "same-origin"},
+			}}, nil
+		}, nil)
+
+	reg := scraper.NewRegistry()
+	if err := reg.Register(fake); err != nil {
+		t.Fatalf("registro: %v", err)
+	}
+	n := NuevoNucleo(reg, px, extractors.SelectBestSource, nuevoEmisorFalso().emitir,
+		cache.New(ttlCacheDetalle), t.TempDir())
+	t.Cleanup(func() { _ = n.Cerrar() })
+
+	salida, err := n.Fuentes(context.Background(), "animeav1", "animeav1:bleach:episode:1", false)
+	if err != nil {
+		t.Fatalf("fuentes: %v", err)
+	}
+	if len(salida) != 1 || salida[0].Type != models.ResourceMP4 {
+		t.Fatalf("salida = %+v; quería el mp4 resuelto", salida)
+	}
+	mp4 := salida[0]
+
+	// (a) Lo que ve el frontend: proxificado, sin cabeceras ni referer...
+	if mp4.Referer != "" || mp4.Headers != nil {
+		t.Errorf("la fuente hacia el frontend arrastra cabeceras: %+v", mp4)
+	}
+	if !strings.HasPrefix(mp4.URL, base+"/proxy?") {
+		t.Fatalf("el mp4 no apunta al proxy: %q (base %q)", mp4.URL, base)
+	}
+	puente, err := json.Marshal(mp4)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	for _, prohibido := range []string{"Sec-Fetch-Site", "Referer", "mp4upload.com/embed-"} {
+		if strings.Contains(string(puente), prohibido) {
+			t.Errorf("el JSON que cruza el puente de Wails contiene %q: %s", prohibido, puente)
+		}
+	}
+
+	// (b) petición REAL con Range a través del proxy: el origen debe recibir
+	// el Referer de la sesión y responder 206.
+	req, err := http.NewRequest(http.MethodGet, mp4.URL, nil)
+	if err != nil {
+		t.Fatalf("preparando la petición: %v", err)
+	}
+	req.Header.Set("Range", "bytes=0-0")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("GET a través del proxy: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusPartialContent {
+		t.Fatalf("el proxy respondió %d para el mp4 con Range; se esperaba 206 (¿403 por Referer perdido?)",
+			resp.StatusCode)
+	}
+	if cr := resp.Header.Get("Content-Range"); !strings.HasPrefix(cr, "bytes 0-0/") {
+		t.Errorf("Content-Range del proxy = %q; se esperaba bytes 0-0/<tamaño>", cr)
+	}
+
+	mu.Lock()
+	cabeceras, m, rg := recibidas, metodo, rango
+	mu.Unlock()
+	if m != http.MethodGet || rg != "bytes=0-0" {
+		t.Errorf("el origen vio %s con Range %q; se esperaba GET con bytes=0-0", m, rg)
+	}
+	if cabeceras.Get("Referer") != embedURL {
+		t.Errorf("el origen no recibió el Referer del embed: %v (quería %q)", cabeceras.Get("Referer"), embedURL)
+	}
+	if cabeceras.Get("Sec-Fetch-Site") != "same-origin" {
+		t.Errorf("el origen no recibió Sec-Fetch-Site: %v", cabeceras.Get("Sec-Fetch-Site"))
+	}
+}

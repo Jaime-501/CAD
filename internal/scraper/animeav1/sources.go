@@ -6,14 +6,18 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/url"
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"miapp/internal/httpx"
+	"miapp/internal/logx"
 	"miapp/internal/models"
 	"miapp/internal/scraper"
+	"miapp/internal/scraper/embeds"
 )
 
 const (
@@ -56,6 +60,10 @@ var idiomasEmbeds = []string{models.LanguageSub, models.LanguageDub}
 // /m3u8/<id>— y el resto de servidores como iframe, cada una con su idioma
 // estructurado en models.VideoSource.Language (SUB/DUB).
 //
+// Tras construir la lista, los iframes de hosts reconocidos se resuelven
+// con los resolvers de embeds (T61) y se añade su mp4 directo conservando
+// el iframe y el idioma.
+//
 // Es una sola petición, sin cookies ni CSRF (T30). downloads se ignora: son
 // enlaces de descarga, no reproductores embebibles. opts.NoCache no cambia
 // nada: las fuentes nunca se cachean (regla 9).
@@ -96,7 +104,11 @@ func (a *AnimeAV1) GetVideoSources(ctx context.Context, episodeID string, opts s
 	if len(data) > maxFuentesBytes {
 		return nil, fmt.Errorf("el __data.json del episodio pesa %d bytes y el máximo es %d", len(data), maxFuentesBytes)
 	}
-	return fuentesDeJSON(slug, ruta, data)
+	fuentes, err := fuentesDeJSON(slug, ruta, data)
+	if err != nil {
+		return nil, err
+	}
+	return a.enriquecerConEmbeds(ctx, fuentes), nil
 }
 
 // fuentesDeJSON extrae el campo embeds del __data.json y lo convierte en
@@ -296,4 +308,89 @@ func claveFuente(f models.VideoSource) string {
 		clave += "#" + u.Fragment
 	}
 	return clave + "\x00" + f.Language
+}
+
+// tiempoResolucionEmbeds acota cada resolución de embed (T61): es la
+// petición corta al HTML del embed, no la descarga del vídeo. Un embed
+// lento no puede bloquear el resto de fuentes del episodio.
+const tiempoResolucionEmbeds = 8 * time.Second
+
+// embedsResolvers devuelve los resolvers de embeds inyectados (New deja
+// uno de MP4Upload con el doer del proveedor; una lista distinta permite a
+// los tests inyectar un resolver falso o desactivar el enriquecimiento con
+// una lista vacía).
+func (a *AnimeAV1) embedsResolvers() []embeds.Resolver {
+	return a.Embeds
+}
+
+// enriquecerConEmbeds añade, por cada iframe que algún resolver reconozca
+// (T61), sus fuentes directas (mp4) conservando el iframe como respaldo.
+// El idioma de la fuente original (SUB/DUB) se copia a la resuelta, de modo
+// que SUB y DUB siguen siendo fuentes distintas. Un fallo del resolver no
+// rompe el resto: se registra un aviso sin URL y se continúa. No se duplica
+// un recurso ya presente (mismo recurso base + idioma, criterio de claveFuente).
+func (a *AnimeAV1) enriquecerConEmbeds(ctx context.Context, fuentes []models.VideoSource) []models.VideoSource {
+	resolvers := a.embedsResolvers()
+	if len(resolvers) == 0 || len(fuentes) == 0 {
+		return fuentes
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	salida := append([]models.VideoSource(nil), fuentes...)
+	vistas := make(map[string]struct{}, len(salida))
+	for _, f := range salida {
+		vistas[claveFuente(f)] = struct{}{}
+	}
+	for _, base := range fuentes {
+		if base.Type != models.ResourceIframe || strings.TrimSpace(base.URL) == "" {
+			continue
+		}
+		resolver := resolverParaEmbeds(resolvers, base.URL)
+		if resolver == nil {
+			continue
+		}
+		resueltas, err := resolverConTimeout(ctx, resolver, base.URL)
+		if err != nil {
+			slog.Warn("animeav1: la resolución del embed falló; se conserva el iframe",
+				"resolver", resolver.Name(),
+				"server", base.Server,
+				"err", logx.Redact(err.Error()))
+			continue
+		}
+		for _, r := range resueltas {
+			r.Language = base.Language // SUB/DUB se conservan por fuente
+			if strings.TrimSpace(r.URL) == "" {
+				continue
+			}
+			clave := claveFuente(r)
+			if _, ya := vistas[clave]; ya {
+				continue // mismo recurso con otra firma: no duplicar
+			}
+			vistas[clave] = struct{}{}
+			salida = append(salida, r)
+		}
+	}
+	return salida
+}
+
+// resolverParaEmbeds devuelve el primer resolver que reconozca la URL del
+// iframe, o nil si ninguno lo hace. Comprobación barata y sin red.
+func resolverParaEmbeds(resolvers []embeds.Resolver, url string) embeds.Resolver {
+	for _, r := range resolvers {
+		if r != nil && r.CanHandle(url) {
+			return r
+		}
+	}
+	return nil
+}
+
+// resolverConTimeout resuelve el embed con un tope corto, derivado del
+// contexto del flujo: si el reproductor cancela, la petición al embed se
+// corta igual. Referer vacío: el resolver no inventa la página que embebe
+// (MP4Upload solo exige Referer del dominio para el CDN, no para el HTML).
+func resolverConTimeout(ctx context.Context, r embeds.Resolver, url string) ([]models.VideoSource, error) {
+	ctxRes, cancel := context.WithTimeout(ctx, tiempoResolucionEmbeds)
+	defer cancel()
+	return r.Resolve(ctxRes, url, "")
 }

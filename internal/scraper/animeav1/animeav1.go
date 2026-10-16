@@ -22,6 +22,7 @@ import (
 	"miapp/internal/httpx"
 	"miapp/internal/models"
 	"miapp/internal/scraper"
+	"miapp/internal/scraper/embeds"
 )
 
 const (
@@ -60,16 +61,26 @@ type AnimeAV1 struct {
 	// Doer con el que se hacen las peticiones (httpx.HTTPDoer; *http.Client
 	// lo cumple).
 	Doer httpx.HTTPDoer
+	// Embeds resuelve las fuentes iframe de hosts reconocidos (T61) para
+	// publicar además su mp4 directo, conservando el iframe y su idioma.
+	// New deja uno de MP4Upload con el mismo doer; una lista distinta (o
+	// vacía) la usan los tests para inyectar un resolver falso o desactivar
+	// el enriquecimiento.
+	Embeds []embeds.Resolver
 }
 
 var _ scraper.Provider = (*AnimeAV1)(nil)
 
 // New crea el proveedor con el doer y la URL base inyectados. La base se
 // normaliza (sin espacios ni barra final) y, si viene vacía, se usa
-// DefaultBaseURL.
+// DefaultBaseURL; sin resolvers de embeds se crea uno de MP4Upload con el
+// mismo doer (T61).
 func New(doer httpx.HTTPDoer, baseURL string) *AnimeAV1 {
 	a := &AnimeAV1{BaseURL: baseURL, Doer: doer}
 	a.BaseURL = a.siteURL()
+	if a.Embeds == nil {
+		a.Embeds = []embeds.Resolver{embeds.NewMP4Upload(doer)}
+	}
 	return a
 }
 

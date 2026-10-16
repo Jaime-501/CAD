@@ -10,6 +10,7 @@
 - `### T32 — internal/scraper/animeav1` → creado por **T32** (detalle y episodios por lotes; `detail.go`, `episodes.go`).
 - `### T33 — internal/scraper/animeav1` → creado por **T33** (fuentes de vídeo; `sources.go`).
 - `### T44 — animeav1` → creado por **T44** (Home: secciones `emision` y `recientes`; `home.go`).
+- `### T61 — animeav1` → creado por **T61** (embeds de terceros cableados a las fuentes, resolviendo MP4Upload; `sources.go`). **Supera** el punto de T33 "Iframes sin resolver" para MP4Upload.
 
 ---
 
@@ -425,5 +426,40 @@ func esperar(ctx context.Context, d time.Duration) bool
 - **`home_test.go` (11 tests, sin red)**: los 11 nombres fijados por la ficha — ParseaSeccionEmision (20 items; primer slug `battle-spirits-re-zekkai-no-kuu`, último `marronnier-oukoku-no-shichinin-no-kishi`, ambos leídos del fixture en el Paso 0), ParseaSeccionRecientes (20; `hotaru-no-yomeiri` … `mouse-cursor-de-genjitsu-…-click-shimaasu`), SlugsUsablesEnDetalle, PortadaUsaCDN, IdNumericoSinNotacionCientifica, EmisionFiltroNoAplicadoEsError (sirve el fixture real sin filtro `home_catalogo_data.json` en la ruta `status=emision`), DeduplicaPorSlug (payloads **artificiales**), UnaSeccionFallaLaOtraSirve (500 en la portada), TodasFallanDevuelveError (`errors.Is(err, httpx.ErrServerError)`), SeccionVaciaSeOmite, ContextoCancelado (ctx precancelado ⇒ 0 peticiones). Helpers: `servidorHome` (distingue `/catalogo/__data.json` exigiendo `status=emision` y `/__data.json`; body nil ⇒ 500), `fixturesHome`, `payloadDePrueba` (array plano devalue con literales sueltos y objetos solo con referencias por índice), `buscarSeccion`/`idsDe`.
 - **`animeav1_integration_test.go` (tag `integration`)**: nuevo `TestHomeRedReal` → ≥ 1 sección con ≥ 1 item, slugs con formato y `Provider` correcto. Verificado en verde contra el sitio real: **2 secciones × 20 items** (recientes es feed vivo: primer slug `kyoufu-collector` el día de la prueba).
 - Verificación de T44: `gofmt -l .` sin salida · `go vet ./...` y `go vet -tags integration ./...` limpios · `go build ./...` OK · `go test -race -count=1 ./...` en verde (**355 → 366** `--- PASS`; `internal/scraper/animeav1`: **59 → 70**).
+
+---
+
+### T61 — animeav1
+
+Cablea el resolver neutro de embeds (T60) a `sources.go`: los `embeds` SUB/DUB con MP4Upload publican **además** su mp4 directo, conservando el iframe. Cambia `animeav1.go` (struct + `New`) y `sources.go` (enriquecimiento al final de `GetVideoSources`); **no** importa `jkanime` ni `extractors`, solo `embeds` (regla de dependencias intacta).
+
+#### Modelo y constructor
+
+```go
+type AnimeAV1 struct {
+	BaseURL string          // sin barra final; vacía → DefaultBaseURL
+	Doer    httpx.HTTPDoer  // *http.Client lo cumple
+	// Embeds resuelve las fuentes iframe de hosts reconocidos (T61).
+	Embeds []embeds.Resolver
+}
+
+// New: además de lo anterior, si a.Embeds es nil deja
+// []embeds.Resolver{embeds.NewMP4Upload(doer)}.
+func New(doer httpx.HTTPDoer, baseURL string) *AnimeAV1
+```
+
+#### Comportamiento (lo que sustituye a T33)
+
+- **Supersede el punto "Iframes sin resolver" de T33 para MP4Upload**: UPNShare/Voe/Byse siguen siendo iframe sin resolver; MP4Upload deja de serlo — se resuelve a un `mp4` con `Server "MP4Upload"`, **conservando el iframe original como respaldo**.
+- `GetVideoSources` pasa la lista final por `enriquecerConEmbeds(ctx, fuentes)`; `opts` sigue sin usarse y **no se cachea ninguna URL resuelta** (regla 9).
+- Internos nuevos (`sources.go`): `const tiempoResolucionEmbeds = 8 * time.Second`, `embedsResolvers()`, `enriquecerConEmbeds(ctx, fuentes)`, `resolverParaEmbeds(resolvers, url)`, `resolverConTimeout(ctx, r, url)`.
+  - **`enriquecerConEmbeds`** recorre las fuentes **iframe** ya extraídas y, por cada una que un resolver reconozca, llama a `Resolve` con `Referer` vacío y añade los `mp4` devueltos. **`Language` de la fuente resuelta = `Language` del iframe** (SUB y DUB siguen siendo **dos** fuentes aunque el resolver devuelva la misma URL del CDN). Dedup por **`claveFuente`** (recurso base + idioma): un recurso ya presente no se duplica. Un fallo del resolver no rompe el resto (`slog.Warn` con `logx.Redact`, sin la URL del CDN) y conserva el iframe.
+  - El resolver no reconoce hosts ajenos: se saltan sin red.
+- **Orden en `bleach/1` (12 fuentes)**: a las 10 de T33 (HLS·SUB/DUB, UPNShare, Voe, Byse, MP4Upload·SUB/DUB como iframe) se suman **2 mp4** de MP4Upload (SUB y DUB, misma URL, idioma distinto). La mejor sigue siendo HLS.
+
+#### Tests
+
+- **`embeds_test.go` (5 tests, red de nada, corren con `-race`; `TestMain` propio)**: ConservaElIdioma (un mp4 por idioma, con el `Referer` del embed), FallaConservaIframes (aviso sin filtrar la URL del CDN), Dedup, CtxCancelado y `New` inyecta el resolver por defecto. **`internal/scraper/animeav1`: 70 → 75** tests.
+- **E2E offline (`internal/app`)**: `TestE2EAnimeAV1FlujoCompletoOffline` sube de **10 → 12 fuentes** (2 HLS + 8 iframe + 2 MP4Upload) con la mejor aún HLS. Añade la petición exacta a **ambos** embeds (`GET /embed-<id>.html` SUB y DUB) y, al pedir el mp4 SUB por el proxy, la del CDN (`GET /d/<token>/video.mp4`); el token del path **no** aparece en ningún log (guard de T62).
 
 ---

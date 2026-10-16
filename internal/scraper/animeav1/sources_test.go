@@ -45,6 +45,10 @@ func fuentesConCuerpo(t *testing.T, episodeID, ruta string, cuerpo []byte) ([]mo
 	t.Helper()
 	srv, _ := servidorJSON(t, cuerpo, ruta)
 	a := New(clientePrueba(), srv.URL)
+	// Sin resolvers de embeds: estos tests fijan el parseo y la
+	// normalización de sources.go sin la capa de T61, que tiene sus propias
+	// pruebas offline con un resolver falso.
+	a.Embeds = nil
 	return a.GetVideoSources(context.Background(), episodeID, scraper.SourceOpts{})
 }
 
@@ -82,6 +86,7 @@ func TestFuentesRutaUserAgentYUnaPeticion(t *testing.T) {
 	}))
 	t.Cleanup(srv.Close)
 	a := New(clientePrueba(), srv.URL)
+	a.Embeds = nil // T61 aparte: este test cuenta las peticiones de fuentes
 
 	fuentes, err := a.GetVideoSources(context.Background(), "animeav1:bleach:episode:1", scraper.SourceOpts{})
 	if err != nil {
@@ -136,6 +141,7 @@ func TestFuentesPeliculaPideElUno(t *testing.T) {
 	srv, peticiones := servidorJSON(t, fixture(t, "episode_movie_data.json"),
 		"/media/bleach-movie-1-memories-of-nobody/1/__data.json")
 	a := New(clientePrueba(), srv.URL)
+	a.Embeds = nil // T61 aparte: este test fija el parseo de la película
 
 	fuentes, err := a.GetVideoSources(context.Background(),
 		"animeav1:bleach-movie-1-memories-of-nobody:movie", scraper.SourceOpts{})
