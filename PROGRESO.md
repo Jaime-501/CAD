@@ -1,4 +1,4 @@
-   # PROGRESO — Comfort Anime Desktop (T01–T63 hechas)
+    # PROGRESO — Comfort Anime Desktop (T01–T64 hechas)
 
 > Este archivo es la **memoria entre sesiones**. Cada sesión lo lee al inicio y lo actualiza al final.
 > Reglas y layout: `tareas/00_REGLAS.md`. Detalle de cada tarea: `tareas/Txx.md`.
@@ -131,10 +131,13 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha y verificada
 | [x] | T61 | Conectar el resolver de MP4Upload a JKAnime y AnimeAV1 | T60 |
 | [x] | T62 | Redactar tokens en el PATH de las URLs de medio (`logx` + `stream`) | T60 |
 | [x] | T63 | UI: selector de fuentes (principales primero, iframes como extra) | T61 |
+| [x] | T64 | Lógica pura de ventana de episodios (`ventana.ts` + tests) | — |
 
 T01–T29 = v1.0 (`docs/PROGRESO_v1.0.md`) · T30–T35 = v1.1.0 AnimeAV1 (`docs/PROGRESO_v1.1.md`) · T36 = cierre de la v1.1.0 · T37 = portabilidad Android · T38 = cierre documental de T37.
 T39–T57 = v1.2.0 (Home, historial lateral, favoritos, "Siguiente" y su estado discreto; **incluye T53b y T57**); plan en `tareas/v1.2_PLAN.md`, detalle **T39–T58 + cierres T56/T59** archivado en `docs/PROGRESO_v1.2.md`, con resúmenes al final de este archivo.
 La **v1.2.0 está PUBLICADA** (prueba manual con el `.exe` y release hechas por el humano). La **v1.2.1** (T58 bugs + T59 cierre documental) está **preparada**: `productVersion` 1.2.1, sin tag ni release aún — los hace el humano.
+
+**v1.3.0 — episodios incrementales** (rama `feature/episodios-incrementales`): serie **T64–T69** para mostrar los episodios del detalle de forma incremental y con animación de entrada. **T64** (lógica pura de `ventana.ts` + tests) hecha; el resto pendiente, con **T68 opcional**.
 
 ## Auditoría de portabilidad (T37)
 
@@ -317,13 +320,18 @@ fricción, H3 se sostiene).
   **T60, T61 y T62 hechas** (MP4Upload: resolver neutro `embeds` —T60—, cableado a JKAnime y
   AnimeAV1 —T61— y redacción del token del path en logs —T62—; ver sus bloques aquí abajo) ·
   **T63** reorganización del selector de fuentes (principales primero, iframes como extra;
-  hecha, ver bloque al final) · **T64** extractor Voe (portar el descifrado del `loader`) ·
-  **T65** extractor Byse (`/api/videos/<id>/embed/details`; el proof-of-work queda fuera) ·
-  **T66** UPNShare (API cifrada) · **T67** Streamtape (token + captcha) · **T68** purga de
+  hecha, ver bloque al final) · **T70** extractor Voe (portar el descifrado del `loader`) ·
+  **T71** extractor Byse (`/api/videos/<id>/embed/details`; el proof-of-work queda fuera) ·
+  **T72** UPNShare (API cifrada) · **T73** Streamtape (token + captcha) · **T74** purga de
   hosts muertos del inventario (`sfastwish.com`; vigilar `mixdrop`/`dsvplay`/`vidhidevip`, no
-  muestreados) · **T69** (solo si se quiere) `sandbox` **por host** y sin `allow-same-origin`,
+  muestreados) · **T75** (solo si se quiere) `sandbox` **por host** y sin `allow-same-origin`,
   nunca global — **NO PROBADA** en esta investigación: solo se probó en Chromium de escritorio,
   sin clic y sin WebView2.
+  **Nota de renumeración (T64):** los números **T64–T69** quedaron reservados para la serie
+  **v1.3.0 — episodios incrementales** (rama `feature/episodios-incrementales`; T64 = lógica
+  pura de `ventana.ts`, ver bloque al final), por lo que estas propuestas de extractores pasan
+  a **T70–T75**. El texto histórico de arriba (T64 = Voe, etc.) no se borra: la numeración
+  vigente es la de esta lista.
 
 ---
 
@@ -556,4 +564,38 @@ Hecha el **2026-10-15**. Solo frontend (`etiquetas.ts` + `etiquetas.test.ts`, `S
 
 - **Prueba manual del humano con el `.exe`**: con el proxy real, comprobar que al fallar una fuente el salto recorre los principales antes que los iframes y que el selector se pliega/despliega como se espera; el MP4Upload `· directo` debe reproducirse sin anuncios y sin saltar al `· iframe`.
 - Sin tag ni release: no aplica a esta tarea.
+
+---
+
+## T64 — Lógica pura de ventana de episodios (`ventana.ts` + tests)
+
+Hecha el **2026-10-16**. Primera tarea de la serie **T64–T69** (v1.3.0, rama `feature/episodios-incrementales`): muestra los episodios del detalle de forma incremental y con animación de entrada. **Solo frontend**: `frontend/src/ventana.ts` (nuevo, TypeScript puro, sin imports del proyecto ni de Svelte) y su test. Ninguna UI, ningún Go.
+
+**Qué se hizo:**
+
+- **`ventana.ts`** exporta exactamente: constantes `FILAS_INICIAL = 5`, `FILAS_TRAMO = 4`, `COLUMNAS_POR_DEFECTO = 4`, `RETARDO_POR_COLUMNA_MS = 50`, `RETARDO_MAXIMO_MS = 300`; funciones puras `normalizarColumnas`, `tamanoInicial`, `siguienteTamano` (redondeo **hacia arriba** al múltiplo de columnas, tope en `total`, nunca por debajo de `min(actual, total)`), `cubrirIndice` (tamaño mínimo que incluye el índice, nunca reduce, `indice < 0` → 0, `indice >= total` → `total`), `retardoEntrada` y `claveVentana`; y la memoria por sesión `recordarVisibles`/`recuperarVisibles`/`olvidarVisibles` sobre un **`Map` a nivel de módulo** (mismo patrón que `scrollPorClave` de `views.ts`, sin stores de Svelte). Todas las entradas inválidas (NaN, Infinity, negativos) devuelven valor seguro **sin lanzar**.
+- **`ventana.test.ts`**: mismo mecanismo que `etiquetas.test.ts` (esbuild de Vite + `node`, comando en la cabecera). **48 comprobaciones** con los valores esperados calculados a mano: `normalizarColumnas` (0, -3, NaN, Infinity, 4.9, 5), `tamanoInicial` (total 0, 7 con 4 cols, 366 con 3/4/5 → 15/20/25), `siguienteTamano` (20→40 con 5 cols; 20 con 3 cols → 33; 0→16; 18 con 5 → 40; tope 25; `actual >= total`; total 0), `cubrirIndice` (visible, siguiente tramo 20→28, límite de bloque, no-múltiplo 5→8, `>= total`, negativo, nunca reduce), `retardoEntrada` (col 0/1, módulo, tope 300 con 10 cols, negativo, columnas 0→4), Map (recordar/recuperar/olvidar, inexistente `undefined`, n inválido ignorado) y la propiedad para cols 3/4/5 con total 366 (secuencia estrictamente creciente, termina en 366, intermedios múltiplos).
+
+**Compuerta (resultado real):**
+
+| Comando | Resultado |
+|---|---|
+| `ventana.test.ts` (esbuild + node) | **OK (48 comprobaciones)** |
+| `npm run check` (frontend) | **0 errores, 0 avisos** |
+| `npm run build` (frontend) | **OK** (aviso de chunk >500 kB preexistente) |
+| `grep -rn wailsjs frontend/src` | **solo `api.ts`** |
+| `gofmt -l .` · `go vet ./...` · `go build ./...` · `go test -race -count=1 ./...` | **no ejecutados**: el daemon de Docker no era accesible en el host (`npipe:////./pipe/dockerDesktopLinuxEngine`) y Go no está en el PATH del host. **Go no se tocó**, así que el recuento (`--- PASS` 435) queda igual que al cerrar T63 a falta de repetir la compuerta. |
+| `git status --porcelain` | solo `frontend/src/ventana.ts`, `frontend/src/ventana.test.ts` (nuevos) y `tareas/T64.md` (sin trackear, previo) |
+
+**Desviaciones:**
+
+- **Compuerta de Go no ejecutable en esta sesión**: el daemon de Docker no estaba levantado y el host no tiene Go/wails (AGENTS.md). Al no tocarse ni una línea de Go, se espera el mismo recuento que T63 (435), pero queda **pendiente de repetir** por el humano (regla 3).
+- **La serie T64–T69 se reserva para la v1.3.0** (`feature/episodios-incrementales`): las propuestas del informe de adds (extractores) se renumeraron a **T70–T75** (nota en el informe; texto histórico conservado).
+- **Sin tag ni release**: no aplica a esta tarea.
+
+**Pendientes:**
+
+- **Repetir la compuerta de Go** (`gofmt -l .`, `go vet ./...`, `go test -race -count=1 ./...`) cuando el contenedor esté disponible; sin cambios esperados (Go intacto).
+- Sin tag ni release.
+
 
