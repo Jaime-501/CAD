@@ -16,11 +16,42 @@
     progressToMap,
   } from './stores';
   import { atras, navegarA, seleccion } from './views';
+  import { COLUMNAS_POR_DEFECTO } from './ventana';
+  import { medirColumnas, revelar } from './revelar';
   import BotonFavorito from './BotonFavorito.svelte';
   import TarjetaEpisodio from './TarjetaEpisodio.svelte';
 
   let cargando = true;
   let error = '';
+
+  // T65: columnas reales de la rejilla para el retardo de entrada por fila.
+  let rejillaEl: HTMLDivElement | undefined = undefined;
+  let columnas = COLUMNAS_POR_DEFECTO;
+  let frameResize: number | null = null;
+
+  function medirColumnasRejilla(): void {
+    if (rejillaEl) columnas = medirColumnas(rejillaEl);
+  }
+
+  function alRedimensionar(): void {
+    if (frameResize !== null) return;
+    // rAF: no medir en cada píxel del arrastre de la ventana.
+    frameResize = requestAnimationFrame(() => {
+      frameResize = null;
+      medirColumnasRejilla();
+    });
+  }
+
+  onMount(() => {
+    window.addEventListener('resize', alRedimensionar);
+    return () => {
+      window.removeEventListener('resize', alRedimensionar);
+      if (frameResize !== null) cancelAnimationFrame(frameResize);
+    };
+  });
+
+  // La rejilla sólo existe cuando hay episodios; se mide al montar y tras el resize.
+  $: if (rejillaEl) medirColumnasRejilla();
 
   onMount(() => {
     const sel = get(seleccion);
@@ -173,9 +204,11 @@
     {/if}
 
     {#if episodios.length > 0}
-      <div class="rejilla">
-        {#each episodios as ep (ep.id)}
-          <TarjetaEpisodio episodio={ep} progreso={$progressMap[ep.id]} abrir={abrirEpisodio} />
+      <div class="rejilla" bind:this={rejillaEl}>
+        {#each episodios as ep, i (ep.id)}
+          <div class="celda" use:revelar={{ id: ep.id, indice: i, columnas }}>
+            <TarjetaEpisodio episodio={ep} progreso={$progressMap[ep.id]} abrir={abrirEpisodio} />
+          </div>
         {/each}
       </div>
     {/if}
@@ -286,6 +319,40 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
     gap: 18px;
+  }
+  /* T65: la animación de entrada vive en el envoltorio `.celda` (no en la
+     tarjeta) para no chocar con el transform del hover ni con
+     content-visibility. La tarjeta ocupa todo el alto disponible. */
+  .celda {
+    display: flex;
+    flex-direction: column;
+  }
+  .celda :global(.tarjeta) {
+    flex: 1 1 auto;
+  }
+  .celda:global(.pendiente) {
+    opacity: 0;
+  }
+  .celda:global(.entra) {
+    animation: entra-celda 320ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  }
+  @keyframes entra-celda {
+    from {
+      opacity: 0;
+      transform: translateX(-18px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .celda:global(.pendiente) {
+      opacity: 1;
+    }
+    .celda:global(.entra) {
+      animation: none;
+    }
   }
   .estado {
     color: #a1a1aa;

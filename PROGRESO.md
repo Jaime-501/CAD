@@ -1,4 +1,4 @@
-    # PROGRESO — Comfort Anime Desktop (T01–T64 hechas)
+    # PROGRESO — Comfort Anime Desktop (T01–T65 hechas)
 
 > Este archivo es la **memoria entre sesiones**. Cada sesión lo lee al inicio y lo actualiza al final.
 > Reglas y layout: `tareas/00_REGLAS.md`. Detalle de cada tarea: `tareas/Txx.md`.
@@ -132,12 +132,13 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha y verificada
 | [x] | T62 | Redactar tokens en el PATH de las URLs de medio (`logx` + `stream`) | T60 |
 | [x] | T63 | UI: selector de fuentes (principales primero, iframes como extra) | T61 |
 | [x] | T64 | Lógica pura de ventana de episodios (`ventana.ts` + tests) | — |
+| [x] | T65 | Revelado animado de tarjetas de episodio por visibilidad (sin paginar) | T64 |
 
 T01–T29 = v1.0 (`docs/PROGRESO_v1.0.md`) · T30–T35 = v1.1.0 AnimeAV1 (`docs/PROGRESO_v1.1.md`) · T36 = cierre de la v1.1.0 · T37 = portabilidad Android · T38 = cierre documental de T37.
 T39–T57 = v1.2.0 (Home, historial lateral, favoritos, "Siguiente" y su estado discreto; **incluye T53b y T57**); plan en `tareas/v1.2_PLAN.md`, detalle **T39–T58 + cierres T56/T59** archivado en `docs/PROGRESO_v1.2.md`, con resúmenes al final de este archivo.
 La **v1.2.0 está PUBLICADA** (prueba manual con el `.exe` y release hechas por el humano). La **v1.2.1** (T58 bugs + T59 cierre documental) está **preparada**: `productVersion` 1.2.1, sin tag ni release aún — los hace el humano.
 
-**v1.3.0 — episodios incrementales** (rama `feature/episodios-incrementales`): serie **T64–T69** para mostrar los episodios del detalle de forma incremental y con animación de entrada. **T64** (lógica pura de `ventana.ts` + tests) hecha; el resto pendiente, con **T68 opcional**.
+**v1.3.0 — episodios incrementales** (rama `feature/episodios-incrementales`): serie **T64–T69** para mostrar los episodios del detalle de forma incremental y con animación de entrada. **T64** (lógica pura de `ventana.ts` + tests) y **T65** (revelado animado por visibilidad, sin paginar) hechas; el resto pendiente, con **T68 opcional**. Recomendación sobre T66–T67 (paginar/client-side window): **no** por rendimiento (ver bloque de T65).
 
 ## Auditoría de portabilidad (T37)
 
@@ -597,5 +598,97 @@ Hecha el **2026-10-16**. Primera tarea de la serie **T64–T69** (v1.3.0, rama `
 
 - **Repetir la compuerta de Go** (`gofmt -l .`, `go vet ./...`, `go test -race -count=1 ./...`) cuando el contenedor esté disponible; sin cambios esperados (Go intacto).
 - Sin tag ni release.
+
+
+## T65 — Revelado animado de tarjetas de episodio por visibilidad (sin paginar)
+
+Hecha el **2026-10-16**. Segunda tarea de la serie **T64–T69** (v1.3.0, rama `feature/episodios-incrementales`). **Solo frontend**: `frontend/src/revelar.ts` (nuevo), `VistaDetalle.svelte` (envoltorio `.celda`, acción, keyframes y medición de columnas) y `TarjetaEpisodio.svelte` (`contain-intrinsic-size`, exigido por la medición). Ningún Go. Con Docker accesible (a diferencia de T64), la compuerta de Go se ejecutó por completo.
+
+### Paso 1 — Mediciones antes de tocar código (Playwright, `localhost:34115`)
+
+Bleach en JKAnime y en AnimeAV1 (366 episodios, lista completa); valores **idénticos** en los dos proveedores (mismo CSS), así que van juntos:
+
+| Config (Bleach, 366 ep.) | Columnas (gridTemplateColumns) | Ancho rejilla | Altura tarjeta | Nodos bajo `.rejilla` | Hijos |
+|---|---|---|---|---|---|
+| 1280 px · barra **expandida** | **4** (211,75 px ×4) | 901 px | **170,39 px** | **1830** | 366 |
+| 1280 px · barra **contraída** | **5** (205,6 px ×5) | 1100 px | **170,39 px** | **1830** | 366 |
+| 700 px · barra contraída | **3** (195 px ×3) | 621 px | **170,39 px** | **1830** | 366 |
+
+- **(b) alturas**: la tarjeta **renderizada** mide **170,39 px** (constante); las tarjetas **fuera de pantalla** reservaban **210 px** por `contain-intrinsic-size: auto 210px` → desajuste de **~39,6 px por tarjeta** (origen de saltos de scroll al entrar). Diferencia > 20 px ⇒ **se ajustó** (paso 4 de la ficha).
+- **(d) tiempos** (desde abrir el detalle hasta 366 hijos):
+  - **JKAnime Bleach** (sin caché, tras reiniciar el contenedor): **16,3 s** — el detalle pinta pronto, pero los episodios llegan por AJAX en lotes de 50.
+  - **AnimeAV1 Bleach**: ficha pintada a **0,40 s** y 366 hijos a **0,44 s** (todos los episodios vienen embebidos en el `__data.json` del detalle, en lotes de 50).
+  - Control adicional (**One Piece** JKAnime, no cacheado): de 48 a **1180** tarjetas en ~49 s, con **scrollY constante** (ver verificación 4).
+- **(c) nodos**: **1830** nodos bajo `.rejilla` (366 × ~5) en los tres anchos; `content-visibility: auto` mantiene el pintado barato. Tras el paso 3, el envoltorio `.celda` añade **1 nodo por tarjeta** (366) → **2196** en total; sin efecto en el pintado (verificación 4: 1180 celdas sin saltos).
+
+**Tabla antes/después del único cambio exigido por la medición (`contain-intrinsic-size`):**
+
+| Medida | Antes | Después |
+|---|---|---|
+| `contain-intrinsic-size` de `.tarjeta` | `auto 210px` | **`auto 170px`** |
+| Altura real renderizada (getBoundingClientRect) | 170,39 px | 170,39 px (sin cambio) |
+| Altura reservada fuera de pantalla | 210 px | ~170 px |
+| Desajuste / salto potencial por tarjeta | ~39,6 px | ~0 px |
+
+### Paso 2 — `revelar.ts` (nuevo)
+
+Acción Svelte `use:revelar={{ id, indice, columnas }}` para el envoltorio de cada tarjeta:
+
+- **`reveladas: Set<string>` a nivel de módulo** (clave = `episodio.id`, ya con prefijo de proveedor), mismo patrón que `scrollPorClave` de `views.ts`: sobrevive al remontaje de `VistaDetalle`, así que al volver del reproductor ningún id ya revelado se re-anima.
+- **Un único `IntersectionObserver` compartido** (`threshold: 0.15`). Al intersectar: añade `entra`, fija `style.animationDelay = retardoEntrada(indice, columnas) + 'ms'` (de `ventana.ts`), registra el id y hace `unobserve`.
+- **Estado inicial oculto síncrono**: la acción pone `pendiente` antes del primer pintado (sin parpadeo visible→oculta).
+- **No oculta ni anima** si el id ya estaba en `reveladas`, si `prefers-reduced-motion: reduce` o si no hay `IntersectionObserver`.
+- Exporta `medirColumnas(rejilla)` (cuenta pistas de `gridTemplateColumns`; si falla devuelve `COLUMNAS_POR_DEFECTO`) y `reiniciarReveladas()` (solo pruebas). `destroy` hace `unobserve` y limpia el registro interno.
+
+### Paso 3 — `VistaDetalle.svelte`
+
+- Cada tarjeta va dentro de un `div.celda` (`display:flex; flex-direction:column`; la tarjeta `flex: 1 1 auto` ocupa todo el alto) que lleva la acción. **La animación vive en `.celda`, no en la tarjeta**, para no chocar con el `transform` del hover ni con `content-visibility`.
+- Keyframes `entra-celda` (opacity 0→1 y translateX(-18px)→0, 320 ms, `cubic-bezier(.22,.61,.36,1)`, `both`); `.celda.pendiente` = `opacity: 0`.
+- `columnas` se mide con `medirColumnas` sobre `.rejilla` al montar y en `resize` con `requestAnimationFrame` (no se mide en cada píxel).
+- `prefers-reduced-motion: reduce` desactiva animación y estado oculto **también por CSS**.
+- La lista, el orden, `episodioContinuar`, el scroll y la caché **no cambian**.
+
+### Verificación (Playwright, `localhost:34115`; 8/8)
+
+1. **Solo el viewport se anima, izq→der por fila**: a 1280 expandida, primeras 4 celdas con `animationDelay` **0/50/100/150 ms** y la 5.ª fila reinicia en 0 (**8 `entra`**, 358 `pendiente` de 366).
+2. **Scroll**: al bajar, `entra` pasó de 8 a 32; la primera fila conserva `entra` con sus retardos originales (no se repite).
+3. **"← Atrás" desde el reproductor**: las celdas ya reveladas vuelven **sin** `entra` ni `pendiente` (visibles al instante, sin re-animación); el resto sigue `pendiente`.
+4. **Lotes tardíos sin saltos**: One Piece (48→1180 celdas, ~49 s) con `scrollY` **exactamente 900** todo el tiempo (salto **0 px**).
+5. **`prefers-reduced-motion: reduce`**: 0 celdas con `entra`/`pendiente`, `opacity: 1` al instante.
+6. **Hover intacto**: `transform: matrix(1,0,0,1,0,-5)` = `translateY(-5px)`.
+7. **Anchos coherentes**: expandida 4 cols → 0/50/100/150; contraída 5 cols → 0/50/100/150/**200**; 700 px 3 cols → 0/50/100 (sin desbordamiento horizontal).
+8. **Consola**: sin errores nuevos de nuestro código (solo el `favicon.ico` 404, el `TypeError` de `wails/ipc.js` y los `ERR_CONNECTION_REFUSED` al proxy local, todos preexistentes y documentados).
+
+### Compuerta (resultado real)
+
+| Comando | Resultado |
+|---|---|
+| `npm run check` | **0 errores, 0 avisos** |
+| `npm run build` | **OK** (aviso de chunk >500 kB preexistente) |
+| `ventana.test.ts` (esbuild + node) | **OK (48 comprobaciones)** — sin cambios |
+| `grep -rn wailsjs frontend/src` | **solo `api.ts`** |
+| `gofmt -l .` | **sin salida** |
+| `go vet ./...` · `go vet -tags integration ./...` | limpios |
+| `go build ./...` | OK |
+| `go test -race -count=1 ./...` | **11 paquetes `ok`** (Go intacto) |
+| recuento `^--- PASS` (`-count=1 -v`) | **435** — idéntico al de T63 (T65 no toca Go) |
+| `git status --porcelain` | solo `frontend/src/revelar.ts` (nuevo), `frontend/src/VistaDetalle.svelte`, `frontend/src/TarjetaEpisodio.svelte`, `PROGRESO.md` y `tareas/T65.md` (sin trackear, previo) |
+
+### Recomendación sobre T66–T67 (¿paginar?)
+
+**Paginar T66–T67: NO.** Las mediciones no muestran problema de DOM/pintado que lo justifique: 366 tarjetas (1830 nodos, 170 px) y hasta 1180 (One Piece) se renderizan **sin jank y con 0 saltos de scroll** gracias a `content-visibility: auto` + el revelado por visibilidad. El coste real medido es **de red** (JKAnime tarda ~16 s en traer los 366 episodios por AJAX), y eso ya lo cubre el mostrado incremental por lotes; limitar/paginar tarjetas añadiría complejidad sin ganancia observable. Reserva: solo se midieron 2 proveedores (hasta 1180 episodios) en escritorio; si aparecen listas muy superiores o equipos de gama baja, el `content-visibility` actual ya acota el pintado. (La ventana de `ventana.ts` de T64 queda disponible y probada si más adelante se decide lo contrario.)
+
+### Desviaciones
+
+- **`contain-intrinsic-size` ajustado a `auto 170px`** (antes `auto 210px`): la medición (b) dio 170,39 px reales frente a 210 px reservados (desajuste ~39,6 px/tarjeta > 20 px). Es la única razón por la que se tocó `TarjetaEpisodio.svelte` (la ficha solo lo permite "si la medición del paso 1 lo exige").
+- **Clases dinámicas con `:global`**: `pendiente`/`entra` las añade la acción en JS, así que Svelte las marcaba como "Unused CSS selector". Se escriben como `.celda:global(.pendiente)` / `.celda:global(.entra)`; el `@keyframes entra-celda` se scopea con hash y la referencia se reescribe correctamente (verificado en el CSS de `dist/`: `animation: svelte-…-entra-celda`).
+- **`columnas` se recalcula solo al montar la rejilla y en `window.resize`** (según la ficha), **no** al plegar/desplegar la barra lateral (eso no dispara `resize`); con la barra cambiada sin redimensionar la ventana, un retardo nuevo podría usar el nº de columnas anterior hasta el siguiente resize.
+- **Medición (d) interpretada "desde abrir el detalle"**: los 170 ms de diferencia entre "ficha pintada" y "366 hijos" en AnimeAV1 confirman que el grueso del tiempo de JKAnime (~16 s) es de red, no de render.
+
+### Pendientes
+
+- **Ninguno propio.** La compuerta de Go que T64 dejó pendiente por el daemon de Docker se ha **repetido aquí en verde** (435 tests, 11 paquetes ok): queda cerrada esa deuda.
+- Sin tag ni release.
+
 
 
