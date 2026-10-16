@@ -11,10 +11,14 @@
  *       && node /tmp/etiquetas.test.js"
  */
 import {
+  agruparFuentes,
+  esExtra,
+  esPrincipal,
   etiquetaFuente,
   etiquetaIdioma,
   etiquetaTipo,
   fuentesVisibles,
+  ordenReproduccion,
 } from './etiquetas';
 import type { VideoSourceView } from './api';
 
@@ -106,5 +110,84 @@ comprueba('etiquetaTipo especial', etiquetaTipo('especial'), 'Especial');
 comprueba('etiquetaTipo unknown', etiquetaTipo('unknown'), '');
 comprueba('etiquetaTipo vacío', etiquetaTipo(''), '');
 comprueba('etiquetaTipo desconocido se respeta', etiquetaTipo('web'), 'web');
+
+// T63 — clasificación por TIPO (nunca por nombre): principal = hls/mp4,
+// extra = iframe.
+const mp4Directo = fuente({
+  url: 'https://a2.mp4upload.com:183/d/tok/video.mp4',
+  type: 'mp4',
+  server: 'MP4Upload',
+});
+const iframeMp4 = fuente({
+  url: 'https://www.mp4upload.com/embed-abc.html',
+  type: 'iframe',
+  server: 'Mp4upload',
+});
+const iframeByse = fuente({ url: 'https://byse.example/e/1', type: 'iframe', server: 'Byse' });
+
+comprueba(
+  'esPrincipal hls y mp4, no iframe',
+  [esPrincipal(sub), esPrincipal(mp4Directo), esPrincipal(iframeMp4)],
+  [true, true, false]
+);
+comprueba(
+  'esExtra solo iframe',
+  [esExtra(iframeMp4), esExtra(mp4Directo), esExtra(sub)],
+  [true, false, false]
+);
+
+// Colisión de nombre (sin distinguir mayúsculas): el `Mp4upload` iframe y el
+// `MP4Upload` mp4 directo se marcan `· directo` / `· iframe`.
+const colision = agruparFuentes([mp4Directo, iframeMp4]);
+comprueba(
+  'colisión: principales con `· directo`',
+  colision.principales.map((f) => f.etiqueta),
+  ['MP4Upload · directo']
+);
+comprueba(
+  'colisión: extras con `· iframe`',
+  colision.extras.map((f) => f.etiqueta),
+  ['Mp4upload · iframe']
+);
+comprueba(
+  'colisión: índices sobre la lista completa',
+  [colision.principales[0].indice, colision.extras[0].indice],
+  [0, 1]
+);
+
+// Sin colisión (HLS de JKAnime vs iframe VOE): etiqueta como siempre.
+const sinColision = agruparFuentes(lista);
+comprueba(
+  'sin colisión: principales intactos (SUB/DUB)',
+  sinColision.principales.map((f) => f.etiqueta),
+  ['HLS · SUB · 1080p', 'HLS · DUB']
+);
+comprueba('sin colisión: extra intacto', sinColision.extras.map((f) => f.etiqueta), ['VOE · 720p']);
+
+// Lista solo de iframes: no hay principales y los extras conservan el orden.
+const soloIframes = agruparFuentes([sinIdioma, iframeByse]);
+comprueba('solo iframes: sin principales', soloIframes.principales.length, 0);
+comprueba(
+  'solo iframes: extras en orden',
+  soloIframes.extras.map((f) => f.etiqueta),
+  ['VOE · 720p', 'Byse']
+);
+
+// Lista vacía: nada en los dos grupos.
+const vacio = agruparFuentes([]);
+comprueba('lista vacía: grupos vacíos', [vacio.principales.length, vacio.extras.length], [0, 0]);
+
+// ordenReproduccion: la del backend primero, luego el resto de principales y
+// los iframes al final.
+comprueba(
+  'ordenReproduccion: hls, mp4 y luego iframes',
+  ordenReproduccion([sub, sinIdioma, mp4Directo, iframeMp4]),
+  [0, 2, 1, 3]
+);
+comprueba(
+  'ordenReproduccion: la del backend (índice 0) va primero aunque sea iframe',
+  ordenReproduccion([sinIdioma, sub]),
+  [0, 1]
+);
 
 console.log(`OK (${comprobaciones} comprobaciones)`);

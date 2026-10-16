@@ -1,4 +1,4 @@
-   # PROGRESO — Comfort Anime Desktop (T01–T62 hechas)
+   # PROGRESO — Comfort Anime Desktop (T01–T63 hechas)
 
 > Este archivo es la **memoria entre sesiones**. Cada sesión lo lee al inicio y lo actualiza al final.
 > Reglas y layout: `tareas/00_REGLAS.md`. Detalle de cada tarea: `tareas/Txx.md`.
@@ -130,6 +130,7 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha y verificada
 | [x] | T60 | Resolver de MP4Upload en paquete neutro `embeds` (sin cableado) | Informe de adds |
 | [x] | T61 | Conectar el resolver de MP4Upload a JKAnime y AnimeAV1 | T60 |
 | [x] | T62 | Redactar tokens en el PATH de las URLs de medio (`logx` + `stream`) | T60 |
+| [x] | T63 | UI: selector de fuentes (principales primero, iframes como extra) | T61 |
 
 T01–T29 = v1.0 (`docs/PROGRESO_v1.0.md`) · T30–T35 = v1.1.0 AnimeAV1 (`docs/PROGRESO_v1.1.md`) · T36 = cierre de la v1.1.0 · T37 = portabilidad Android · T38 = cierre documental de T37.
 T39–T57 = v1.2.0 (Home, historial lateral, favoritos, "Siguiente" y su estado discreto; **incluye T53b y T57**); plan en `tareas/v1.2_PLAN.md`, detalle **T39–T58 + cierres T56/T59** archivado en `docs/PROGRESO_v1.2.md`, con resúmenes al final de este archivo.
@@ -315,13 +316,14 @@ fricción, H3 se sostiene).
 - **Tareas propuestas** (sin renumerar la tabla de arriba; se numeran cuando se arranquen):
   **T60, T61 y T62 hechas** (MP4Upload: resolver neutro `embeds` —T60—, cableado a JKAnime y
   AnimeAV1 —T61— y redacción del token del path en logs —T62—; ver sus bloques aquí abajo) ·
-  **T63** extractor Voe (portar el descifrado del `loader`) · **T64** extractor Byse
-  (`/api/videos/<id>/embed/details`; el proof-of-work queda fuera) · **T65** UPNShare (API
-  cifrada) · **T66** Streamtape (token + captcha) · **T67** purga de hosts muertos del
-  inventario (`sfastwish.com`; vigilar `mixdrop`/`dsvplay`/`vidhidevip`, no muestreados) ·
-  **T68** (solo si se quiere) `sandbox` **por host** y sin `allow-same-origin`, nunca global —
-  **NO PROBADA** en esta investigación: solo se probó en Chromium de escritorio, sin clic y sin
-  WebView2.
+  **T63** reorganización del selector de fuentes (principales primero, iframes como extra;
+  hecha, ver bloque al final) · **T64** extractor Voe (portar el descifrado del `loader`) ·
+  **T65** extractor Byse (`/api/videos/<id>/embed/details`; el proof-of-work queda fuera) ·
+  **T66** UPNShare (API cifrada) · **T67** Streamtape (token + captcha) · **T68** purga de
+  hosts muertos del inventario (`sfastwish.com`; vigilar `mixdrop`/`dsvplay`/`vidhidevip`, no
+  muestreados) · **T69** (solo si se quiere) `sandbox` **por host** y sin `allow-same-origin`,
+  nunca global — **NO PROBADA** en esta investigación: solo se probó en Chromium de escritorio,
+  sin clic y sin WebView2.
 
 ---
 
@@ -507,3 +509,51 @@ Hecha el **2026-10-15**. Cablea el resolver neutro de embeds (T60) a los dos pro
 
 - **Prueba manual del humano con el `.exe`** (T61 lo pide): reproducción real de un MP4Upload **resuelto** —pausa larga y *seek*— por si el token temporal de la URL caduca o se ata a la IP; si el mp4 se niega tras la pausa, quedará como comportamiento esperado (la URL es temporal, no se refrigera).
 - Sin tag ni release: no aplica a esta tarea.
+
+---
+
+## T63 — Selector de fuentes: principales primero, iframes como extra
+
+Hecha el **2026-10-15**. Solo frontend (`etiquetas.ts` + `etiquetas.test.ts`, `SelectorFuente.svelte` y `VistaReproductor.svelte` en lo justo). El selector deja de ser una fila plana: los **principales** (tipo `hls`/`mp4`: jkplayer, MediaFire, el HLS de AnimeAV1 y el MP4Upload resuelto de T61) van primero, y los **iframes** (embebidos de terceros, pueden traer publicidad) quedan debajo en una sección plegable cerrada por defecto. Se arregla así el chip ambiguo `Mp4upload` (iframe con anuncios) vs `MP4Upload` (directo sin anuncios) que hacía elegir el equivocado.
+
+**Qué se hizo:**
+
+- **Clasificación por TIPO, nunca por nombre** (`etiquetas.ts`): `esPrincipal` = `hls`\|`mp4`; `esExtra` = `iframe`. `agruparFuentes(fuentes, filtro)` separa ambos grupos conservando el orden del backend dentro de cada uno y etiqueta cada fila.
+- **Sufijo de colisión**: cuando el mismo nombre de servidor (comparado **sin mayúsculas**) aparece en los dos grupos, el principal se marca `· directo` y el extra `· iframe`; si no hay colisión, la etiqueta queda como siempre. `etiquetaFuente` recibe un `sufijo` opcional que se añade al final (con calidad/idioma previos intactos: "MP4Upload · SUB · directo").
+- **UI** (`SelectorFuente.svelte`): fila de principales + botón plegable `aria-expanded` con el texto exacto "Otras fuentes (embebidas, pueden incluir publicidad)". **Cerrada por defecto**; se despliega sola si la fuente activa es un iframe o si no hay ningún principal. Funciona con teclado (`:focus-visible`), sin depender de hover (P6). El filtro de idioma sigue en `null` (no se activó).
+- **Orden y fallback** (`VistaReproductor.svelte`): la fuente que se abre sigue siendo la del backend (índice 0). El salto automático ahora recorre `ordenReproduccion(fuentes)` —el resto de **principales** primero y los **iframes solo al final**—, porque `Nucleo.Fuentes` solo mueve la mejor a cabeza y el mp4 resuelto de T61 se **añade al final** (podía quedar detrás de los iframes). `elegirFuente` reubica `intentos` en ese orden.
+
+**Pruebas (`etiquetas.test.ts`, esbuild de Vite):** **32** comprobaciones (20 previas + 12 nuevas): clasificación por tipo, colisión `Mp4upload` iframe vs `MP4Upload` mp4 con `· directo`/`· iframe` e índices sobre la lista completa, sin colisión (HLS JKAnime vs VOE, SUB/DUB intactos), lista solo de iframes y lista vacía, y `ordenReproduccion` (principales antes que iframes; la del backend siempre primera).
+
+**Verificación visual (Playwright, `localhost:34115`; sin vídeo real, el proxy no es alcanzable desde el navegador —documentado—):**
+
+- **JKAnime "bleach"** (Ep. 1) → principales `jkplayer`, `Mediafire`, `MP4Upload · directo`; extras al desplegar: `Mega`, `Streamwish`, `Vidhide`, `VOE`, `Filemoon`, `Mixdrop`, `Mp4upload · iframe`, `Streamtape`, `Doodstream`.
+- **AnimeAV1 "bleach"** (Ep. 1) → principales `HLS · SUB`, `HLS · DUB`, `MP4Upload · SUB · directo`, `MP4Upload · DUB · directo`; extras: `UPNShare · SUB/DUB`, `Voe · SUB/DUB`, `Byse · SUB/DUB`, `MP4Upload · SUB/DUB · iframe`.
+- Pliegue **cerrado por defecto** con un principal activo (`aria-expanded="false"`, extras ocultos) en los dos proveedores; el botón abre/cierra alternando `aria-expanded`; **autoapertura** con iframe activo (el activo acaba en iframe porque el proxy da `ERR_CONNECTION_REFUSED`); **foco de teclado** alcanza el botón en 3 `Tab` con `:focus-visible`. A **700 px** no hay desbordamiento horizontal (selector 636 px, etiquetas largas envuelven). Capturas en `.playwright-mcp/t63-selector-{jkanime,animeav1}-700.png`.
+- **Consola**: sin errores nuevos de nuestro código (0 coincidencias de `etiquetas`/`SelectorFuente`/`VistaReproductor`). Lo único que aparece es el `favicon.ico` 404 y el `TypeError` de `wails/ipc.js` (ambos ya presentes en la carga inicial, ajenos a T63), los `ERR_CONNECTION_REFUSED` al proxy `127.0.0.1` (limitación del navegador) y mensajes de anuncios **dentro de los iframes de terceros**.
+
+**Compuerta (resultado real):**
+
+| Comando | Resultado |
+|---|---|
+| `gofmt -l .` | **sin salida** (los 10 `.go` del fantasma CRLF T36 se normalizaron a LF; `git diff --ignore-cr-at-eol -- '*.go'` **vacío**) |
+| `go build ./...` · `go vet ./...` | OK · limpio (sin cambios de Go) |
+| `go test -race -count=1 ./...` | **11 paquetes `ok`** (mismo recuento; T63 no toca Go) |
+| `etiquetas.test.ts` (esbuild + node) | **OK (32 comprobaciones)** |
+| `npm run check` | **0 errores, 0 avisos** |
+| `npm run build` | OK (aviso de chunk >500 kB preexistente) |
+| `grep -rn wailsjs frontend/src` | **solo `api.ts`** |
+
+**Desviaciones:**
+
+- **`gofmt -l .` marcaba 10 `.go` con el fantasma CRLF (T36)** aunque no se tocó ni una línea de Go; se normalizaron a LF (quitar solo el `\r` final, git no registra cambio real) para dejar la compuerta limpia. Archivos afectados: `internal/app/{app_e2e_test.go,app_nucleo_animeav1_test.go}` y `internal/scraper/{animeav1/{animeav1.go,embeds_test.go,sources.go,sources_test.go},jkanime/{embeds.go,embeds_test.go,get_video_sources_test.go,jkanime.go}}`. Ningún cambio de contenido.
+- **Sufijo al final de la etiqueta** (tras `Idioma`/`Calidad`): con idioma queda "MP4Upload · SUB · directo". Es la lectura literal de "sufijo"; sin colisión no se añade nada.
+- **Colisión por nombre de servidor sin distinguir mayúsculas** (el caso real JKAnime: iframe `Mp4upload` vs directo `MP4Upload`).
+- **Colisión de numeración del informe de adds**: `T63` estaba propuesto como extractor de Voe; el selector de fuentes se queda con `T63` y las propuestas pasan a **T64+** (Voe T64, Byse T65, UPNShare T66, Streamtape T67, purga T68, sandbox T69).
+- **Los errores de consola del navegador** (`favicon` 404, `wails/ipc.js` TypeError, `ERR_CONNECTION_REFUSED` del proxy y anuncios dentro de los iframes) son previos/ajenos a T63 (documentados en AGENTS.md); no se introdujo ninguno nuevo.
+
+**Pendientes:**
+
+- **Prueba manual del humano con el `.exe`**: con el proxy real, comprobar que al fallar una fuente el salto recorre los principales antes que los iframes y que el selector se pliega/despliega como se espera; el MP4Upload `· directo` debe reproducirse sin anuncios y sin saltar al `· iframe`.
+- Sin tag ni release: no aplica a esta tarea.
+

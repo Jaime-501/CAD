@@ -5,7 +5,7 @@
   import type { models } from './api';
   import { getNextEpisode, getProgress, getVideoSources, saveProgress } from './api';
   import type { VideoSourceView } from './api';
-  import type { FiltroIdioma } from './etiquetas';
+  import { ordenReproduccion, type FiltroIdioma } from './etiquetas';
   import { currentDetail, currentProvider, episodes, progressMap, startAt } from './stores';
   import { atras, navegarA, seleccion, type SeleccionAnime } from './views';
   import BotonSiguiente from './BotonSiguiente.svelte';
@@ -27,7 +27,12 @@
    * `fuentesVisibles`).
    */
   let filtroIdioma: FiltroIdioma = null;
-  /** Fuentes ya probadas: índice de la siguiente a intentar tras un fallo fatal. */
+  /**
+   * T63: posición (no índice) siguiente en el orden de reproducción. La
+   * fuente que se abre sigue siendo la del backend (índice 0, la mejor); ante
+   * un fallo se recorre `ordenReproduccion(fuentes)` —principales primero y
+   * los iframes solo al final—. `intentos` empieza en 1 tras cargar fuentes.
+   */
   let intentos = 0;
   let modo: 'nada' | 'video' | 'iframe' = 'nada';
   /** Evita recuperaciones concurrentes (varios errores seguidos). */
@@ -392,14 +397,15 @@
     }
 
     cargando = false;
-    if (intentos >= lista.length) {
+    const orden = ordenReproduccion(lista);
+    if (intentos >= orden.length) {
       modo = 'nada';
       error = `No se pudo reproducir ninguna fuente de vídeo (${detalle}).`;
       ocupado = false;
       return;
     }
     fuentes = lista;
-    indice = intentos;
+    indice = orden[intentos];
     intentos += 1;
     reproducir();
     ocupado = false;
@@ -420,7 +426,8 @@
     guardarProgreso(true);
     error = '';
     indice = nuevo;
-    if (intentos <= nuevo) intentos = nuevo + 1;
+    const posicion = ordenReproduccion(fuentes).indexOf(nuevo) + 1;
+    if (posicion > intentos) intentos = posicion;
     reproducir();
   }
 

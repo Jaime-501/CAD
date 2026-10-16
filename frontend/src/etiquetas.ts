@@ -49,9 +49,11 @@ export function etiquetaIdioma(fuente: VideoSourceView): string {
  * Etiqueta de una fuente en el selector: `Servidor · Idioma · Calidad`, con
  * las partes que haya (siempre texto, nunca solo color). Sin servidor se usa
  * el tipo de recurso (HLS/MP4/Iframe), y el idioma solo aparece si el
- * proveedor lo declara.
+ * proveedor lo declara. `sufijo` (T63) es una marca opcional que se añade al
+ * final para desambiguar dos fuentes del mismo servidor (`· directo` en el
+ * medio resuelto, `· iframe` en el embebido).
  */
-export function etiquetaFuente(fuente: VideoSourceView): string {
+export function etiquetaFuente(fuente: VideoSourceView, sufijo = ''): string {
   const tipo =
     fuente.type === 'hls'
       ? 'HLS'
@@ -67,6 +69,7 @@ export function etiquetaFuente(fuente: VideoSourceView): string {
   if (idioma !== '') partes.push(idioma);
   const calidad = fuente.quality.trim();
   if (calidad !== '') partes.push(calidad);
+  if (sufijo !== '') partes.push(sufijo);
   return partes.join(' · ');
 }
 
@@ -81,4 +84,92 @@ export function fuentesVisibles(
 ): VideoSourceView[] {
   if (filtro === null) return fuentes;
   return fuentes.filter((f) => etiquetaIdioma(f) === filtro);
+}
+
+/**
+ * Clasificación por TIPO (T63), nunca por nombre: una fuente es **principal**
+ * cuando se reproduce en el `<video>` propio —`hls` (jkplayer, el HLS de
+ * AnimeAV1) o `mp4` (MediaFire y el MP4Upload resuelto)—; es **extra** cuando
+ * es un `iframe` embebido de un tercero (puede traer publicidad). El nombre
+ * del servidor varía entre proveedores, por eso no decide nada aquí.
+ */
+export function esPrincipal(fuente: VideoSourceView): boolean {
+  return fuente.type === 'hls' || fuente.type === 'mp4';
+}
+
+/** Extra = `iframe` (T63): embebido de terceros, fuera del control de progreso. */
+export function esExtra(fuente: VideoSourceView): boolean {
+  return fuente.type === 'iframe';
+}
+
+/** Fila del selector: la fuente, su índice en la lista COMPLETA y su etiqueta. */
+export interface FilaFuente {
+  fuente: VideoSourceView;
+  indice: number;
+  etiqueta: string;
+}
+
+/** Fuentes separadas para el selector (T63): principales primero, extras aparte. */
+export interface FuentesAgrupadas {
+  principales: FilaFuente[];
+  extras: FilaFuente[];
+}
+
+/**
+ * Separa las fuentes en principales y extras (T63) conservando el orden del
+ * backend dentro de cada grupo, y etiqueta cada fila. Cuando el mismo nombre
+ * de servidor —comparado sin mayúsculas— aparece en los dos grupos (p. ej. el
+ * `Mp4upload` iframe y el `MP4Upload` directo de T61), el principal se marca
+ * con `· directo` y el extra con `· iframe`; si no hay colisión la etiqueta
+ * queda como siempre. Un tipo desconocido nunca se oculta: viaja con los
+ * extras (hoy los proveedores solo emiten hls/mp4/iframe).
+ */
+export function agruparFuentes(
+  fuentes: VideoSourceView[],
+  filtro: FiltroIdioma = null
+): FuentesAgrupadas {
+  const visibles = fuentesVisibles(fuentes, filtro);
+  const principales = visibles.filter(esPrincipal);
+  const extras = visibles.filter((f) => !esPrincipal(f));
+  const nombres = (lista: VideoSourceView[]): Set<string> =>
+    new Set(
+      lista.map((f) => f.server.trim().toLowerCase()).filter((nombre) => nombre !== '')
+    );
+  const enPrincipales = nombres(principales);
+  const enExtras = nombres(extras);
+  const hayColision = (f: VideoSourceView): boolean => {
+    const nombre = f.server.trim().toLowerCase();
+    return nombre !== '' && enPrincipales.has(nombre) && enExtras.has(nombre);
+  };
+  const fila = (f: VideoSourceView, sufijo: string): FilaFuente => ({
+    fuente: f,
+    indice: fuentes.indexOf(f),
+    etiqueta: etiquetaFuente(f, hayColision(f) ? sufijo : ''),
+  });
+  return {
+    principales: principales.map((f) => fila(f, 'directo')),
+    extras: extras.map((f) => fila(f, 'iframe')),
+  };
+}
+
+/**
+ * Orden de reproducción/fallback (T63): la primera es la del backend (la
+ * mejor, índice 0) y después van el resto de principales y, solo al final,
+ * los extras (iframes). Devuelve índices sobre la lista recibida, así que el
+ * salto ante un fallo recorre primero los principales restantes.
+ */
+export function ordenReproduccion(fuentes: VideoSourceView[]): number[] {
+  const principales: number[] = [];
+  const extras: number[] = [];
+  fuentes.forEach((f, i) => {
+    if (esPrincipal(f)) principales.push(i);
+    else extras.push(i);
+  });
+  const orden = [...principales, ...extras];
+  const posCero = orden.indexOf(0);
+  if (posCero > 0) {
+    orden.splice(posCero, 1);
+    orden.unshift(0);
+  }
+  return orden;
 }
