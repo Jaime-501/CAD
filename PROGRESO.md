@@ -1,10 +1,10 @@
-    # PROGRESO — Comfort Anime Desktop (T01–T70 hechas)
+    # PROGRESO — Comfort Anime Desktop (T01–T71 hechas)
 
 > Este archivo es la **memoria entre sesiones**. Cada sesión lo lee al inicio y lo actualiza al final.
 > Reglas y layout: `tareas/00_REGLAS.md`. Detalle de cada tarea: `tareas/Txx.md`.
 > Firmas reales por paquete: `docs/firmas/<paquete>.md` · Bitácora, desviaciones históricas y pendientes cerrados: `docs/BITACORA.md`.
 > **Si una firma de `docs/firmas` no coincide con el código, manda el código (`go doc`).**
-> **Archivos históricos**: el estado de **T01–T29 + T30** (v1.0) está en **`docs/PROGRESO_v1.0.md`**, el de **T30–T35** (AnimeAV1, v1.1.0, con sus desviaciones por tarea, fixtures y pruebas manuales) en **`docs/PROGRESO_v1.1.md`** y el de **T39–T58** (v1.2.0: Home, historial, favoritos, "Siguiente" y sus bugs; incluye los cierres T56/T59) en **`docs/PROGRESO_v1.2.md`**, y el de **T64–T67** (v1.3.0: `ventana.ts`, revelado animado y scroll del detalle) en **`docs/PROGRESO_v1.3.md`**. Aquí solo queda lo vigente. Estado del producto: **v1.2.1 PUBLICADA** (tag `v1.2.1`; ciclo **T39–T59**: v1.2.0 publicada en T56–T58, con T53b y T57; los dos bugs visuales son **T58**; el cierre documental —post-v1.2.0 y de la v1.2.1— es **T59**) y **v1.3.0 PREPARADA** — serie **T64–T68** en la rama **`feature/episodios-incrementales`** (episodios incrementales + revelado animado; cierre documental en **T68**). La **prueba manual con el `.exe` de la v1.2.0** y la **release** las hizo el humano; T57 se probó con el `.exe` sin incidencias. `wails.json` → `productVersion` **1.3.0**: **sin tag ni release aún** (los hace el humano). **Numeración (colisión resuelta en T59):** `tareas/T58.md` = bugs visuales (fila/bloque T58); el cierre documental pasó de T58 a **T59** (sin borrar contenido). **Nueva serie v1.4.0 (rediseño y enfoque móvil, rama `feature/rediseno-movil`)**: comienza con **T69** (auditoría de UI base, solo lectura) **hecha** — informe en `docs/investigacion/ui_base.md`, capturas en `docs/img/v1.4/base/` y scripts en `docs/investigacion/ui/`; **sin cambios de código**. Le sigue **T70** (tokens de diseño en `style.css`: solo variables nuevas, sin cambio visual) **hecha** — `docs/investigacion/ui_tokens.md` y `docs/investigacion/ui/contraste.mjs`; los `--cad-*` quedan como legado hasta T93.
+> **Archivos históricos**: el estado de **T01–T29 + T30** (v1.0) está en **`docs/PROGRESO_v1.0.md`**, el de **T30–T35** (AnimeAV1, v1.1.0, con sus desviaciones por tarea, fixtures y pruebas manuales) en **`docs/PROGRESO_v1.1.md`** y el de **T39–T58** (v1.2.0: Home, historial, favoritos, "Siguiente" y sus bugs; incluye los cierres T56/T59) en **`docs/PROGRESO_v1.2.md`**, y el de **T64–T67** (v1.3.0: `ventana.ts`, revelado animado y scroll del detalle) en **`docs/PROGRESO_v1.3.md`**. Aquí solo queda lo vigente. Estado del producto: **v1.2.1 PUBLICADA** (tag `v1.2.1`; ciclo **T39–T59**: v1.2.0 publicada en T56–T58, con T53b y T57; los dos bugs visuales son **T58**; el cierre documental —post-v1.2.0 y de la v1.2.1— es **T59**) y **v1.3.0 PREPARADA** — serie **T64–T68** en la rama **`feature/episodios-incrementales`** (episodios incrementales + revelado animado; cierre documental en **T68**). La **prueba manual con el `.exe` de la v1.2.0** y la **release** las hizo el humano; T57 se probó con el `.exe` sin incidencias. `wails.json` → `productVersion` **1.3.0**: **sin tag ni release aún** (los hace el humano). **Numeración (colisión resuelta en T59):** `tareas/T58.md` = bugs visuales (fila/bloque T58); el cierre documental pasó de T58 a **T59** (sin borrar contenido). **Nueva serie v1.4.0 (rediseño y enfoque móvil, rama `feature/rediseno-movil`)**: comienza con **T69** (auditoría de UI base, solo lectura) **hecha** — informe en `docs/investigacion/ui_base.md`, capturas en `docs/img/v1.4/base/` y scripts en `docs/investigacion/ui/`; **sin cambios de código**. Le sigue **T70** (tokens de diseño en `style.css`: solo variables nuevas, sin cambio visual) **hecha** — `docs/investigacion/ui_tokens.md` y `docs/investigacion/ui/contraste.mjs`; los `--cad-*` quedan como legado hasta T93— y **T71** (base global: fuentes locales Inter/Outfit, viewport con safe-area, corrección del fondo dividido, foco visible y ajustes táctiles) **hecha** — ver bloque al final.
 
 ## Protocolo de sesión
 
@@ -138,6 +138,7 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha y verificada
 | [x] | T68 | Cierre documental de la v1.3.0 (T64–T67) | T67 |
 | [x] | T69 | Auditoría de UI base (v1.4.0, solo lectura) | — |
 | [x] | T70 | Tokens de diseño en `style.css` (v1.4.0) | T69 |
+| [x] | T71 | Base global: tipografía, viewport, fondo y safe-area (v1.4.0) | T70 |
 
 T01–T29 = v1.0 (`docs/PROGRESO_v1.0.md`) · T30–T35 = v1.1.0 AnimeAV1 (`docs/PROGRESO_v1.1.md`) · T36 = cierre de la v1.1.0 · T37 = portabilidad Android · T38 = cierre documental de T37.
 T39–T57 = v1.2.0 (Home, historial lateral, favoritos, "Siguiente" y su estado discreto; **incluye T53b y T57**); plan en `tareas/v1.2_PLAN.md`, detalle **T39–T58 + cierres T56/T59** archivado en `docs/PROGRESO_v1.2.md`, con resúmenes al final de este archivo.
@@ -145,7 +146,7 @@ La **v1.2.0 está PUBLICADA** (prueba manual con el `.exe` y release hechas por 
 
 **v1.3.0 — episodios incrementales** (rama `feature/episodios-incrementales`): serie **T64–T69** para mostrar los episodios del detalle de forma incremental y con animación de entrada. **T64** (lógica pura de `ventana.ts` + tests), **T65** (revelado animado por visibilidad, sin paginar), **T66** (clave de scroll del detalle por proveedor + slug) y **T67** (restauración del scroll del detalle cuando la lista se recarga) hechas; **T68** (cierre documental de la v1.3.0) hecho: `productVersion` **1.3.0**, **sin tag ni release** (los hace el humano). Los **T66–T67 originales** (paginado / ventana client-side) quedan **descartados** por las mediciones de T65 (sin jank y con 0 saltos de scroll; el coste real es de red, ya cubierto por el mostrado por lotes); **T69 pendiente** de la serie. Notas largas de T64–T67 archivadas en `docs/PROGRESO_v1.3.md`.
 
-**v1.4.0 — rediseño y enfoque móvil** (rama `feature/rediseno-movil`): serie nueva que empieza con **T69** (auditoría de UI base, **solo lectura**: inventario, literales CSS, 24 capturas a 360/768/1280, métricas por vista y extracción de la paleta de los 4 HTML de Stitch), hecha y documentada en `docs/investigacion/ui_base.md`; los scripts de medición viven en `docs/investigacion/ui/` y las capturas en `docs/img/v1.4/base/`. **No se tocó código** (`frontend/**`, `*.go`, `package.json`, `wails.json` intactos). Le sigue **T70** (tokens de diseño: un bloque `:root` **añadido** a `frontend/src/style.css` con las variables del rediseño —colores, superficies, bordes, texto, marca, semánticos, radios, sombras, marco de póster, blur, movimiento, espacio, táctil, gutter y capas—, **sin modificar ninguna línea existente** y sin cambio visual; documentadas en `docs/investigacion/ui_tokens.md` con la tabla de contraste de `docs/investigacion/ui/contraste.mjs`; las `--cad-*` quedan como legado hasta **T93**). Próximas tareas de la serie: pendientes de definir.
+**v1.4.0 — rediseño y enfoque móvil** (rama `feature/rediseno-movil`): serie nueva que empieza con **T69** (auditoría de UI base, **solo lectura**: inventario, literales CSS, 24 capturas a 360/768/1280, métricas por vista y extracción de la paleta de los 4 HTML de Stitch), hecha y documentada en `docs/investigacion/ui_base.md`; los scripts de medición viven en `docs/investigacion/ui/` y las capturas en `docs/img/v1.4/base/`. **No se tocó código** (`frontend/**`, `*.go`, `package.json`, `wails.json` intactos). Le sigue **T70** (tokens de diseño: un bloque `:root` **añadido** a `frontend/src/style.css` con las variables del rediseño —colores, superficies, bordes, texto, marca, semánticos, radios, sombras, marco de póster, blur, movimiento, espacio, táctil, gutter y capas—, **sin modificar ninguna línea existente** y sin cambio visual; documentadas en `docs/investigacion/ui_tokens.md` con la tabla de contraste de `docs/investigacion/ui/contraste.mjs`; las `--cad-*` quedan como legado hasta **T93**) y **T71** (base global móvil: fuentes locales **Inter**/Outfit por subconjunto latin, escala tipográfica y safe-area como tokens, `viewport-fit=cover`, corrección del fondo dividido, `:focus-visible` y ajustes táctiles; herramienta reutilizable `docs/investigacion/ui/verificar_ui.mjs`). Próximas tareas de la serie: pendientes de definir.
 
 ## Auditoría de portabilidad (T37)
 
@@ -701,3 +702,70 @@ Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**
 - Sin tag ni release: no aplica a esta tarea. Las `--cad-*` siguen vigentes hasta **T93**.
 
 **Archivos tocados:** `frontend/src/style.css` (solo adiciones), `docs/investigacion/ui_tokens.md` (nuevo), `docs/investigacion/ui/contraste.mjs` (nuevo) y `PROGRESO.md`. **Nada fuera de "Puedes tocar"** (regla 7 no se activó): ningún `.svelte`, ningún `*.go`, `frontend/wailsjs/**`, `index.html` ni `package.json` tocados; `frontend/dist` regenerado por `npm run build` (ignorado por git).
+
+---
+
+## T71 — Base global: tipografía, viewport, fondo y safe-area (v1.4.0) — bloque de esta sesión
+
+Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**. Fecha **2026-10-17**. Deja la base lista para móvil: fuentes locales **Inter** (texto) y **Outfit** (display) por subconjunto **latin**, escala tipográfica y safe-area como tokens, `viewport-fit=cover`, **corrección del fondo dividido** (bug T69), foco visible global y ajustes táctiles. Solo se tocó `frontend/src/style.css`, `frontend/index.html` (solo el `<meta viewport>`), `package.json`/`package-lock.json` (solo las 2 dependencias) y `PROGRESO.md`; la adenda autoriza además `docs/investigacion/ui/verificar_ui.mjs` (nuevo, reutilizable).
+
+**Qué se hizo:**
+
+- **Fuentes (paso 1):** instaladas `@fontsource-variable/inter@5.3.0` y `@fontsource-variable/outfit@5.3.0`. **No existe CSS por subconjunto** en los paquetes (`index.css`/`wght.css` traen **todos** los subsets; sumarían ~259 KB > 200 KB), así que se declara `@font-face` a mano en `style.css` apuntando al woff2 **latin** con peso variable (`inter-latin-wght-normal.woff2` 48,3 KB + `outfit-latin-wght-normal.woff2` 32,3 KB) con su `unicode-range` de latin. Tokens `--font-sans` (Inter) y `--font-display` (Outfit) con fallbacks de sistema; `body` deja de usar Nunito. El `@font-face` de Nunito se conserva (el archivo se retira en T93).
+- **Escala tipográfica (paso 2):** tokens `--fs-xs..2xl` (12/14/16/18/22/28 px), `--lh-tight`/`--lh`, `--fw-regular..bold` (400/500/600/700) en un `:root` nuevo de T71. Mínimo 12 px.
+- **Viewport (paso 3):** `index.html` → `width=device-width, initial-scale=1, viewport-fit=cover` (única línea tocada; el `referrer` intacto). Variables `--sat/--sar/--sab/--sal` = `env(safe-area-inset-*, 0px)`.
+- **Fondo (paso 4):** `html { background: var(--bg-0); min-height: 100%; }` y `body { min-height: 100dvh; background: transparent; }` — sustituye el `#151515` y el azul pizarra `rgba(27,38,54,1)` que asomaba por debajo del contenido.
+- **Base global (paso 5):** `color-scheme: dark`; `-webkit-tap-highlight-color: transparent`; `text-size-adjust: 100%`; `overscroll-behavior-y: none`; `touch-action: manipulation` en `button, a, [role="button"], input`; `:focus-visible { outline: none; box-shadow: var(--ring); }`; y un `@media (hover: none)` **documentado sin estilos de hover pegajosos** en el reset. Los títulos `h1..h6` usan `--font-display`.
+- **Fondo ambiental (paso 6):** `body::before` con `position: fixed; inset: 0; z-index: -1; pointer-events: none` y dos `radial-gradient` de baja opacidad (esmeralda `--brand-500` arriba-izquierda, índigo `--indigo` abajo-derecha) vía `color-mix`. **Sin** `filter: blur` ni `backdrop-filter`.
+- **Herramienta (adenda):** `docs/investigacion/ui/verificar_ui.mjs` (Playwright desde el MCP global): lee tokens por computed style, captura vistas midiendo `overflowH`, compara dos carpetas de PNG con tolerancia por canal ≤ 2 (impresas las cajas que difieren) y lee el color de un píxel. Modos `capturar`/`comparar`/`pixel`.
+
+**Criterios de aceptación (resultado real):**
+
+| criterio | resultado |
+|---|---|
+| `font-family` de `body` | **`"Inter Variable", system-ui, …`** (computed) |
+| fuente de un título | no existe `h1`; se aplicó `--font-display` a `h1..h6` y el `h2` medido («Buscador de anime») computa **`"Outfit Variable", system-ui, …`** |
+| peticiones de fuentes a dominios externos | **0**: las 2 peticiones (`…/inter-latin-wght-normal.woff2`, `…/outfit-latin-wght-normal.woff2`, 304) salen de **`localhost:34115`**; los únicos hosts externos son portadas (`cdn.animeav1.com`, `cdn.jkdesa.com`, pre-existentes) |
+| peso de `frontend/dist` antes → después | **739 913 → 822 179 B (+82 266 B, ≈ +80,3 KB)** ≤ 200 KB |
+| `descubrir_360` fullPage, píxel y=100 vs y=1000 | **iguales: `#090d16`** en y=100/500/1000/1500; la captura T69 tenía `#1b2636` (azul pizarra) desde y≈740 → **franja eliminada** |
+| `overflowH` a 360 px vs `metricas.json` T69 | **0** en todas (medir_ui: 7 vistas a 360; + `favoritos@360` headless = 0) |
+| cajas de elementos medidos (alto, vs T69) | tarjeta episodio **170,39** (=) · tarjeta Home **263,8** (=) · `.pestaña` **39→38** (−1 ✓) · `.boton-siguiente` **37→36** (−1 ✓) · `.buscar` **38** (=) · **`.actualizar` 34→32 (−2)** y **`.borrar-todo` 32→30 (−2)** (texto que reflujo, reportado) |
+| `npm run check` | **0 errores, 0 avisos** |
+| `npm run build` | **OK** (aviso de chunk >500 kB preexistente) |
+| `*.test.ts` (esbuild + node) | **etiquetas 32 · ventana 48 · views 13** (todas OK) |
+| `grep -rn wailsjs frontend/src` | **solo `api.ts`** |
+| Go (`-race`, `-v`) | **435 `--- PASS`**, `gofmt -l .` sin salida, `go vet`/`go build` OK — **sin cambios** |
+
+**Diferencias de texto por el cambio de fuente (adenda, anchos):** `.pestaña` «Descubrir» **93→100** (+7) y `.actualizar` «Actualizar» **92→98** (+6) y `.boton-siguiente` **140→147** (+7): reflujo por las métricas de Inter frente a Nunito (el alto se mantiene dentro de 1 px salvo los 2 botones de texto). Los conteos de textos < 12/14 px y de táctiles < 44 px varían por **contenido vivo** de los proveedores (p. ej. `reproductor_extras@1280`), no por el CSS.
+
+**Verificación visual (Playwright headless, `localhost:34115`):** `verificar_ui.mjs capturar` → tokens **0 vacíos**, `overflowH = 0` en descubrir/búsqueda/detalle_animeav1/detalle_jkanime @360/768/1280; `comparar` (base T69 vs T71) informa diferencias **esperadas** (cambia la fuente) con tope `tol ≤ 2`. El desborde de 7 px que muestra el navegador **con barra de scroll clásica** (MCP) desaparece en headless (misma metodología que `medir_ui.mjs`/T69).
+
+**Compuerta (resultado real):**
+
+| Comando | Resultado |
+|---|---|
+| `git diff --numstat -- frontend/package.json` | **+2** (solo las 2 dependencias) |
+| `frontend/package.json.md5` | regenerado por wails; **=`md5(package.json)`** (ver desviación) |
+| `npm run check` | **svelte-check found 0 errors and 0 warnings** |
+| `npm run build` | **OK**; `frontend/dist` **822 179 B** (antes 739 913 B) |
+| `*.test.ts` | **32 · 48 · 13** |
+| `grep -rn wailsjs frontend/src` | **solo `api.ts`** |
+| `gofmt -l .` · `go vet ./...` · `go build ./...` | sin salida · limpio · OK |
+| `go test -race -count=1 -v ./...` | **11 paquetes `ok`**; `^--- PASS` = **435**, `^--- FAIL` = **0** (Go intacto) |
+
+**Desviaciones:**
+
+- **No hay CSS por subconjunto latin** en los paquetes `@fontsource-variable/*`: el `@font-face` del subconjunto latin se escribe a mano en `style.css` (importar `wght.css` metería todos los subsets: ~259 KB, por encima del límite de 200 KB). El import se resuelve como especificador de paquete en `url()` (Vite lo resuelve y emite solo el woff2 latin).
+- **No existe `h1` en la app**: la escala se aplica a `h1..h6` y la comprobación se hace sobre el `h2` («Buscador de anime») = Outfit. (El criterio está redactado como `h1`.)
+- **`frontend/package.json.md5`** cambia **automáticamente** (lo regenera wails al detectar el cambio de `package.json`); está **fuera de "Puedes tocar"** pero es un fichero generado y su valor es el `md5` correcto de `package.json`. Se deja consistente y se reporta.
+- **"9 vistas a 360":** `metricas.json` de T69 solo tiene **7** estados a 360; T71 confirma **0** en esos 7, más `favoritos@360 = 0`. Los estados `lateral_contraida/expandida` solo existen a ≥900 px. **Sin desborde horizontal nuevo.**
+- **`.actualizar` y `.borrar-todo` bajan 2 px de alto** (texto que reflujo por la fuente): se reportan por la adenda (>1 px); el resto ≤1 px.
+- **Capturas y `metricas.json` regenerados** por `medir_ui.mjs` a un directorio **temporal**, y **restaurados** los de T69 en el repositorio (la evidencia base de T69 no se pisa).
+
+**Pendientes:**
+
+- **Traslado de los tokens a los componentes**: la escala `--fs-*`, `--font-display` y el resto de tokens de T70 aún **no los consumen** las vistas (llega con **T72b** y las tareas de vista).
+- **Objetivos táctiles < 44 px** (`.pestaña`, `.actualizar`, `.borrar-todo`, `.estrella`, `.hamburguesa`…) siguen pendientes; los resuelve la serie v1.4.0.
+- Sin tag ni release: no aplica a esta tarea. `--cad-*` y el `@font-face` de Nunito siguen vigentes hasta **T93**.
+
+**Archivos tocados:** `frontend/src/style.css`, `frontend/index.html` (solo el `<meta viewport>`), `frontend/package.json` y `frontend/package-lock.json` (solo las 2 dependencias) + `frontend/package.json.md5` (generado), `docs/investigacion/ui/verificar_ui.mjs` (nuevo) y `PROGRESO.md`. **Nada fuera de "Puedes tocar"** (regla 7 no se activó): ningún `.svelte`, ningún `*.go`, `frontend/wailsjs/**` ni `main.go` tocados; `frontend/src/main.ts` **no** necesitó cambios (el `@font-face` vive en `style.css`).
