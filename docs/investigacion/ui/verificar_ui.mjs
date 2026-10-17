@@ -190,6 +190,21 @@ const MEDIR = () => {
   };
 };
 
+// T72: mide los objetivos táctiles de las primitivas (`.btn` debe llegar a
+// 44×44 y `.chip` a 40 px de alto). Pensado para el arnés de galería temporal.
+const MEDIR_TACTILES = () => {
+  const medir = (sel) =>
+    [...document.querySelectorAll(sel)].map((el) => {
+      const r = el.getBoundingClientRect();
+      return {
+        texto: (el.textContent || '').trim().slice(0, 24),
+        w: Math.round(r.width * 100) / 100,
+        h: Math.round(r.height * 100) / 100,
+      };
+    });
+  return { btn: medir('.btn'), chip: medir('.chip') };
+};
+
 async function gotoApp(page) {
   await page.goto(BASE, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('.buscador input', { timeout: 20000 });
@@ -314,6 +329,35 @@ if (modo === 'comparar') {
   const img = decodePNG(readFileSync(png));
   const p = pixelAt(img, x, y);
   console.log(`${png} (${img.width}x${img.height}) px(${x},${y}) = ${hex(p)} rgba(${p.join(',')})`);
+} else if (modo === 'tactiles') {
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  let fallos = 0;
+  try {
+    console.log('| ancho | primitiva | texto | w | h | ok |');
+    console.log('|---|---|---|---:|---:|:--:|');
+    for (const a of ANCHOS) {
+      await page.setViewportSize({ width: a.w, height: a.h });
+      await page.goto(BASE, { waitUntil: 'domcontentloaded' });
+      await page.waitForSelector('.btn', { timeout: 20000 });
+      const res = await page.evaluate(MEDIR_TACTILES);
+      for (const [primitiva, items] of Object.entries(res)) {
+        for (const it of items) {
+          const ok = primitiva === 'btn' ? it.w >= 44 && it.h >= 44 : it.h >= 40;
+          if (!ok) fallos++;
+          console.log(
+            `| ${a.nombre} | ${primitiva} | ${it.texto || '—'} | ${it.w} | ${it.h} | ${ok ? 'sí' : 'NO'} |`
+          );
+        }
+      }
+    }
+  } catch (e) {
+    log('error:', e.message);
+    fallos++;
+  }
+  await browser.close();
+  console.log(fallos === 0 ? '\nTodos los objetivos táctiles cumplen.' : `\n${fallos} objetivos NO cumplen.`);
+  process.exit(fallos === 0 ? 0 : 1);
 } else {
   const dirOut = process.argv[3] ?? DIR_DEF;
   const res = await capturar(dirOut);

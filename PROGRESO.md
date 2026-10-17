@@ -1,10 +1,10 @@
-    # PROGRESO — Comfort Anime Desktop (T01–T71 hechas)
+    # PROGRESO — Comfort Anime Desktop (T01–T72 hechas)
 
 > Este archivo es la **memoria entre sesiones**. Cada sesión lo lee al inicio y lo actualiza al final.
 > Reglas y layout: `tareas/00_REGLAS.md`. Detalle de cada tarea: `tareas/Txx.md`.
 > Firmas reales por paquete: `docs/firmas/<paquete>.md` · Bitácora, desviaciones históricas y pendientes cerrados: `docs/BITACORA.md`.
 > **Si una firma de `docs/firmas` no coincide con el código, manda el código (`go doc`).**
-> **Archivos históricos**: el estado de **T01–T29 + T30** (v1.0) está en **`docs/PROGRESO_v1.0.md`**, el de **T30–T35** (AnimeAV1, v1.1.0, con sus desviaciones por tarea, fixtures y pruebas manuales) en **`docs/PROGRESO_v1.1.md`** y el de **T39–T58** (v1.2.0: Home, historial, favoritos, "Siguiente" y sus bugs; incluye los cierres T56/T59) en **`docs/PROGRESO_v1.2.md`**, y el de **T64–T67** (v1.3.0: `ventana.ts`, revelado animado y scroll del detalle) en **`docs/PROGRESO_v1.3.md`**. Aquí solo queda lo vigente. Estado del producto: **v1.2.1 PUBLICADA** (tag `v1.2.1`; ciclo **T39–T59**: v1.2.0 publicada en T56–T58, con T53b y T57; los dos bugs visuales son **T58**; el cierre documental —post-v1.2.0 y de la v1.2.1— es **T59**) y **v1.3.0 PREPARADA** — serie **T64–T68** en la rama **`feature/episodios-incrementales`** (episodios incrementales + revelado animado; cierre documental en **T68**). La **prueba manual con el `.exe` de la v1.2.0** y la **release** las hizo el humano; T57 se probó con el `.exe` sin incidencias. `wails.json` → `productVersion` **1.3.0**: **sin tag ni release aún** (los hace el humano). **Numeración (colisión resuelta en T59):** `tareas/T58.md` = bugs visuales (fila/bloque T58); el cierre documental pasó de T58 a **T59** (sin borrar contenido). **Nueva serie v1.4.0 (rediseño y enfoque móvil, rama `feature/rediseno-movil`)**: comienza con **T69** (auditoría de UI base, solo lectura) **hecha** — informe en `docs/investigacion/ui_base.md`, capturas en `docs/img/v1.4/base/` y scripts en `docs/investigacion/ui/`; **sin cambios de código**. Le sigue **T70** (tokens de diseño en `style.css`: solo variables nuevas, sin cambio visual) **hecha** — `docs/investigacion/ui_tokens.md` y `docs/investigacion/ui/contraste.mjs`; los `--cad-*` quedan como legado hasta T93— y **T71** (base global: fuentes locales Inter/Outfit, viewport con safe-area, corrección del fondo dividido, foco visible y ajustes táctiles) **hecha** — ver bloque al final.
+> **Archivos históricos**: el estado de **T01–T29 + T30** (v1.0) está en **`docs/PROGRESO_v1.0.md`**, el de **T30–T35** (AnimeAV1, v1.1.0, con sus desviaciones por tarea, fixtures y pruebas manuales) en **`docs/PROGRESO_v1.1.md`** y el de **T39–T58** (v1.2.0: Home, historial, favoritos, "Siguiente" y sus bugs; incluye los cierres T56/T59) en **`docs/PROGRESO_v1.2.md`**, y el de **T64–T67** (v1.3.0: `ventana.ts`, revelado animado y scroll del detalle) en **`docs/PROGRESO_v1.3.md`**. Aquí solo queda lo vigente. Estado del producto: **v1.2.1 PUBLICADA** (tag `v1.2.1`; ciclo **T39–T59**: v1.2.0 publicada en T56–T58, con T53b y T57; los dos bugs visuales son **T58**; el cierre documental —post-v1.2.0 y de la v1.2.1— es **T59**) y **v1.3.0 PREPARADA** — serie **T64–T68** en la rama **`feature/episodios-incrementales`** (episodios incrementales + revelado animado; cierre documental en **T68**). La **prueba manual con el `.exe` de la v1.2.0** y la **release** las hizo el humano; T57 se probó con el `.exe` sin incidencias. `wails.json` → `productVersion` **1.3.0**: **sin tag ni release aún** (los hace el humano). **Numeración (colisión resuelta en T59):** `tareas/T58.md` = bugs visuales (fila/bloque T58); el cierre documental pasó de T58 a **T59** (sin borrar contenido). **Nueva serie v1.4.0 (rediseño y enfoque móvil, rama `feature/rediseno-movil`)**: comienza con **T69** (auditoría de UI base, solo lectura) **hecha** — informe en `docs/investigacion/ui_base.md`, capturas en `docs/img/v1.4/base/` y scripts en `docs/investigacion/ui/`; **sin cambios de código**. Le sigue **T70** (tokens de diseño en `style.css`: solo variables nuevas, sin cambio visual) **hecha** — `docs/investigacion/ui_tokens.md` y `docs/investigacion/ui/contraste.mjs`; los `--cad-*` quedan como legado hasta T93— y **T71** (base global: fuentes locales Inter/Outfit, viewport con safe-area, corrección del fondo dividido, foco visible y ajustes táctiles) **hecha** — ver bloque al final y **T72** (primitivas de UI e iconos: `Icono`, `Btn`, `Chip`, `Insignia`, `Esqueleto` y `EstadoVista`, 6 componentes nuevos, sin migrar ninguno existente) **hecha** — ver bloque al final.
 
 ## Protocolo de sesión
 
@@ -139,6 +139,7 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha y verificada
 | [x] | T69 | Auditoría de UI base (v1.4.0, solo lectura) | — |
 | [x] | T70 | Tokens de diseño en `style.css` (v1.4.0) | T69 |
 | [x] | T71 | Base global: tipografía, viewport, fondo y safe-area (v1.4.0) | T70 |
+| [x] | T72 | Primitivas de UI e iconos (v1.4.0) | T70, T71 |
 
 T01–T29 = v1.0 (`docs/PROGRESO_v1.0.md`) · T30–T35 = v1.1.0 AnimeAV1 (`docs/PROGRESO_v1.1.md`) · T36 = cierre de la v1.1.0 · T37 = portabilidad Android · T38 = cierre documental de T37.
 T39–T57 = v1.2.0 (Home, historial lateral, favoritos, "Siguiente" y su estado discreto; **incluye T53b y T57**); plan en `tareas/v1.2_PLAN.md`, detalle **T39–T58 + cierres T56/T59** archivado en `docs/PROGRESO_v1.2.md`, con resúmenes al final de este archivo.
@@ -146,7 +147,7 @@ La **v1.2.0 está PUBLICADA** (prueba manual con el `.exe` y release hechas por 
 
 **v1.3.0 — episodios incrementales** (rama `feature/episodios-incrementales`): serie **T64–T69** para mostrar los episodios del detalle de forma incremental y con animación de entrada. **T64** (lógica pura de `ventana.ts` + tests), **T65** (revelado animado por visibilidad, sin paginar), **T66** (clave de scroll del detalle por proveedor + slug) y **T67** (restauración del scroll del detalle cuando la lista se recarga) hechas; **T68** (cierre documental de la v1.3.0) hecho: `productVersion` **1.3.0**, **sin tag ni release** (los hace el humano). Los **T66–T67 originales** (paginado / ventana client-side) quedan **descartados** por las mediciones de T65 (sin jank y con 0 saltos de scroll; el coste real es de red, ya cubierto por el mostrado por lotes); **T69 pendiente** de la serie. Notas largas de T64–T67 archivadas en `docs/PROGRESO_v1.3.md`.
 
-**v1.4.0 — rediseño y enfoque móvil** (rama `feature/rediseno-movil`): serie nueva que empieza con **T69** (auditoría de UI base, **solo lectura**: inventario, literales CSS, 24 capturas a 360/768/1280, métricas por vista y extracción de la paleta de los 4 HTML de Stitch), hecha y documentada en `docs/investigacion/ui_base.md`; los scripts de medición viven en `docs/investigacion/ui/` y las capturas en `docs/img/v1.4/base/`. **No se tocó código** (`frontend/**`, `*.go`, `package.json`, `wails.json` intactos). Le sigue **T70** (tokens de diseño: un bloque `:root` **añadido** a `frontend/src/style.css` con las variables del rediseño —colores, superficies, bordes, texto, marca, semánticos, radios, sombras, marco de póster, blur, movimiento, espacio, táctil, gutter y capas—, **sin modificar ninguna línea existente** y sin cambio visual; documentadas en `docs/investigacion/ui_tokens.md` con la tabla de contraste de `docs/investigacion/ui/contraste.mjs`; las `--cad-*` quedan como legado hasta **T93**) y **T71** (base global móvil: fuentes locales **Inter**/Outfit por subconjunto latin, escala tipográfica y safe-area como tokens, `viewport-fit=cover`, corrección del fondo dividido, `:focus-visible` y ajustes táctiles; herramienta reutilizable `docs/investigacion/ui/verificar_ui.mjs`). Próximas tareas de la serie: pendientes de definir.
+**v1.4.0 — rediseño y enfoque móvil** (rama `feature/rediseno-movil`): serie nueva que empieza con **T69** (auditoría de UI base, **solo lectura**: inventario, literales CSS, 24 capturas a 360/768/1280, métricas por vista y extracción de la paleta de los 4 HTML de Stitch), hecha y documentada en `docs/investigacion/ui_base.md`; los scripts de medición viven en `docs/investigacion/ui/` y las capturas en `docs/img/v1.4/base/`. **No se tocó código** (`frontend/**`, `*.go`, `package.json`, `wails.json` intactos). Le sigue **T70** (tokens de diseño: un bloque `:root` **añadido** a `frontend/src/style.css` con las variables del rediseño —colores, superficies, bordes, texto, marca, semánticos, radios, sombras, marco de póster, blur, movimiento, espacio, táctil, gutter y capas—, **sin modificar ninguna línea existente** y sin cambio visual; documentadas en `docs/investigacion/ui_tokens.md` con la tabla de contraste de `docs/investigacion/ui/contraste.mjs`; las `--cad-*` quedan como legado hasta **T93**) y **T71** (base global móvil: fuentes locales **Inter**/Outfit por subconjunto latin, escala tipográfica y safe-area como tokens, `viewport-fit=cover`, corrección del fondo dividido, `:focus-visible` y ajustes táctiles; herramienta reutilizable `docs/investigacion/ui/verificar_ui.mjs`). Le sigue **T72** (primitivas de UI e iconos: 6 componentes **nuevos** — `Icono`, `Btn`, `Chip`, `Insignia`, `Esqueleto` y `EstadoVista` — con tokens, sin migrar ningún componente existente; el arnés de galería fue temporal). Próximas tareas de la serie: pendientes de definir.
 
 ## Auditoría de portabilidad (T37)
 
@@ -769,3 +770,53 @@ Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**
 - Sin tag ni release: no aplica a esta tarea. `--cad-*` y el `@font-face` de Nunito siguen vigentes hasta **T93**.
 
 **Archivos tocados:** `frontend/src/style.css`, `frontend/index.html` (solo el `<meta viewport>`), `frontend/package.json` y `frontend/package-lock.json` (solo las 2 dependencias) + `frontend/package.json.md5` (generado), `docs/investigacion/ui/verificar_ui.mjs` (nuevo) y `PROGRESO.md`. **Nada fuera de "Puedes tocar"** (regla 7 no se activó): ningún `.svelte`, ningún `*.go`, `frontend/wailsjs/**` ni `main.go` tocados; `frontend/src/main.ts` **no** necesitó cambios (el `@font-face` vive en `style.css`).
+
+---
+
+## T72 — Primitivas de UI e iconos (v1.4.0) — bloque de esta sesión
+
+Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**. Fecha **2026-10-17**. Añade **6 componentes nuevos** con el sistema de tokens de T70 y la base de T71 (fuentes `--font-sans`/`--font-display`, escala `--fs-*`, safe-area) y un set de iconos SVG inline. **No migra ningún componente existente** (eso es T72b y las tareas de vista).
+
+**Componentes (archivos NUEVOS en `frontend/src/`):**
+
+- **`Icono.svelte`**: 24 iconos SVG inline (paths al estilo Heroicons, MIT) con `stroke="currentColor"`/`fill="none"` salvo los «llenos» (`play`, `pausa`, `estrella-llena`, `marcador-lleno`). Props `nombre`, `tam` (16|20|24, def. 20) y `etiqueta` (si se pasa, `role="img"` + `aria-label`; si no, `aria-hidden="true"`). Los px de `tam` son los únicos permitidos del set.
+- **`Btn.svelte`**: variantes `primario` (`--grad-brand`, `--on-brand`, `--sh-glow`), `secundario` (`--surface-chip`+`--border`), `fantasma`, `icono`; tamaños `m`/`l`; `bloque`, `href` (renderiza `<a>`), `disabled`, `etiqueta`, slots `icono-izq`/`icono-der`. Alto y ancho mínimo `var(--tap)` (44 px) en todas. Hover SOLO en `@media (hover:hover) and (pointer:fine)`, `:active` escala .98, `:focus-visible` con `--ring`, `:disabled` atenuado.
+- **`Chip.svelte`**: `<button>` con `aria-pressed`; activo (`--grad-chip-active`, `--on-brand`, punto estático sin animación) / inactivo (`--surface-chip`+`--border`); el texto envuelve (`white-space:normal`, `overflow-wrap:anywhere`); alto `calc(var(--tap) - var(--sp-1))` = 40 px (sin px literal).
+- **`Insignia.svelte`**: tonos `marca|info|alerta|neutro|indigo` (`color-mix` sobre tokens), `font-size: var(--fs-xs)`, prop `mayusculas`.
+- **`Esqueleto.svelte`**: bloque con props `alto`/`ancho`/`radio` (valores CSS, por defecto tokens); shimmer con `--dur-slow`, desactivado por `prefers-reduced-motion: reduce`.
+- **`EstadoVista.svelte`**: variantes `vacio|error|cargando` con `Icono`, `h2`, texto y slot de acción; `role="alert"` (error) / `role="status"` (cargando) / sin rol (vacío). Usa `h2` (la app aún no tiene `h1`): **anotado para T91**.
+
+**Solo tokens / cero literales** (`grep -nE "#[0-9a-fA-F]{3,8}|rgba?\(|[0-9]+px"` sobre los 6 componentes): los únicos px son el borde `1px solid` (Btn/Chip/Insignia) y ningún tamaño literal (los de `Icono` salen de la prop `tam`); `font-family`/`box-shadow` siempre con `var()`. Un falso positivo (el `{#each` de `Icono`). Sin colores, radios, sombras ni duraciones literales.
+
+**Verificación — arnés temporal + capturas + medición táctil:**
+
+- **Arnés `frontend/src/_galeria.svelte`** (montado temporalmente en `App.svelte` solo durante la sesión) → **borrado** y `App.svelte` **revertido** (`git diff` vacío; no aparece en `git status`).
+- **Capturas** a **360 y 1280 px** en `docs/img/v1.4/primitivas/`: `iconos`, `botones`, `chips`, `insignias`, `esqueletos`, `estados` × 2 anchos = **12 PNG**.
+- **Medición táctil** con el nuevo modo `tactiles` de `docs/investigacion/ui/verificar_ui.mjs` (autorizado por la adenda): **todos los `Btn` ≥ 44×44** (44–46 px de alto; el de icono 44×44) y **todos los `Chip` ≥ 40 px** (40 / 40 / 43,59) a 360, 768 y 1280 → «Todos los objetivos táctiles cumplen». El chip «Activo» (con punto) mide 84,44×40.
+
+**Compuerta (resultado real):**
+
+| Comando | Resultado |
+|---|---|
+| `npm run check` | **0 errores, 0 avisos** |
+| `npm run build` | **OK** (aviso de chunk >500 kB preexistente) |
+| `*.test.ts` (esbuild + node) | **etiquetas 32 · ventana 48 · views 13** (todas OK) |
+| `grep -rn wailsjs frontend/src` | **solo `api.ts`** |
+| `gofmt -l .` · `go vet ./...` · `go build ./...` | sin salida · limpio · OK |
+| `go test -race -count=1 -v ./...` | **11 paquetes `ok`**; `^--- PASS` = **435**, `^--- FAIL` = **0** (Go intacto) |
+| `git status --porcelain` | 6 componentes nuevos + `docs/img/v1.4/primitivas/` + `verificar_ui.mjs` + `PROGRESO.md` (ni `App.svelte` ni el arnés) |
+
+**Desviaciones:**
+
+- **El arnés de galería fue temporal** (como pide la ficha): se montó en `App.svelte` solo para capturar/medir y se revirtió; la captura/medición se hizo con Playwright (MCP + `verificar_ui.mjs tactiles`).
+- **Modo `tactiles` añadido a `verificar_ui.mjs`** (autorizado por la adenda): mide `.btn` (≥44×44) y `.chip` (≥40) y termina con código ≠ 0 si algo no cumple. **No se creó otro script**; la captura de las 12 imágenes usó el código del MCP (sin script versionado nuevo).
+- **`--text-4` no se usa** (es decorativo y no cumple AA): las primitivas usan `--text-2`/`--text-3`.
+- **`h2` en `EstadoVista`** pese a que la app no tiene `h1`: lo indica la adenda; la jerarquía se resuelve en **T91**.
+- **Sin colisiones de nombre** con `Boton*.svelte`, `Tarjeta*.svelte` ni `Toast.svelte`: se usaron los nombres exactos de la ficha.
+
+**Pendientes:**
+
+- **Migración de los componentes existentes** a estas primitivas: es **T72b** (y las tareas de vista); aquí **no** se migró ninguno.
+- Sin tag ni release: no aplica a esta tarea. `--cad-*` siguen vigentes hasta **T93**.
+
+**Archivos tocados:** `frontend/src/{Icono,Btn,Chip,Insignia,Esqueleto,EstadoVista}.svelte` (nuevos), `docs/img/v1.4/primitivas/*.png` (12 capturas nuevas, versionadas), `docs/investigacion/ui/verificar_ui.mjs` (solo el modo `tactiles` que autoriza la adenda) y `PROGRESO.md`. **Nada fuera de "Puedes tocar"** (regla 7 no se activó): ningún componente existente, ningún `*.go`, `frontend/wailsjs/**`, `main.go`, `package.json` ni `style.css` tocados; el arnés temporal se borró y `App.svelte` quedó idéntico.
