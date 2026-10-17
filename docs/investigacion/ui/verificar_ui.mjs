@@ -52,6 +52,15 @@ const ANCHOS = [
   { w: 1280, h: 800, nombre: '1280' },
 ];
 
+// T73: anchos del modo `shell` (barra inferior móvil).
+const ANCHOS_SHELL = [
+  { w: 360, h: 740, nombre: '360' },
+  { w: 390, h: 844, nombre: '390' },
+  { w: 768, h: 1024, nombre: '768' },
+  { w: 1024, h: 768, nombre: '1024' },
+  { w: 1280, h: 800, nombre: '1280' },
+];
+
 function log(...a) { process.stderr.write(['[verificar_ui]', ...a].join(' ') + '\n'); }
 
 // ---------------------------------------------------------------------------
@@ -205,6 +214,72 @@ const MEDIR_TACTILES = () => {
   return { btn: medir('.btn'), chip: medir('.chip') };
 };
 
+// T73: medición del modo `shell` (barra inferior + geometría por ancho).
+const MEDIR_SHELL = () => {
+  const d = document.documentElement;
+  const barra = document.querySelector('.barra-inferior');
+  const destinos = barra ? [...barra.querySelectorAll('.destino')] : [];
+  const round = (n) => Math.round(n * 100) / 100;
+  const rect = (el) => {
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return { x: Math.round(r.x), y: Math.round(r.y), w: round(r.width), h: round(r.height), bottom: round(r.bottom) };
+  };
+  const alto = (el) => (el ? round(el.getBoundingClientRect().height) : null);
+  const panelVisible = (id) => {
+    const p = document.getElementById(id);
+    return !!p && !p.classList.contains('inactivo');
+  };
+  return {
+    overflowH: d.scrollWidth - d.clientWidth,
+    innerHeight: window.innerHeight,
+    hamburguesa: !!document.querySelector('.hamburguesa'),
+    barra: {
+      visible: !!barra,
+      rect: rect(barra),
+      destinos: destinos.map((b) => {
+        const r = b.getBoundingClientRect();
+        return {
+          texto: (b.textContent || '').trim(),
+          w: round(r.width),
+          h: round(r.height),
+          current: b.getAttribute('aria-current'),
+        };
+      }),
+    },
+    paneles: { descubrir: panelVisible('panel-descubrir'), favoritos: panelVisible('panel-favoritos') },
+    alturas: {
+      tarjetaEpisodio: alto(document.querySelector('.rejilla .celda .tarjeta')),
+      tarjetaHome: alto(document.querySelector('.fila .carrusel .tarjeta')),
+      pestana: alto(document.querySelector('.pestana')),
+    },
+  };
+};
+
+// T73: lista de objetivos táctiles < 44 px visibles, marcando si son de la
+// barra inferior o del cajón (ninguno de esos dos debe aparecer en la lista).
+const TACTILES_CHICOS = () => {
+  const visibles = [...document.querySelectorAll('button, a, [role="button"], input')].filter(
+    (b) => b.offsetParent !== null
+  );
+  return visibles
+    .map((b) => {
+      const r = b.getBoundingClientRect();
+      return {
+        texto:
+          (b.textContent || '').trim().slice(0, 24) ||
+          b.getAttribute('aria-label') ||
+          b.id ||
+          b.tagName.toLowerCase(),
+        w: Math.round(r.width),
+        h: Math.round(r.height),
+        enBarra: !!b.closest('.barra-inferior'),
+        enCajon: !!b.closest('.cajon'),
+      };
+    })
+    .filter((x) => x.w < 44 || x.h < 44);
+};
+
 async function gotoApp(page) {
   await page.goto(BASE, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('.buscador input', { timeout: 20000 });
@@ -297,6 +372,229 @@ async function capturar(dirOut) {
 }
 
 // ---------------------------------------------------------------------------
+// Modo shell (T73): barra inferior móvil + cajón de historial
+// ---------------------------------------------------------------------------
+
+async function shell() {
+  const dirOut = 'docs/img/v1.4/shell';
+  mkdirSync(dirOut, { recursive: true });
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  const rep = { anchos: [], funciones: [], tactiles: [], capturas: [], errores: [] };
+  const check = (nombre, ok, detalle) =>
+    rep.funciones.push({ nombre, ok: !!ok, detalle: detalle === undefined ? null : detalle });
+
+  const captura = async (nombre) => {
+    try {
+      await page.screenshot({ path: join(dirOut, `${nombre}.png`) });
+      rep.capturas.push(`${nombre}.png`);
+    } catch (e) {
+      rep.errores.push(`${nombre}: ${e.message}`);
+    }
+  };
+
+  try {
+    // --- A. Medidas y capturas por ancho ---
+    for (const a of ANCHOS_SHELL) {
+      await page.setViewportSize({ width: a.w, height: a.h });
+      await gotoApp(page);
+      await page.waitForSelector('.fila .carrusel .tarjeta', { timeout: 60000 }).catch(() => {});
+      await page.waitForTimeout(500);
+      const med = await page.evaluate(MEDIR_SHELL);
+      if (['360', '768', '1280'].includes(a.nombre)) await captura(`home_${a.nombre}`);
+      let tarjetaEp = med.alturas.tarjetaEpisodio;
+      if (a.w >= 1024) {
+        await buscar(page, 'bleach');
+        await abrirDetalle(page, 'animeav1');
+        tarjetaEp = await page.evaluate(() => {
+          const el = document.querySelector('.rejilla .celda .tarjeta');
+          return el ? Math.round(el.getBoundingClientRect().height * 100) / 100 : null;
+        });
+      }
+      rep.anchos.push({ ancho: a.nombre, ...med, tarjetaEpisodioDetalle: tarjetaEp });
+      log('shell ancho', a.nombre, 'barra=', med.barra.visible);
+    }
+
+    // --- B. Funcional a 360×740 ---
+    await page.setViewportSize({ width: 360, height: 740 });
+    await gotoApp(page);
+    await page.waitForSelector('.fila .carrusel .tarjeta', { timeout: 60000 }).catch(() => {});
+    await page.waitForTimeout(400);
+
+    const destino = (texto) => page.locator('.barra-inferior .destino', { hasText: texto });
+    const panelActivo = (id) => page.evaluate((i) => !document.getElementById(i).classList.contains('inactivo'), id);
+
+    // B1. Descubrir/Favoritos desde Home.
+    await destino('Favoritos').click();
+    await page.waitForTimeout(250);
+    check('Home → Favoritos', await panelActivo('panel-favoritos'));
+    await destino('Descubrir').click();
+    await page.waitForTimeout(250);
+    check('Home → Descubrir', await panelActivo('panel-descubrir'));
+
+    // B2. Buscar enfoca el input.
+    await destino('Buscar').click();
+    await page.waitForTimeout(250);
+    check('Buscar enfoca el input', await page.evaluate(() => document.activeElement?.id === 'buscador-anime'));
+
+    // B3. Buscar "bleach" → Descubrir: Home, input vacío.
+    await buscar(page, 'bleach');
+    await captura('busqueda_360');
+    check('hay resultados de "bleach"', (await page.locator('main .rejilla .tarjeta').count()) > 0);
+    await destino('Descubrir').click();
+    await page.waitForSelector('.fila .carrusel .tarjeta', { timeout: 30000 }).catch(() => {});
+    check('Descubrir tras búsqueda: input vacío', (await page.locator('#buscador-anime').inputValue()) === '');
+    check('Descubrir tras búsqueda: Home visible', await page.locator('#panel-descubrir').isVisible());
+    await buscar(page, 'bleach');
+    await destino('Favoritos').click();
+    await page.waitForTimeout(250);
+    check('Favoritos tras búsqueda: panel favoritos', await panelActivo('panel-favoritos'));
+    await destino('Descubrir').click();
+    await page.waitForTimeout(200);
+
+    // B4. Descubrir/Favoritos desde detalle.
+    await buscar(page, 'bleach');
+    await abrirDetalle(page, 'animeav1');
+    await captura('detalle_360');
+    await destino('Favoritos').click();
+    await page.waitForTimeout(400);
+    check('detalle → Favoritos', await panelActivo('panel-favoritos'));
+    check('detalle → Favoritos deja el Home', await page.locator('.pestanas').isVisible());
+    await destino('Descubrir').click();
+    await page.waitForTimeout(250);
+
+    // B5. Historial abre el cajón; Escape cierra y devuelve el foco.
+    await destino('Historial').click();
+    await page.waitForTimeout(300);
+    check('Historial abre el cajón', await page.locator('.barra.cajon').isVisible());
+    await captura('cajon_360');
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(300);
+    check('Escape cierra el cajón', !(await page.locator('.barra.cajon').isVisible().catch(() => false)));
+    const foco = await page.evaluate(() => {
+      const el = document.activeElement;
+      const d = el?.closest?.('.destino');
+      return d ? (d.textContent || '').trim() : null;
+    });
+    check('Escape devuelve el foco a Historial', foco === 'Historial', foco);
+
+    // B6. Barra oculta en el reproductor y reaparece al volver.
+    await buscar(page, 'bleach');
+    await abrirDetalle(page, 'animeav1');
+    const ep = page.locator('.rejilla .celda .tarjeta').first();
+    if (await ep.count()) {
+      await ep.click();
+      await page.waitForTimeout(1800);
+      check('sin barra en el reproductor', (await page.locator('.barra-inferior').count()) === 0);
+      await page.locator('.cabecera .atras').first().click();
+      await page.waitForTimeout(600);
+      check('barra reaparece al volver', (await page.locator('.barra-inferior').count()) > 0);
+    } else {
+      check('reproductor (sin episodios)', false, 'sin tarjetas de episodio');
+    }
+
+    // B7. Fin de scroll: Home y detalle.
+    await buscar(page, 'bleach');
+    await destino('Descubrir').click();
+    await page.waitForSelector('.fila .carrusel .tarjeta', { timeout: 30000 }).catch(() => {});
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await page.waitForTimeout(400);
+    const finHome = await page.evaluate(() => {
+      const barra = document.querySelector('.barra-inferior');
+      const filas = document.querySelectorAll('.fila');
+      const ultima = filas[filas.length - 1];
+      if (!barra || !ultima) return null;
+      return { fondo: Math.round(ultima.getBoundingClientRect().bottom), topBarra: Math.round(barra.getBoundingClientRect().top) };
+    });
+    check('fin del Home no bajo la barra', !!finHome && finHome.fondo <= finHome.topBarra + 1, finHome);
+    await buscar(page, 'bleach');
+    await abrirDetalle(page, 'animeav1');
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await page.waitForTimeout(400);
+    const finDetalle = await page.evaluate(() => {
+      const barra = document.querySelector('.barra-inferior');
+      const celdas = document.querySelectorAll('.rejilla .celda');
+      const ultima = celdas[celdas.length - 1];
+      if (!barra || !ultima) return null;
+      return { fondo: Math.round(ultima.getBoundingClientRect().bottom), topBarra: Math.round(barra.getBoundingClientRect().top) };
+    });
+    check('fin del detalle no bajo la barra', !!finDetalle && finDetalle.fondo <= finDetalle.topBarra + 1, finDetalle);
+
+    // B7b. Restauración de scroll T66/T67: detalle → reproductor → Atrás.
+    await buscar(page, 'bleach');
+    await abrirDetalle(page, 'animeav1');
+    await page.waitForTimeout(900);
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await page.waitForTimeout(500);
+    const yAntes = await page.evaluate(() => Math.round(window.scrollY));
+    const ultimaTarjeta = page.locator('.rejilla .celda .tarjeta').last();
+    if (yAntes > 0 && (await ultimaTarjeta.count())) {
+      await ultimaTarjeta.click();
+      await page.waitForTimeout(1800);
+      await page.locator('.cabecera .atras').first().click();
+      await page.waitForTimeout(1200);
+      const yDespues = await page.evaluate(() => Math.round(window.scrollY));
+      check('T66/T67: scroll del detalle restaurado al volver', Math.abs(yDespues - yAntes) <= 5, { yAntes, yDespues });
+    } else {
+      check('T66/T67: scroll del detalle restaurado al volver', false, { yAntes });
+    }
+
+    // B8. Toast sobre la barra (borrar y deshacer un historial).
+    await destino('Historial').click();
+    await page.waitForTimeout(400);
+    try {
+      const envoltorio = page.locator('.barra.cajon .envoltorio').first();
+      if (await envoltorio.count()) {
+        await envoltorio.hover(); // el ✕ solo es visible con hover/foco
+        await page.waitForTimeout(150);
+        await envoltorio.locator('.borrar').click();
+        await page.waitForTimeout(300);
+        const toast = await page.evaluate(() => {
+          const t = document.querySelector('.toast');
+          const b = document.querySelector('.barra-inferior');
+          if (!t) return null;
+          return { bottom: Math.round(t.getBoundingClientRect().bottom), topBarra: b ? Math.round(b.getBoundingClientRect().top) : null };
+        });
+        check('toast sobre la barra', !!toast && toast.topBarra !== null && toast.bottom <= toast.topBarra + 1, toast);
+        await captura('toast_360');
+        await page.locator('.toast .accion').click().catch(() => {});
+      } else {
+        check('toast sobre la barra', false, 'sin historial sembrado');
+      }
+    } catch (e) {
+      check('toast sobre la barra', false, e.message);
+    }
+    await page.keyboard.press('Escape').catch(() => {});
+    await page.waitForTimeout(4200); // deja que cualquier toast expire
+
+    // B9. prefers-reduced-motion: sin transiciones en la barra.
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    check(
+      'reduced-motion: sin transición en la barra',
+      (await page.evaluate(() => {
+        const el = document.querySelector('.destino');
+        return el ? getComputedStyle(el).transitionDuration : null;
+      })) === '0s'
+    );
+    await page.emulateMedia({ reducedMotion: null });
+
+    // B10. Objetivos táctiles < 44 px (Home y cajón abierto).
+    rep.tactiles = (await page.evaluate(TACTILES_CHICOS)).map((t) => ({ ...t, estado: 'home' }));
+    await destino('Historial').click();
+    await page.waitForTimeout(300);
+    rep.tactiles = rep.tactiles.concat((await page.evaluate(TACTILES_CHICOS)).map((t) => ({ ...t, estado: 'cajon' })));
+    await page.keyboard.press('Escape').catch(() => {});
+    const malos = rep.tactiles.filter((t) => t.enBarra || t.enCajon);
+    check('ningún táctil <44 px en barra ni cajón', malos.length === 0, malos.slice(0, 5));
+  } catch (e) {
+    rep.errores.push(e.message);
+  }
+  writeFileSync(join(dirOut, 'shell.json'), JSON.stringify(rep, null, 2));
+  await browser.close();
+  return rep;
+}
+
+// ---------------------------------------------------------------------------
 // CLI
 // ---------------------------------------------------------------------------
 
@@ -358,6 +656,37 @@ if (modo === 'comparar') {
   await browser.close();
   console.log(fallos === 0 ? '\nTodos los objetivos táctiles cumplen.' : `\n${fallos} objetivos NO cumplen.`);
   process.exit(fallos === 0 ? 0 : 1);
+} else if (modo === 'shell') {
+  const rep = await shell();
+  console.log('## Modo shell (T73) — barra inferior móvil\n');
+  console.log('| ancho | barra | pegada al borde | destinos | todos ≥44 | hamburguesa | overflowH | tarj.Home | tarj.ep | pestaña |');
+  console.log('|---|:--:|:--:|---:|:--:|:--:|---:|---:|---:|---:|');
+  for (const m of rep.anchos) {
+    const b = m.barra;
+    const todos = b.destinos.length === 4 && b.destinos.every((d) => d.w >= 44 && d.h >= 44);
+    const pegada = b.rect ? Math.abs(b.rect.bottom - m.innerHeight) < 1 : false;
+    console.log(
+      `| ${m.ancho} | ${b.visible ? 'sí' : 'no'} | ${b.visible ? (pegada ? 'sí' : 'NO') : '—'} | ${b.destinos.length} | ` +
+        `${b.visible ? (todos ? 'sí' : 'NO') : '—'} | ${m.hamburguesa ? 'SÍ' : 'no'} | ${m.overflowH} | ` +
+        `${m.alturas.tarjetaHome ?? '—'} | ${m.tarjetaEpisodioDetalle ?? '—'} | ${m.alturas.pestana ?? '—'} |`
+    );
+  }
+  console.log('\nDestinos por ancho:');
+  for (const m of rep.anchos) {
+    const d = m.barra.destinos.map((x) => `${x.texto} ${x.w}×${x.h}${x.current ? ' (activo)' : ''}`).join(' · ');
+    console.log(`- ${m.ancho}: ${d || 'sin barra'}`);
+  }
+  console.log('\n| comprobación | ok | detalle |');
+  console.log('|---|:--:|---|');
+  for (const f of rep.funciones) {
+    console.log(`| ${f.nombre} | ${f.ok ? 'sí' : 'NO'} | ${f.detalle === null ? '' : JSON.stringify(f.detalle)} |`);
+  }
+  console.log(`\nTáctiles <44 px visibles (${rep.tactiles.length}):`);
+  for (const t of rep.tactiles) {
+    console.log(`- ${t.estado}: ${t.texto} ${t.w}×${t.h}${t.enBarra ? ' [BARRA]' : ''}${t.enCajon ? ' [CAJÓN]' : ''}`);
+  }
+  if (rep.errores.length) console.log('\nErrores:', rep.errores);
+  console.log(`\nCapturas (docs/img/v1.4/shell/): ${rep.capturas.join(', ') || 'ninguna'}`);
 } else {
   const dirOut = process.argv[3] ?? DIR_DEF;
   const res = await capturar(dirOut);

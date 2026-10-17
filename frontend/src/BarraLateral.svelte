@@ -46,6 +46,13 @@
   /** Resolución del clic: la cablea `App.svelte` con `retomar` (T50). */
   export let onOpen: (item: models.WatchProgress) => Promise<RetomarResultado>;
 
+  /**
+   * T73: se llama al cerrar el cajón con Escape, velo o botón (no al cerrarlo
+   * al retomar) para que `App.svelte` devuelva el foco al destino Historial de
+   * la barra inferior.
+   */
+  export let onCerrarCajon: () => void = () => {};
+
   /** Duración del mensaje de tarjeta ("Completado"…) antes de borrarlo (T50). */
   const MENSAJE_MS = 4000;
   /** Espera de la confirmación de "borrar todo" antes de cancelarse sola (T52). */
@@ -155,6 +162,7 @@
   function alternar() {
     if (get(isNarrow)) {
       drawerOpen.set(false);
+      onCerrarCajon();
       return;
     }
     sidebarCollapsed.update((v) => !v);
@@ -162,6 +170,7 @@
 
   function cerrarCajon() {
     drawerOpen.set(false);
+    onCerrarCajon();
   }
 
   function alTeclar(e: KeyboardEvent) {
@@ -173,6 +182,7 @@
     }
     if (get(isNarrow) && get(drawerOpen)) {
       drawerOpen.set(false);
+      onCerrarCajon();
     }
   }
 </script>
@@ -308,7 +318,9 @@
     display: flex;
     flex-direction: column;
     width: 300px;
-    background: var(--surface-card);
+    /* T73b: fondo OPACO del cajón (evita que el contenido y el pie se
+       transparenten). Opaque también en escritorio. */
+    background: var(--bg-1);
     color: var(--text-1);
     border-right: 1px solid var(--border);
     text-align: left;
@@ -419,7 +431,9 @@
   /* Pie fijo con el "borrar todo" (T52): solo con historial y barra expandida. */
   .pie {
     box-sizing: border-box;
-    padding: 12px;
+    padding: var(--sp-3);
+    /* T73: hueco para el área segura inferior del dispositivo. */
+    padding-bottom: calc(var(--sp-3) + var(--sab));
     border-top: 1px solid var(--border);
   }
   .borrar-todo {
@@ -546,10 +560,23 @@
     top: 0;
     bottom: 0;
     width: min(320px, 85vw);
-    height: 100vh;
+    height: 100dvh;
     z-index: 50;
     border-right: none;
+    /* T73b: solo en el cajón, se separa del velo con la sombra de panel. */
+    box-shadow: var(--sh-panel);
     transition: none;
+  }
+  /* T73: en el cajón, los controles del historial alcanzan el objetivo táctil
+     mínimo (44 px) en ancho y alto. */
+  .barra.cajon .alternar,
+  .barra.cajon .papelera,
+  .barra.cajon .borrar-todo,
+  .barra.cajon .reintentar,
+  .barra.cajon .si-borrar,
+  .barra.cajon .cancelar {
+    min-width: var(--tap);
+    min-height: var(--tap);
   }
   .fondo-cajon {
     position: fixed;

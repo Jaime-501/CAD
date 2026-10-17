@@ -1,4 +1,4 @@
-    # PROGRESO — Comfort Anime Desktop (T01–T72b hechas)
+    # PROGRESO — Comfort Anime Desktop (T01–T73b hechas)
 
 > Este archivo es la **memoria entre sesiones**. Cada sesión lo lee al inicio y lo actualiza al final.
 > Reglas y layout: `tareas/00_REGLAS.md`. Detalle de cada tarea: `tareas/Txx.md`.
@@ -141,6 +141,8 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha y verificada
 | [x] | T71 | Base global: tipografía, viewport, fondo y safe-area (v1.4.0) | T70 |
 | [x] | T72 | Primitivas de UI e iconos (v1.4.0) | T70, T71 |
 | [x] | T72b | Puente de color: literales a tokens (v1.4.0) | T70, T71, T72 |
+| [x] | T73 | Barra inferior móvil y cajón de historial (v1.4.0) | T70–T72b |
+| [x] | T73b | Cajón opaco (v1.4.0) | T73 |
 
 T01–T29 = v1.0 (`docs/PROGRESO_v1.0.md`) · T30–T35 = v1.1.0 AnimeAV1 (`docs/PROGRESO_v1.1.md`) · T36 = cierre de la v1.1.0 · T37 = portabilidad Android · T38 = cierre documental de T37.
 T39–T57 = v1.2.0 (Home, historial lateral, favoritos, "Siguiente" y su estado discreto; **incluye T53b y T57**); plan en `tareas/v1.2_PLAN.md`, detalle **T39–T58 + cierres T56/T59** archivado en `docs/PROGRESO_v1.2.md`, con resúmenes al final de este archivo.
@@ -148,7 +150,7 @@ La **v1.2.0 está PUBLICADA** (prueba manual con el `.exe` y release hechas por 
 
 **v1.3.0 — episodios incrementales** (rama `feature/episodios-incrementales`): serie **T64–T69** para mostrar los episodios del detalle de forma incremental y con animación de entrada. **T64** (lógica pura de `ventana.ts` + tests), **T65** (revelado animado por visibilidad, sin paginar), **T66** (clave de scroll del detalle por proveedor + slug) y **T67** (restauración del scroll del detalle cuando la lista se recarga) hechas; **T68** (cierre documental de la v1.3.0) hecho: `productVersion` **1.3.0**, **sin tag ni release** (los hace el humano). Los **T66–T67 originales** (paginado / ventana client-side) quedan **descartados** por las mediciones de T65 (sin jank y con 0 saltos de scroll; el coste real es de red, ya cubierto por el mostrado por lotes); **T69 pendiente** de la serie. Notas largas de T64–T67 archivadas en `docs/PROGRESO_v1.3.md`.
 
-**v1.4.0 — rediseño y enfoque móvil** (rama `feature/rediseno-movil`): serie nueva que empieza con **T69** (auditoría de UI base, **solo lectura**: inventario, literales CSS, 24 capturas a 360/768/1280, métricas por vista y extracción de la paleta de los 4 HTML de Stitch), hecha y documentada en `docs/investigacion/ui_base.md`; los scripts de medición viven en `docs/investigacion/ui/` y las capturas en `docs/img/v1.4/base/`. **No se tocó código** (`frontend/**`, `*.go`, `package.json`, `wails.json` intactos). Le sigue **T70** (tokens de diseño: un bloque `:root` **añadido** a `frontend/src/style.css` con las variables del rediseño —colores, superficies, bordes, texto, marca, semánticos, radios, sombras, marco de póster, blur, movimiento, espacio, táctil, gutter y capas—, **sin modificar ninguna línea existente** y sin cambio visual; documentadas en `docs/investigacion/ui_tokens.md` con la tabla de contraste de `docs/investigacion/ui/contraste.mjs`; las `--cad-*` quedan como legado hasta **T93**) y **T71** (base global móvil: fuentes locales **Inter**/Outfit por subconjunto latin, escala tipográfica y safe-area como tokens, `viewport-fit=cover`, corrección del fondo dividido, `:focus-visible` y ajustes táctiles; herramienta reutilizable `docs/investigacion/ui/verificar_ui.mjs`). Le sigue **T72** (primitivas de UI e iconos: 6 componentes **nuevos** — `Icono`, `Btn`, `Chip`, `Insignia`, `Esqueleto` y `EstadoVista` — con tokens, sin migrar ningún componente existente; el arnés de galería fue temporal) y **T72b** (puente de color: los 15 `.svelte` existentes dejan de escribir literales de color/radio/sombra/`--cad-*` y pasan a los tokens de T70 —solo dentro de `<style>`—, documentado en `docs/investigacion/ui_mapeo_color.md`; sin cambio de geometría). Próximas tareas de la serie: pendientes de definir. Los `--cad-*` siguen **definidos** en `style.css` (sin uso) hasta **T93**.
+**v1.4.0 — rediseño y enfoque móvil** (rama `feature/rediseno-movil`): serie nueva que empieza con **T69** (auditoría de UI base, **solo lectura**: inventario, literales CSS, 24 capturas a 360/768/1280, métricas por vista y extracción de la paleta de los 4 HTML de Stitch), hecha y documentada en `docs/investigacion/ui_base.md`; los scripts de medición viven en `docs/investigacion/ui/` y las capturas en `docs/img/v1.4/base/`. **No se tocó código** (`frontend/**`, `*.go`, `package.json`, `wails.json` intactos). Le sigue **T70** (tokens de diseño: un bloque `:root` **añadido** a `frontend/src/style.css` con las variables del rediseño —colores, superficies, bordes, texto, marca, semánticos, radios, sombras, marco de póster, blur, movimiento, espacio, táctil, gutter y capas—, **sin modificar ninguna línea existente** y sin cambio visual; documentadas en `docs/investigacion/ui_tokens.md` con la tabla de contraste de `docs/investigacion/ui/contraste.mjs`; las `--cad-*` quedan como legado hasta **T93**) y **T71** (base global móvil: fuentes locales **Inter**/Outfit por subconjunto latin, escala tipográfica y safe-area como tokens, `viewport-fit=cover`, corrección del fondo dividido, `:focus-visible` y ajustes táctiles; herramienta reutilizable `docs/investigacion/ui/verificar_ui.mjs`). Le sigue **T72** (primitivas de UI e iconos: 6 componentes **nuevos** — `Icono`, `Btn`, `Chip`, `Insignia`, `Esqueleto` y `EstadoVista` — con tokens, sin migrar ningún componente existente; el arnés de galería fue temporal) y **T72b** (puente de color: los 15 `.svelte` existentes dejan de escribir literales de color/radio/sombra/`--cad-*` y pasan a los tokens de T70 —solo dentro de `<style>`—, documentado en `docs/investigacion/ui_mapeo_color.md`; sin cambio de geometría). Le sigue **T73** (barra de navegación inferior móvil y cajón de historial: en modo estrecho —< 900 px— la hamburguesa se sustituye por una barra fija de 4 destinos —Descubrir, Buscar, Favoritos, Historial— con tokens, safe-area y objetivos táctiles de 44 px, reutilizando el cajón existente; en modo ancho, sin cambios). Próximas tareas de la serie: pendientes de definir. Los `--cad-*` siguen **definidos** en `style.css` (sin uso) hasta **T93**.
 
 ## Auditoría de portabilidad (T37)
 
@@ -893,3 +895,113 @@ Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**
 - Sin tag ni release: no aplica a esta tarea.
 
 **Archivos tocados:** 15 `.svelte` existentes (solo `<style>`), `docs/investigacion/ui_mapeo_color.md` (nuevo), `docs/investigacion/ui/verif_antes/` y `docs/investigacion/ui/verif_despues/` (12 PNG + `resumen.json` cada uno, capturas de la comprobación) y `PROGRESO.md`. **Nada fuera de "Puedes tocar"** (regla 7 no se activó): `style.css` intacto, ningún `*.ts`/`*.go`/`wailsjs/**`/`index.html` ni componente de T72 tocados.
+
+---
+
+## T73 — Barra inferior móvil y cajón de historial (v1.4.0) — bloque de esta sesión
+
+Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**. Fecha **2026-10-17**. En modo estrecho (`$isNarrow`, `< 900 px`) sustituye la **hamburguesa** por una **barra de navegación inferior fija** de 4 destinos (Descubrir, Buscar, Favoritos, Historial) que reutiliza el **cajón de historial** existente. En modo ancho el aspecto y el comportamiento **no cambian** (comprobado por píxeles).
+
+**Qué se hizo:**
+
+- **`style.css`**: token nuevo `--bar-h: 60px` (solo añadido).
+- **`ui.ts`**: dos stores nuevos no persistidos: `pestanaHome` (`'descubrir'|'favoritos'`) y `limpiarBusqueda` (contador).
+- **`VistaInicio.svelte`**: `pestana` pasa a `$: pestana = $pestanaHome` y `seleccionar` hace `pestanaHome.set(...)`; el resto intacto (incluido el `position:absolute` + `visibility:hidden` del panel inactivo).
+- **`VistaBusqueda.svelte`**: `id="buscador-anime"` en el `<input>` y una suscripción a `limpiarBusqueda` que vacía `texto` y cancela el temporizador (7 líneas de código + `import` + `id` + `cancelarLimpiar()` en `onDestroy`); se cancela en `onDestroy`.
+- **`BarraInferior.svelte`** (NUEVO): `<nav aria-label="Navegación principal">` con 4 `<button>` (Icono `brujula`/`buscar`/`estrella`/`historial`, `tam=24`), ancho a partes iguales y ≥ `--tap` de alto; props `activo`/`onDescubrir`/`onBuscar`/`onFavoritos`/`onHistorial`; el activo lleva `aria-current="page"`, `--brand-400` y un **indicador superior de 2 px** (no depende solo del color); expone `enfocarHistorial()`; `--surface-panel` + `backdrop-filter: blur(var(--blur-md))`, borde superior `--border`, `padding-bottom: var(--sab)`, `z-index: var(--z-bar)`, `position: fixed; inset: auto 0 0 0`, `--sh-card` de sombra, `:active`/`:focus-visible` (`--ring`) y sin transiciones con `prefers-reduced-motion: reduce`.
+- **`App.svelte`**: renderiza la barra con `{#if $isNarrow && $vista !== 'reproductor'}`; **elimina** el bloque `.cabecera-estrecha`/hamburguesa (era narrow-only) y su CSS; `.area-principal.con-barra` añade `padding-bottom: calc(var(--bar-h) + var(--sab) + var(--sp-4))`; envuelve shell + `<Toast/>` en `<div class="raiz" style:--bar-offset={...}>` (`display: contents`); implementa los destinos (`irAHome`/`irABuscar`/`irAHistorial`), `barraActiva` y `enfocarHistorialBarra`.
+- **`BarraLateral.svelte`**: prop `onCerrarCajon` (se llama al cerrar por velo, botón o Escape, y al alternar en estrecho) y estilos del cajón (`.alternar`/`.papelera`/`.borrar-todo`/`.reintentar`/`.si-borrar`/`.cancelar` ≥ `--tap`; `.pie` con `padding-bottom: calc(var(--sp-3) + var(--sab))`; `height: 100dvh`).
+- **`TarjetaHistorial.svelte`**: solo `<style>` — `:global(.cajon) .tarjeta { min-height: var(--tap) }` y `:global(.cajon) .borrar { min-width/min-height: var(--tap) }`.
+- **`Toast.svelte`**: `bottom: calc(24px + var(--bar-offset, 0px))`.
+
+**Regla del destino activo** (documentada en `App.svelte`): en `busqueda` con `$searchState.query !== ''` → **`'buscar'`**; en `busqueda` sin consulta → el valor de **`$pestanaHome`** (`descubrir`|`favoritos`); en `detalle` —y en el reproductor, donde la barra no se ve— → **ninguno**.
+
+**Verificación (modo `shell` de `verificar_ui.mjs`, resultados reales; 20/20 comprobaciones en verde):**
+
+| Comprobación | Resultado |
+|---|---|
+| Barra a 360/390/768 | visible, **pegada al borde** (`bottom == innerHeight`), alto **60 px**, 4 destinos **≥44×44** (59 px de alto; 90 / 97,5 / 192 px de ancho), `aria-current="page"` en Descubrir |
+| A 1024/1280 | **sin barra**, sin hamburguesa, `overflowH = 0`; geometría idéntica a T72b: tarjeta de Home **263,8**, pestaña **38**, tarjeta de episodio **170,39** |
+| Hamburguesa | **ausente** en los 5 anchos |
+| Destinos | Descubrir/Favoritos cambian de pestaña desde Home, desde detalle y desde una búsqueda; Buscar **enfoca** `#buscador-anime`; Historial **abre el cajón**; Escape lo cierra y **devuelve el foco** al botón Historial |
+| Buscar "bleach" → Descubrir / Favoritos | aparece el Home/panel de Favoritos, **input vacío** |
+| Reproductor | **sin barra**; al volver, **reaparece** |
+| Fin de scroll | Home y detalle terminan **por encima** de la barra (618 y 636 < 680) |
+| T66/T67 scroll del detalle | detalle → abajo → reproductor → "← Atrás": **69674 → 69673** px (≤ 5) |
+| Toast sobre la barra | `bottom = 656` ≤ `topBarra = 680` (borrar + deshacer un historial) |
+| `prefers-reduced-motion: reduce` | `transition-duration: 0s` en los destinos |
+| Táctiles < 44 px | 6 visibles (`← Atrás` 83×31, `Quitar de favoritos` 32×32, `Continuar` 103×35), **ninguno de la barra ni del cajón** |
+| Capturas a 1280 (antes T72b / después T73, tol ≤ 2) | **idénticas** (`descubrir_1280.png`, 1280×1629; **0 px distintos**) |
+
+**Compuerta (resultado real):**
+
+| Comando | Resultado |
+|---|---|
+| `npm run check` | **0 errores, 0 avisos** |
+| `npm run build` | **OK** (aviso de chunk >500 kB preexistente) |
+| `*.test.ts` (esbuild + node) | **etiquetas 32 · ventana 48 · views 13** (todas OK) |
+| `grep -rn wailsjs frontend/src` | **solo `api.ts`** |
+| `go test -count=1 -v ./...` | **11 paquetes `ok`**; `^--- PASS` = **435**, `^--- FAIL` = **0** (Go intacto) |
+| `git status --porcelain` | 8 `.svelte`/`.ts` + `style.css` modificados + `BarraInferior.svelte` (nuevo) + `docs/img/v1.4/shell/` + `verificar_ui.mjs` + `PROGRESO.md` (+ `tareas/T73.md`, ya presente) |
+
+**Desviaciones:**
+
+- **`--sh-card` como sombra de la barra** (lo pide reportar la ficha, punto 5): no hay token de sombra específico para la barra; se reutiliza `--sh-card`.
+- **La pestaña del Home ya NO se reinicia** al volver de una búsqueda (persiste en la sesión): lo exige el punto 3 y queda anotado aquí.
+- **Modo `shell` añadido a `verificar_ui.mjs`** (autorizado por la ficha): mide/verifica barra, destinos, geometría y las comprobaciones funcionales, y deja `shell.json` + las capturas. **No se creó otro script.**
+- **`--bar-offset` con un `<div class="raiz">` de `display: contents`** (tal cual el punto 6): no altera el layout; a 1280 la captura sale **idéntica**.
+- **El cajón no cambia su z-index** (ya cubre la barra), como pide el punto 8.
+- **`BarraLateral.svelte`: se tocó su `<script>`** (no solo el `<style>`) para añadir la prop `onCerrarCajon` y llamarla en las 3 vías de cierre (velo, botón y Escape) — es **lo indicado en el punto 8** (devolver el foco al botón Historial).
+- **Prueba del toast**: el ✕ de la tarjeta está `visibility:hidden` sin hover, así que el arnés hace `hover` sobre la tarjeta antes de pulsarlo (detalle de la verificación, no del código).
+
+**Pendientes:**
+
+- **Contador de favoritos en la barra**: lo decide **T75**; aquí no se puso.
+- Sin tag ni release: no aplica a esta tarea. `--cad-*` siguen definidas y sin uso hasta **T93**.
+
+**Archivos tocados:** `frontend/src/BarraInferior.svelte` (nuevo), `frontend/src/{App,BarraLateral,TarjetaHistorial,VistaInicio,VistaBusqueda,Toast}.svelte`, `frontend/src/ui.ts`, `frontend/src/style.css`, `docs/investigacion/ui/verificar_ui.mjs` (solo el modo `shell`), `docs/img/v1.4/shell/**` (7 capturas + `shell.json`) y `PROGRESO.md`. **Nada fuera de "Puedes tocar"** (regla 7 no se activó): `stores.ts`, `views.ts`, `api.ts`, `frontend/wailsjs/**`, `*.go`, `index.html` y el `<script>` de `VistaDetalle`/`VistaReproductor` intactos.
+
+---
+
+## T73b — Cajón opaco (v1.4.0) — bloque de esta sesión
+
+Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**. Fecha **2026-10-17**. Corrige la transparencia del cajón de historial: el fondo `.barra` (y `.barra.cajon`) era `var(--surface-card)` = `rgba(16,23,41,.55)`, que dejaba traslucir el contenido y el pie "Borrar todo" sobre la barra inferior. Solo `<style>` de `BarraLateral.svelte`; **no se añadió `--surface-solid`** porque `--bg-1` (#0f172a) ya es un fondo opaco equivalente (T70).
+
+**Qué se hizo (solo `<style>`):**
+
+- **`.barra`** (`:321`): `background: var(--surface-card)` → **`var(--bg-1)`** (opaco). Aplica también en escritorio.
+- **`.barra.cajon`** (`:555`): añadido **`box-shadow: var(--sh-panel)`** para separar el cajón del velo (solo con `.cajon`; en escritorio `box-shadow: none`).
+- **Sin cambios** en `<script>`, markup, `*.go`, `wailsjs/**` ni otros componentes.
+
+**Verificación (Playwright, `localhost:34115`, resultado real):**
+
+| Comprobación | Resultado |
+|---|---|
+| Cajón @360: fondo | `getComputedStyle(.barra.cajon).backgroundColor` = **`rgb(15, 23, 42)`** (opaco, `--bg-1`); no trasluce nada |
+| Cajón @360: sombra | **`rgba(0,0,0,.5) 0 20px 50px 0, rgba(255,255,255,.1) 0 1px 0 0 inset`** (`--sh-panel`) |
+| Cajón @360: medidas | cajón **306×740** (min(320,85vw)); pie `.pie` y=671 h=69, dentro del cajón; el cajón cubre la barra inferior (y=665 h=60) |
+| **Tarjetas del historial @360** | **NO se salen del panel**: `.envoltorio` x=12, ancho 282, `right=294` < 306; el botón `.borrar` (44×44, absolute) x=242–286; **0 descendientes con `right > cajón`** (barrido de los 3 grupos). No hay selector/ancho que reportar |
+| Escritorio @1280 | `.barra` 300×800 en x=0, `border-right: 1px solid var(--border)`, **`box-shadow: none`**; geometría idéntica; **único cambio** = tono de fondo (opaco). `overflowH` sin cambios |
+
+**Compuerta (resultado real):**
+
+| Comando | Resultado |
+|---|---|
+| `npm run check` | **0 errores, 0 avisos** |
+| `npm run build` | **OK** (aviso de chunk >500 kB preexistente) |
+| `*.test.ts` (esbuild + node) | **etiquetas 32 · ventana 48 · views 13** (todas OK) |
+| `grep -rn wailsjs frontend/src` | **solo `api.ts`** |
+| `gofmt -l .` · `go vet ./...` · `go build ./...` | sin salida · limpio · OK |
+| `go test -count=1 -v ./...` | **11 paquetes `ok`**; `^--- PASS` = **435**, `^--- FAIL` = **0** (Go intacto) |
+
+**Desviaciones:**
+
+- **No se usó `--surface-solid`**: `--bg-1` (`#0f172a`) ya es el fondo opaco del rediseño; la ficha lo permite expresamente ("o `--bg-1`").
+- **Interprete de "el fondo de la barra debe verse igual que ahora":** se cumple la aceptación literal (**geometría idéntica**; **solo cambia el tono de fondo**, que pasa de semitransparente a opaco), que es el objeto de la tarea.
+- **No se rediseñó `TarjetaHistorial`**: se comprobó que no se sale del cajón; no hubo nada que reportar (punto 3).
+
+**Pendientes:**
+
+- Sin tag ni release: no aplica a esta tarea. `--cad-*` siguen definidas y sin uso hasta **T93**.
+
+**Archivos tocados:** `frontend/src/BarraLateral.svelte` (solo `<style>`), `docs/img/v1.4/shell/t73b-cajon-360.png` y `t73b-escritorio-1280.png` (capturas nuevas de la verificación) y `PROGRESO.md`. **Nada fuera de "Puedes tocar"** (regla 7 no se activó): `style.css` intacto (no hizo falta el token), ningún `<script>`, markup, `*.go`, `wailsjs/**` ni otro componente tocados.

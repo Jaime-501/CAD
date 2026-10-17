@@ -240,4 +240,13 @@
       opacity: 1;
     }
   }
+  /* T73: dentro del cajón (modo estrecho), los botones alcanzan el objetivo
+     táctil mínimo de 44 px en ancho y alto. */
+  :global(.cajon) .tarjeta {
+    min-height: var(--tap);
+  }
+  :global(.cajon) .borrar {
+    min-width: var(--tap);
+    min-height: var(--tap);
+  }
 </style>

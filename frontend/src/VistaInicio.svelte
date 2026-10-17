@@ -27,13 +27,18 @@
   import GridFavoritos from './GridFavoritos.svelte';
   import { favoritos, cargarFavoritos } from './favoritos';
   import { cargarProveedor, cargarTodo, home, PROVEEDORES_HOME } from './home';
+  import { pestanaHome } from './ui';
 
   export let onAbrir: (a: models.Anime) => void;
 
   type Pestana = 'descubrir' | 'favoritos';
 
-  /** Pestaña visible: por defecto "Descubrir" (se reinicia al volver de una búsqueda). */
-  let pestana: Pestana = 'descubrir';
+  /**
+   * Pestaña visible: la comparte el store `pestanaHome` (T73), así que ya NO se
+   * reinicia a "Descubrir" al volver de una búsqueda: la selección persiste en
+   * la sesión (desviación anotada en PROGRESO.md).
+   */
+  $: pestana = $pestanaHome;
   let tabDescubrir: HTMLButtonElement;
   let tabFavoritos: HTMLButtonElement;
 
@@ -52,7 +57,7 @@
   });
 
   function seleccionar(destino: Pestana): void {
-    pestana = destino;
+    pestanaHome.set(destino);
     if (destino === 'favoritos') void cargarFavoritos();
   }
 

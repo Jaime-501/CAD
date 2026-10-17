@@ -3,6 +3,7 @@
   import { get } from 'svelte/store';
   import type { models } from './api';
   import { search, searchResults, searchState } from './stores';
+  import { limpiarBusqueda } from './ui';
   import { navegarA, type SeleccionAnime } from './views';
   import VistaInicio from './VistaInicio.svelte';
 
@@ -14,6 +15,16 @@
   let texto = '';
   let temporizador: ReturnType<typeof setTimeout> | null = null;
 
+  // T73: la barra inferior sube este contador para vaciar el texto local (la
+  // consulta efectiva la limpia `search('')` desde App.svelte al pulsar Home).
+  const cancelarLimpiar = limpiarBusqueda.subscribe(() => {
+    texto = '';
+    if (temporizador !== null) {
+      clearTimeout(temporizador);
+      temporizador = null;
+    }
+  });
+
   onMount(() => {
     // Al volver de otra vista se recupera la última búsqueda (los resultados
     // siguen en `searchResults`, que no se limpia al desmontar).
@@ -21,6 +32,7 @@
   });
 
   onDestroy(() => {
+    cancelarLimpiar();
     if (temporizador !== null) clearTimeout(temporizador);
   });
 
@@ -66,6 +78,7 @@
 
   <div class="buscador">
     <input
+      id="buscador-anime"
       type="text"
       bind:value={texto}
       placeholder="Ej: Death Note, Jujutsu Kaisen..."

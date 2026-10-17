@@ -103,6 +103,9 @@
     /* Táctil */
     --tap: 44px;
 
+    /* T73: alto de la barra de navegación inferior (modo estrecho) */
+    --bar-h: 60px;
+
     /* Gutter de página */
     --gutter: 16px;
 

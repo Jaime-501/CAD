@@ -34,7 +34,7 @@
   .toast {
     position: fixed;
     left: 50%;
-    bottom: 24px;
+    bottom: calc(24px + var(--bar-offset, 0px));
     transform: translateX(-50%);
     z-index: 100;
     box-sizing: border-box;

@@ -1,0 +1,376 @@
+{
+  "anchos": [
+    {
+      "ancho": "360",
+      "overflowH": 0,
+      "innerHeight": 740,
+      "hamburguesa": false,
+      "barra": {
+        "visible": true,
+        "rect": {
+          "x": 0,
+          "y": 680,
+          "w": 360,
+          "h": 60,
+          "bottom": 740
+        },
+        "destinos": [
+          {
+            "texto": "Descubrir",
+            "w": 90,
+            "h": 59,
+            "current": "page"
+          },
+          {
+            "texto": "Buscar",
+            "w": 90,
+            "h": 59,
+            "current": null
+          },
+          {
+            "texto": "Favoritos",
+            "w": 90,
+            "h": 59,
+            "current": null
+          },
+          {
+            "texto": "Historial",
+            "w": 90,
+            "h": 59,
+            "current": null
+          }
+        ]
+      },
+      "paneles": {
+        "descubrir": true,
+        "favoritos": false
+      },
+      "alturas": {
+        "tarjetaEpisodio": null,
+        "tarjetaHome": 263.8,
+        "pestana": 38
+      },
+      "tarjetaEpisodioDetalle": null
+    },
+    {
+      "ancho": "390",
+      "overflowH": 0,
+      "innerHeight": 844,
+      "hamburguesa": false,
+      "barra": {
+        "visible": true,
+        "rect": {
+          "x": 0,
+          "y": 784,
+          "w": 390,
+          "h": 60,
+          "bottom": 844
+        },
+        "destinos": [
+          {
+            "texto": "Descubrir",
+            "w": 97.5,
+            "h": 59,
+            "current": "page"
+          },
+          {
+            "texto": "Buscar",
+            "w": 97.5,
+            "h": 59,
+            "current": null
+          },
+          {
+            "texto": "Favoritos",
+            "w": 97.5,
+            "h": 59,
+            "current": null
+          },
+          {
+            "texto": "Historial",
+            "w": 97.5,
+            "h": 59,
+            "current": null
+          }
+        ]
+      },
+      "paneles": {
+        "descubrir": true,
+        "favoritos": false
+      },
+      "alturas": {
+        "tarjetaEpisodio": null,
+        "tarjetaHome": 263.8,
+        "pestana": 38
+      },
+      "tarjetaEpisodioDetalle": null
+    },
+    {
+      "ancho": "768",
+      "overflowH": 0,
+      "innerHeight": 1024,
+      "hamburguesa": false,
+      "barra": {
+        "visible": true,
+        "rect": {
+          "x": 0,
+          "y": 964,
+          "w": 768,
+          "h": 60,
+          "bottom": 1024
+        },
+        "destinos": [
+          {
+            "texto": "Descubrir",
+            "w": 192,
+            "h": 59,
+            "current": "page"
+          },
+          {
+            "texto": "Buscar",
+            "w": 192,
+            "h": 59,
+            "current": null
+          },
+          {
+            "texto": "Favoritos",
+            "w": 192,
+            "h": 59,
+            "current": null
+          },
+          {
+            "texto": "Historial",
+            "w": 192,
+            "h": 59,
+            "current": null
+          }
+        ]
+      },
+      "paneles": {
+        "descubrir": true,
+        "favoritos": false
+      },
+      "alturas": {
+        "tarjetaEpisodio": null,
+        "tarjetaHome": 263.8,
+        "pestana": 38
+      },
+      "tarjetaEpisodioDetalle": null
+    },
+    {
+      "ancho": "1024",
+      "overflowH": 0,
+      "innerHeight": 768,
+      "hamburguesa": false,
+      "barra": {
+        "visible": false,
+        "rect": null,
+        "destinos": []
+      },
+      "paneles": {
+        "descubrir": true,
+        "favoritos": false
+      },
+      "alturas": {
+        "tarjetaEpisodio": null,
+        "tarjetaHome": 263.8,
+        "pestana": 38
+      },
+      "tarjetaEpisodioDetalle": 170.39
+    },
+    {
+      "ancho": "1280",
+      "overflowH": 0,
+      "innerHeight": 800,
+      "hamburguesa": false,
+      "barra": {
+        "visible": false,
+        "rect": null,
+        "destinos": []
+      },
+      "paneles": {
+        "descubrir": true,
+        "favoritos": false
+      },
+      "alturas": {
+        "tarjetaEpisodio": null,
+        "tarjetaHome": 263.8,
+        "pestana": 38
+      },
+      "tarjetaEpisodioDetalle": 170.39
+    }
+  ],
+  "funciones": [
+    {
+      "nombre": "Home → Favoritos",
+      "ok": true,
+      "detalle": null
+    },
+    {
+      "nombre": "Home → Descubrir",
+      "ok": true,
+      "detalle": null
+    },
+    {
+      "nombre": "Buscar enfoca el input",
+      "ok": true,
+      "detalle": null
+    },
+    {
+      "nombre": "hay resultados de \"bleach\"",
+      "ok": true,
+      "detalle": null
+    },
+    {
+      "nombre": "Descubrir tras búsqueda: input vacío",
+      "ok": true,
+      "detalle": null
+    },
+    {
+      "nombre": "Descubrir tras búsqueda: Home visible",
+      "ok": true,
+      "detalle": null
+    },
+    {
+      "nombre": "Favoritos tras búsqueda: panel favoritos",
+      "ok": true,
+      "detalle": null
+    },
+    {
+      "nombre": "detalle → Favoritos",
+      "ok": true,
+      "detalle": null
+    },
+    {
+      "nombre": "detalle → Favoritos deja el Home",
+      "ok": true,
+      "detalle": null
+    },
+    {
+      "nombre": "Historial abre el cajón",
+      "ok": true,
+      "detalle": null
+    },
+    {
+      "nombre": "Escape cierra el cajón",
+      "ok": true,
+      "detalle": null
+    },
+    {
+      "nombre": "Escape devuelve el foco a Historial",
+      "ok": true,
+      "detalle": "Historial"
+    },
+    {
+      "nombre": "sin barra en el reproductor",
+      "ok": true,
+      "detalle": null
+    },
+    {
+      "nombre": "barra reaparece al volver",
+      "ok": true,
+      "detalle": null
+    },
+    {
+      "nombre": "fin del Home no bajo la barra",
+      "ok": true,
+      "detalle": {
+        "fondo": 618,
+        "topBarra": 680
+      }
+    },
+    {
+      "nombre": "fin del detalle no bajo la barra",
+      "ok": true,
+      "detalle": {
+        "fondo": 636,
+        "topBarra": 680
+      }
+    },
+    {
+      "nombre": "T66/T67: scroll del detalle restaurado al volver",
+      "ok": true,
+      "detalle": {
+        "yAntes": 69674,
+        "yDespues": 69673
+      }
+    },
+    {
+      "nombre": "toast sobre la barra",
+      "ok": true,
+      "detalle": {
+        "bottom": 656,
+        "topBarra": 680
+      }
+    },
+    {
+      "nombre": "reduced-motion: sin transición en la barra",
+      "ok": true,
+      "detalle": null
+    },
+    {
+      "nombre": "ningún táctil <44 px en barra ni cajón",
+      "ok": true,
+      "detalle": []
+    }
+  ],
+  "tactiles": [
+    {
+      "texto": "← Atrás",
+      "w": 83,
+      "h": 31,
+      "enBarra": false,
+      "enCajon": false,
+      "estado": "home"
+    },
+    {
+      "texto": "Quitar de favoritos",
+      "w": 32,
+      "h": 32,
+      "enBarra": false,
+      "enCajon": false,
+      "estado": "home"
+    },
+    {
+      "texto": "Continuar",
+      "w": 103,
+      "h": 35,
+      "enBarra": false,
+      "enCajon": false,
+      "estado": "home"
+    },
+    {
+      "texto": "← Atrás",
+      "w": 83,
+      "h": 31,
+      "enBarra": false,
+      "enCajon": false,
+      "estado": "cajon"
+    },
+    {
+      "texto": "Quitar de favoritos",
+      "w": 32,
+      "h": 32,
+      "enBarra": false,
+      "enCajon": false,
+      "estado": "cajon"
+    },
+    {
+      "texto": "Continuar",
+      "w": 103,
+      "h": 35,
+      "enBarra": false,
+      "enCajon": false,
+      "estado": "cajon"
+    }
+  ],
+  "capturas": [
+    "home_360.png",
+    "home_768.png",
+    "home_1280.png",
+    "busqueda_360.png",
+    "detalle_360.png",
+    "cajon_360.png",
+    "toast_360.png"
+  ],
+  "errores": []
+}
