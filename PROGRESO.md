@@ -1,10 +1,10 @@
-    # PROGRESO — Comfort Anime Desktop (T01–T68 hechas)
+    # PROGRESO — Comfort Anime Desktop (T01–T69 hechas)
 
 > Este archivo es la **memoria entre sesiones**. Cada sesión lo lee al inicio y lo actualiza al final.
 > Reglas y layout: `tareas/00_REGLAS.md`. Detalle de cada tarea: `tareas/Txx.md`.
 > Firmas reales por paquete: `docs/firmas/<paquete>.md` · Bitácora, desviaciones históricas y pendientes cerrados: `docs/BITACORA.md`.
 > **Si una firma de `docs/firmas` no coincide con el código, manda el código (`go doc`).**
-> **Archivos históricos**: el estado de **T01–T29 + T30** (v1.0) está en **`docs/PROGRESO_v1.0.md`**, el de **T30–T35** (AnimeAV1, v1.1.0, con sus desviaciones por tarea, fixtures y pruebas manuales) en **`docs/PROGRESO_v1.1.md`** y el de **T39–T58** (v1.2.0: Home, historial, favoritos, "Siguiente" y sus bugs; incluye los cierres T56/T59) en **`docs/PROGRESO_v1.2.md`**, y el de **T64–T67** (v1.3.0: `ventana.ts`, revelado animado y scroll del detalle) en **`docs/PROGRESO_v1.3.md`**. Aquí solo queda lo vigente. Estado del producto: **v1.2.1 PUBLICADA** (tag `v1.2.1`; ciclo **T39–T59**: v1.2.0 publicada en T56–T58, con T53b y T57; los dos bugs visuales son **T58**; el cierre documental —post-v1.2.0 y de la v1.2.1— es **T59**) y **v1.3.0 PREPARADA** — serie **T64–T68** en la rama **`feature/episodios-incrementales`** (episodios incrementales + revelado animado; cierre documental en **T68**). La **prueba manual con el `.exe` de la v1.2.0** y la **release** las hizo el humano; T57 se probó con el `.exe` sin incidencias. `wails.json` → `productVersion` **1.3.0**: **sin tag ni release aún** (los hace el humano). **Numeración (colisión resuelta en T59):** `tareas/T58.md` = bugs visuales (fila/bloque T58); el cierre documental pasó de T58 a **T59** (sin borrar contenido).
+> **Archivos históricos**: el estado de **T01–T29 + T30** (v1.0) está en **`docs/PROGRESO_v1.0.md`**, el de **T30–T35** (AnimeAV1, v1.1.0, con sus desviaciones por tarea, fixtures y pruebas manuales) en **`docs/PROGRESO_v1.1.md`** y el de **T39–T58** (v1.2.0: Home, historial, favoritos, "Siguiente" y sus bugs; incluye los cierres T56/T59) en **`docs/PROGRESO_v1.2.md`**, y el de **T64–T67** (v1.3.0: `ventana.ts`, revelado animado y scroll del detalle) en **`docs/PROGRESO_v1.3.md`**. Aquí solo queda lo vigente. Estado del producto: **v1.2.1 PUBLICADA** (tag `v1.2.1`; ciclo **T39–T59**: v1.2.0 publicada en T56–T58, con T53b y T57; los dos bugs visuales son **T58**; el cierre documental —post-v1.2.0 y de la v1.2.1— es **T59**) y **v1.3.0 PREPARADA** — serie **T64–T68** en la rama **`feature/episodios-incrementales`** (episodios incrementales + revelado animado; cierre documental en **T68**). La **prueba manual con el `.exe` de la v1.2.0** y la **release** las hizo el humano; T57 se probó con el `.exe` sin incidencias. `wails.json` → `productVersion` **1.3.0**: **sin tag ni release aún** (los hace el humano). **Numeración (colisión resuelta en T59):** `tareas/T58.md` = bugs visuales (fila/bloque T58); el cierre documental pasó de T58 a **T59** (sin borrar contenido). **Nueva serie v1.4.0 (rediseño y enfoque móvil, rama `feature/rediseno-movil`)**: comienza con **T69** (auditoría de UI base, solo lectura) **hecha** — informe en `docs/investigacion/ui_base.md`, capturas en `docs/img/v1.4/base/` y scripts en `docs/investigacion/ui/`; **sin cambios de código**.
 
 ## Protocolo de sesión
 
@@ -136,12 +136,15 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha y verificada
 | [x] | T66 | Clave de scroll del detalle por proveedor + slug | T65 |
 | [x] | T67 | Restaurar el scroll del detalle tras la recarga por lotes | T66 |
 | [x] | T68 | Cierre documental de la v1.3.0 (T64–T67) | T67 |
+| [x] | T69 | Auditoría de UI base (v1.4.0, solo lectura) | — |
 
 T01–T29 = v1.0 (`docs/PROGRESO_v1.0.md`) · T30–T35 = v1.1.0 AnimeAV1 (`docs/PROGRESO_v1.1.md`) · T36 = cierre de la v1.1.0 · T37 = portabilidad Android · T38 = cierre documental de T37.
 T39–T57 = v1.2.0 (Home, historial lateral, favoritos, "Siguiente" y su estado discreto; **incluye T53b y T57**); plan en `tareas/v1.2_PLAN.md`, detalle **T39–T58 + cierres T56/T59** archivado en `docs/PROGRESO_v1.2.md`, con resúmenes al final de este archivo.
 La **v1.2.0 está PUBLICADA** (prueba manual con el `.exe` y release hechas por el humano). La **v1.2.1** (T58 bugs + T59 cierre documental) está **preparada**: `productVersion` 1.2.1, sin tag ni release aún — los hace el humano.
 
 **v1.3.0 — episodios incrementales** (rama `feature/episodios-incrementales`): serie **T64–T69** para mostrar los episodios del detalle de forma incremental y con animación de entrada. **T64** (lógica pura de `ventana.ts` + tests), **T65** (revelado animado por visibilidad, sin paginar), **T66** (clave de scroll del detalle por proveedor + slug) y **T67** (restauración del scroll del detalle cuando la lista se recarga) hechas; **T68** (cierre documental de la v1.3.0) hecho: `productVersion` **1.3.0**, **sin tag ni release** (los hace el humano). Los **T66–T67 originales** (paginado / ventana client-side) quedan **descartados** por las mediciones de T65 (sin jank y con 0 saltos de scroll; el coste real es de red, ya cubierto por el mostrado por lotes); **T69 pendiente** de la serie. Notas largas de T64–T67 archivadas en `docs/PROGRESO_v1.3.md`.
+
+**v1.4.0 — rediseño y enfoque móvil** (rama `feature/rediseno-movil`): serie nueva que empieza con **T69** (auditoría de UI base, **solo lectura**: inventario, literales CSS, 24 capturas a 360/768/1280, métricas por vista y extracción de la paleta de los 4 HTML de Stitch), hecha y documentada en `docs/investigacion/ui_base.md`; los scripts de medición viven en `docs/investigacion/ui/` y las capturas en `docs/img/v1.4/base/`. **No se tocó código** (`frontend/**`, `*.go`, `package.json`, `wails.json` intactos). Próximas tareas de la serie: pendientes de definir.
 
 ## Auditoría de portabilidad (T37)
 
@@ -622,3 +625,28 @@ Cierre documental de la **v1.3.0**, solo documentación y versión, sin cambios 
 | `git diff --stat -- '*.go'` | **vacío** (ningún `.go` con cambios reales) |
 
 **No se creó tag ni release** (lo hace el humano). Detalle largo de T64–T67 en `docs/PROGRESO_v1.3.md`; sesión en `docs/BITACORA.md`.
+
+## Auditoría de UI base de la v1.4.0 (T69) — bloque de esta sesión
+
+Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**, commit `fc34a64`. T69 es **de solo lectura sobre el código**: nada de `frontend/**`, `*.go`, `package.json` ni `wails.json` tocado. Fecha **2026-10-16**. Informe completo en **`docs/investigacion/ui_base.md`**.
+
+- **Inventario (paso 1)**: 16 `.svelte` (3 895 líneas) + `style.css` (42) + 17 `.ts`; fuentes en `frontend/src/assets/fonts/nunito-v16-latin-regular.woff2` (cargada por `@font-face` en `style.css`) y logo en `assets/images/logo-universal.png`. Solo hay **1 fuente (Nunito)** y **ningún set de iconos**.
+- **Literales (paso 2)**: **82 hex**, 9 `rgb(a)`, 0 `hsl`, 4 `box-shadow`, 47 `border-radius`, **0 `backdrop-filter`**, 1 `blur()`, 31 anchos/altos en px, 19 `:hover`, 9 `@media`. **Único breakpoint con px: `max-width: 640px`** (1, en `VistaDetalle`); los otros 8 `@media` son `prefers-reduced-motion` (6) y `(hover: none)` (1). `style.css` ya define 8 variables `--cad-*` (fondo `#151515`, superficie `#1e1e24`, borde `#3f3f46`, texto `#fff`, texto suave `#a1a1aa`, acento `#4ade80`, peligro `#f87171`, radio `8px`).
+- **Capturas (paso 3)**: **24 PNG** en `docs/img/v1.4/base/` a 360×740, 768×1024 y 1280×800 (Descubrir, búsqueda, favoritos vacío/datos, detalle AnimeAV1/JKAnime, reproductor con HLS y con «otras fuentes» abierto, barra lateral expandida/contraída y cajón móvil).
+- **Métricas (paso 4)**: `metricas.json` + `resumir_metricas.mjs`. **`overflowH = 0`** en todas las vistas/anchos; rejilla de episodios 1/3–4 columnas; **tarjeta de episodio = 170,39 px** ligada a `contain-intrinsic-size: auto 170px`; **38 objetivos táctiles < 44 px** (`.papelera` 24×24, `.estrella`/`.flecha`/`.alternar` 32×32, `.hamburguesa` 38×38, `.pestana` 39 px de alto…); muchos textos < 12 px en las rejillas de episodios.
+- **Paleta de Stitch (paso 5)**: de los 4 HTML (`stitch_home`, `stitch_detalle`, `stitch_reproductor_1`, `stitch_reproductor_2`) extraídos **solo valores**: fondo `#090d16`/`#090a0f`/`#0a0d12`, acento esmeralda `#10b981`/`#059669`/`#34d399` (más teal `#14b8a6` y neón `#22c55e`), superficies *glass* `rgba(15,23,42,.6)` con borde `rgba(255,255,255,.08)`, glow `rgba(16,185,129,.45)`, sombras `glow-emerald`/`card-glass`, tipografías **Inter + Outfit** (y Noto Serif JP), transiciones 0,25–0,35 s `cubic-bezier(.16,1,.3,1)` y animaciones `glow-pulse`/`float-slow`. No se copió marcado ni clases Tailwind.
+- **Acoplamientos (paso 6)**: altura fija de tarjeta de episodio (T64/T65), clave de scroll por proveedor+slug (T66/T67), P4 (wailsjs solo en `api.ts`), clases atómicas `s-<hash>` de Svelte, único breakpoint 640 px, colores duplicados variable/literal y ausencia de glassmorphism/iconos en el código actual.
+- **Entregables**: `docs/investigacion/ui_base.md`, `docs/investigacion/ui/{contar_literales,medir_ui,resumir_metricas}.mjs`, `docs/investigacion/ui/metricas.json` y `docs/img/v1.4/base/*.png` (24).
+
+### Comprobación — 2026-10-16, todo en verde (T69)
+
+| Comando | Resultado |
+|---|---|
+| `gofmt -l .` | **sin salida** |
+| `go vet ./...` | limpio |
+| `go build ./...` | OK |
+| recuento `^--- PASS` (`go test -race -count=1 -v ./...`) | **435** (0 `--- FAIL`) — idéntico al de T63/T65–T68 |
+| `npm run check` (frontend) | **svelte-check found 0 errors and 0 warnings** |
+| `git status --porcelain` | solo `docs/img/v1.4/` y `docs/investigacion/ui/` (nuevos, sin trackear) |
+
+**Sin cambios de código**; no se creó tag ni release. Próxima tarea de la serie v1.4.0: pendiente de definir.
