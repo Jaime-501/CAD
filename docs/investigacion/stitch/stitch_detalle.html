@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Shinseiki Evangelion - Ficha de Anime</title>
+<!-- Tailwind CSS CDN with Forms & Container Queries -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- FontAwesome Icons -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+<!-- Google Fonts: Inter & Outfit -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind Configuration -->
+<script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              emerald: '#10b981',
+              emeraldDark: '#059669',
+              emeraldLight: '#34d399',
+              accent: '#00f2a6',
+              darkBg: '#090d16',
+              surface: 'rgba(15, 23, 42, 0.72)',
+              surfaceCard: 'rgba(23, 32, 54, 0.65)'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Outfit', 'sans-serif'],
+          },
+          backdropBlur: {
+            '2xl': '40px',
+          }
+        }
+      }
+    }
+  </script>
+<!-- BEGIN: Custom Glassmorphism Styles -->
+<style data-purpose="glass-effects">
+    .glass-panel {
+      background: rgba(13, 20, 36, 0.75);
+      backdrop-filter: blur(28px) saturate(180%);
+      -webkit-backdrop-filter: blur(28px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+    .glass-card-item {
+      background: rgba(18, 26, 47, 0.55);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .glass-card-item:hover {
+      transform: translateY(-4px);
+      border-color: rgba(16, 185, 129, 0.4);
+      box-shadow: 0 12px 30px -10px rgba(16, 185, 129, 0.25);
+    }
+    .glow-emerald-btn {
+      box-shadow: 0 0 20px -3px rgba(16, 185, 129, 0.45);
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 9999px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb:hover {
+      background: rgba(16, 185, 129, 0.5);
+    }
+  </style>
+<!-- END: Custom Glassmorphism Styles -->
+</head>
+<body class="bg-brand-darkBg text-slate-100 min-h-screen font-sans selection:bg-brand-emerald selection:text-white relative overflow-x-hidden antialiased">
+<!-- BEGIN: Ambient Background Glows -->
+<div aria-hidden="true" class="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
+<!-- Atmospheric Blurred Artwork Banner -->
+<div class="absolute -top-32 left-1/2 -translate-x-1/2 w-[140%] max-w-[1920px] h-[720px] opacity-25 filter blur-[90px]">
+<img alt="" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBitySxM-_-D-lkzcr_p5AJx7UTiRXj0qDPtlwR6ElIVErfk6gqn3dDQ386Y5C3n2an976LRqRrXC_DQtBf2TuPrnp8E6ajQY05_C5iBRe1vdJtZ25NWhtIqSCKKX-XtCwx4iFJ_tf2UoKA8G0one9JF_R9X1cQEsP3960fHpQ6ZgAhBRgrR0xOefAA6FuTnqguuNUnQIVYppZGMBEeuFRHV30_R_GvGdYLUMAuRaraSyXTxG-aM_Xc3QL4LMEpNbQkY1M"/>
+</div>
+<!-- Neon Radial Accent Lights -->
+<div class="absolute top-24 left-1/4 w-96 h-96 bg-brand-emerald/15 rounded-full filter blur-[120px]"></div>
+<div class="absolute top-80 right-1/4 w-[30rem] h-[30rem] bg-indigo-600/15 rounded-full filter blur-[140px]"></div>
+<div class="absolute top-0 inset-x-0 h-96 bg-gradient-to-b from-brand-darkBg/30 via-brand-darkBg/80 to-brand-darkBg pointer-events-none"></div>
+</div>
+<!-- END: Ambient Background Glows -->
+<!-- BEGIN: Main Page Container -->
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10 space-y-8">
+<!-- BEGIN: Top Navigation Header -->
+<header class="flex items-center justify-between gap-4" data-purpose="top-navigation-bar">
+<div class="flex items-center gap-4 sm:gap-6">
+<!-- Back Navigation Button -->
+<a class="inline-flex items-center gap-2.5 px-4 py-2 rounded-full text-xs font-semibold tracking-wide uppercase bg-emerald-500/20 hover:bg-emerald-500/30 text-brand-accent border border-emerald-500/30 shadow-lg shadow-emerald-950/40 backdrop-blur-md transition-all duration-200 group" href="#back">
+<i class="fa-solid fa-arrow-left text-xs transition-transform duration-200 group-hover:-translate-x-0.5"></i>
+<span>Atrás</span>
+</a>
+<!-- Main Title & Favorite Indicator -->
+<div class="flex items-center gap-3">
+<h1 class="text-2xl sm:text-3xl lg:text-4xl font-extrabold font-display tracking-tight text-white drop-shadow-sm">
+            Shinseiki Evangelion
+          </h1>
+<button aria-label="Añadir a favoritos" class="group p-1.5 rounded-full hover:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-400" type="button">
+<i class="fa-solid fa-star text-xl sm:text-2xl text-emerald-400 group-hover:scale-110 group-hover:text-amber-400 transition-all duration-200 drop-shadow-[0_0_8px_rgba(52,211,153,0.6)]"></i>
+</button>
+</div>
+</div>
+<!-- Quick Action Utilities -->
+<div class="hidden sm:flex items-center gap-2">
+<button class="w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-slate-300 hover:text-white transition-all" title="Compartir anime">
+<i class="fa-solid fa-share-nodes text-sm"></i>
+</button>
+<button class="w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-slate-300 hover:text-white transition-all" title="Notificaciones">
+<i class="fa-regular fa-bell text-sm"></i>
+</button>
+</div>
+</header>
+<!-- END: Top Navigation Header -->
+<!-- BEGIN: Main Anime Hero Card -->
+<main>
+<section class="glass-panel rounded-3xl p-6 sm:p-8 lg:p-10 border border-white/10 relative overflow-hidden" data-purpose="anime-details-hero">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
+<!-- Column Left: Poster Artwork -->
+<div class="lg:col-span-4 xl:col-span-3 flex flex-col items-center">
+<div class="relative w-full max-w-[280px] lg:max-w-none group rounded-2xl p-1 bg-gradient-to-b from-white/20 via-white/5 to-white/10 shadow-2xl overflow-hidden">
+<div class="relative rounded-xl overflow-hidden aspect-[3/4.2] bg-slate-900">
+<img alt="Póster oficial de Shinseiki Evangelion" class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 ease-out" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBitySxM-_-D-lkzcr_p5AJx7UTiRXj0qDPtlwR6ElIVErfk6gqn3dDQ386Y5C3n2an976LRqRrXC_DQtBf2TuPrnp8E6ajQY05_C5iBRe1vdJtZ25NWhtIqSCKKX-XtCwx4iFJ_tf2UoKA8G0one9JF_R9X1cQEsP3960fHpQ6ZgAhBRgrR0xOefAA6FuTnqguuNUnQIVYppZGMBEeuFRHV30_R_GvGdYLUMAuRaraSyXTxG-aM_Xc3QL4LMEpNbQkY1M"/>
+<!-- Image Overlay Sheen -->
+<div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-60"></div>
+<!-- Format badge overlay -->
+<div class="absolute top-3 left-3 px-2.5 py-1 rounded-md bg-black/60 backdrop-blur-md border border-white/15 text-[11px] font-bold uppercase tracking-wider text-emerald-300">
+                  HD • TV Series
+                </div>
+</div>
+</div>
+<!-- Fast Stats Pill under Poster -->
+<div class="mt-4 flex items-center justify-center gap-4 text-xs text-slate-400 font-medium">
+<span class="flex items-center gap-1.5"><i class="fa-solid fa-star text-amber-400"></i> 8.6 / 10</span>
+<span class="w-1 h-1 rounded-full bg-slate-600"></span>
+<span class="flex items-center gap-1.5"><i class="fa-solid fa-users text-slate-400"></i> #42 Ranking</span>
+</div>
+</div>
+<!-- Column Right: Information & Synopsis -->
+<div class="lg:col-span-8 xl:col-span-9 flex flex-col justify-between space-y-6">
+<div class="space-y-5">
+<!-- Meta Breadcrumbs & Status -->
+<div class="flex flex-wrap items-center gap-2 sm:gap-3 text-xs sm:text-sm text-slate-400 font-medium">
+<span class="text-emerald-400 font-semibold tracking-wide">animeav1</span>
+<span class="text-slate-600">•</span>
+<span class="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-slate-300">TV</span>
+<span class="text-slate-600">•</span>
+<span class="text-emerald-300 flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  Finalizado
+                </span>
+<span class="text-slate-600">•</span>
+<span class="text-slate-300">26 episodios</span>
+</div>
+<!-- Genre Badges -->
+<div class="flex flex-wrap gap-2 pt-1" data-purpose="genre-tag-list">
+<span class="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-300 border border-emerald-500/25 hover:bg-emerald-500/20 hover:border-emerald-500/40 transition-colors cursor-pointer backdrop-blur-sm">
+                  Acción
+                </span>
+<span class="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-300 border border-emerald-500/25 hover:bg-emerald-500/20 hover:border-emerald-500/40 transition-colors cursor-pointer backdrop-blur-sm">
+                  Drama
+                </span>
+<span class="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-300 border border-emerald-500/25 hover:bg-emerald-500/20 hover:border-emerald-500/40 transition-colors cursor-pointer backdrop-blur-sm">
+                  Ciencia Ficción
+                </span>
+<span class="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-300 border border-emerald-500/25 hover:bg-emerald-500/20 hover:border-emerald-500/40 transition-colors cursor-pointer backdrop-blur-sm">
+                  Suspenso
+                </span>
+<span class="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-300 border border-emerald-500/25 hover:bg-emerald-500/20 hover:border-emerald-500/40 transition-colors cursor-pointer backdrop-blur-sm">
+                  Mecha
+                </span>
+<span class="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-300 border border-emerald-500/25 hover:bg-emerald-500/20 hover:border-emerald-500/40 transition-colors cursor-pointer backdrop-blur-sm">
+                  Psicológico
+                </span>
+</div>
+<!-- Synopsis Paragraphs -->
+<div class="space-y-4 text-slate-300 text-sm sm:text-base leading-relaxed tracking-normal pr-1 max-h-[340px] overflow-y-auto custom-scroll" data-purpose="anime-synopsis">
+<p>
+                  Quince años después de un evento cataclísmico conocido como el Segundo Impacto, el mundo enfrenta una nueva amenaza: seres celestiales monstruosos llamados Ángeles invaden Tokio-3 uno por uno. La humanidad no puede defenderse contra los Ángeles a pesar de utilizar su munición y tácticas militares más avanzadas. La única esperanza para la salvación humana reside en manos de NERV, una misteriosa organización dirigida por el frío Gendou Ikari. NERV opera gigantescos robots humanoides llamados "Evangelions" para combatir a los Ángeles con armamento avanzado de última generación y barreras protectoras conocidas como Campos de Terror Absoluto.
+                </p>
+<p>
+                  Años después de ser abandonado por su padre, Shinji Ikari, el hijo de 14 años de Gendou, regresa a Tokio-3. Shinji enfrenta una batalla interna perpetua contra el trauma profundamente enterrado causado por la pérdida de su madre y el abandono emocional que sufrió a manos de su padre. Temiendo abrirse a los demás, la vida de Shinji cambia para siempre al conocer a Misato Katsuragi, una oficial de alto rango de NERV de 29 años que le muestra una bondad maternal de espíritu libre que nunca ha experimentado.
+                </p>
+<p>
+                  Un devastador ataque de un Ángel obliga a Shinji a entrar en acción cuando Gendou revela su verdadero motivo para invitar a su hijo a regresar a Tokio-3: Shinji es el único niño capaz de pilotar eficientemente la Unidad-01 de Evangelion, un nuevo robot que se sincroniza con sus biométricas. A pesar del brutal trauma psicológico que conlleva pilotar un Evangelion, Shinji defiende Tokio-3 contra la amenaza angelical, ajeno a las oscuras maquinaciones de su padre.
+                </p>
+</div>
+</div>
+<!-- Action CTA Toolbar -->
+<div class="pt-4 border-t border-white/10 flex flex-wrap items-center gap-4">
+<a class="inline-flex items-center justify-center gap-3 px-8 py-3.5 rounded-xl font-bold text-sm tracking-wide bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 glow-emerald-btn hover:from-emerald-400 hover:to-teal-300 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200" href="#continuar">
+<i class="fa-solid fa-play text-xs"></i>
+<span>Continuar Viendo</span>
+</a>
+<a class="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl font-semibold text-sm bg-white/5 hover:bg-white/10 text-white border border-white/10 transition-colors" href="#ver-ep1">
+<i class="fa-solid fa-rotate-left text-xs text-slate-400"></i>
+<span>Reiniciar Ep. 1</span>
+</a>
+<button class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 transition-colors ml-auto" title="Añadir a mi lista">
+<i class="fa-solid fa-bookmark text-sm"></i>
+</button>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- END: Main Anime Hero Card -->
+<!-- BEGIN: Episodes Grid Section -->
+<section class="space-y-5 pt-4" data-purpose="episodes-list-section">
+<!-- Section Header -->
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-1.5 h-6 bg-brand-emerald rounded-full"></div>
+<h2 class="text-xl sm:text-2xl font-bold font-display text-white tracking-wide">
+            Episodios <span class="text-sm font-semibold text-slate-400 font-sans ml-1">(26)</span>
+</h2>
+</div>
+<!-- Filter / Order Utilities -->
+<div class="flex items-center gap-3 text-xs">
+<button class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition-colors">
+            1-26
+          </button>
+<button class="p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition-colors" title="Invertir orden">
+<i class="fa-solid fa-arrow-down-short-wide text-xs"></i>
+</button>
+</div>
+</div>
+<!-- Grid Cards -->
+<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-5">
+<!-- Episode Item 1 -->
+<article class="glass-card-item rounded-2xl overflow-hidden group cursor-pointer flex flex-col" data-purpose="episode-card">
+<div class="relative aspect-video w-full overflow-hidden bg-slate-900">
+<img alt="Shinseiki Evangelion - 1" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ease-out" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBbW8VvxZhsweEIM88AJdPimSTIgVQaAmDOZDhEuu9sUKuvQypuwULYRZphBQU8rMBGxxyFEUTyCaXU6YBH1tqXDNFEX9imjIAGePW2pqbn6N74_-LCFU4gERCOZZGJwkGUX14WIaN-zaBZ-IKCEZAKTdU6_-2K9VQaXynqcTwlKTy4mneWC1z22zI6DMzzGD72FT0iV6PjS0iuTChLYHhv4u8oStN6AnEiBzOaYYShGpx2mnrTaWsU6Q"/>
+<!-- Badge Episode -->
+<div class="absolute bottom-2.5 left-2.5 px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500 text-slate-950 tracking-wider shadow-sm">
+              EP. 1
+            </div>
+<!-- Play Hover Overlay -->
+<div class="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
+<div class="w-10 h-10 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center shadow-lg transform scale-75 group-hover:scale-100 transition-transform duration-200">
+<i class="fa-solid fa-play text-xs pl-0.5"></i>
+</div>
+</div>
+<!-- Watched progress indicator (completed) -->
+<div class="absolute bottom-0 inset-x-0 h-1 bg-emerald-500"></div>
+</div>
+<div class="p-3 sm:p-3.5 flex flex-col justify-between flex-1">
+<h3 class="text-xs sm:text-sm font-semibold text-slate-200 group-hover:text-emerald-400 transition-colors line-clamp-1">
+              Shinseiki Evangelion - 1
+            </h3>
+<span class="text-[11px] text-slate-500 mt-1">24 min • Visto</span>
+</div>
+</article>
+<!-- Episode Item 2 -->
+<article class="glass-card-item rounded-2xl overflow-hidden group cursor-pointer flex flex-col" data-purpose="episode-card">
+<div class="relative aspect-video w-full overflow-hidden bg-slate-900">
+<img alt="Shinseiki Evangelion - 2" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ease-out" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCeob3na7NTl5jb_9NYH3fVzrlB13hvkHODwWGQxf8kjPAaA0oz-9AGtoN1-pzpUSPSh2MaN-vvFujICJd21rU_jHLDBQVLssvyeb3JxgbNmK9aivVLxqn6WDrkHfCCYGOOJBqZFqNY1lLRkZr0Q6t89uOChRzRXH6en7XrLyg6VDKgNTV_IOHj4FvzDhRDq1ra2Le1joVcUVksozUGgZVy4qpc_5BcjqPEiEK3oYvbXIAA5z-sapNQeQ"/>
+<div class="absolute bottom-2.5 left-2.5 px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500 text-slate-950 tracking-wider shadow-sm">
+              EP. 2
+            </div>
+<div class="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
+<div class="w-10 h-10 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center shadow-lg transform scale-75 group-hover:scale-100 transition-transform duration-200">
+<i class="fa-solid fa-play text-xs pl-0.5"></i>
+</div>
+</div>
+<!-- Watched progress indicator (partial) -->
+<div class="absolute bottom-0 inset-x-0 h-1 bg-white/10">
+<div class="w-1/2 h-full bg-emerald-400"></div>
+</div>
+</div>
+<div class="p-3 sm:p-3.5 flex flex-col justify-between flex-1">
+<h3 class="text-xs sm:text-sm font-semibold text-slate-200 group-hover:text-emerald-400 transition-colors line-clamp-1">
+              Shinseiki Evangelion - 2
+            </h3>
+<span class="text-[11px] text-slate-500 mt-1">24 min • 12m restantes</span>
+</div>
+</article>
+<!-- Episode Item 3 -->
+<article class="glass-card-item rounded-2xl overflow-hidden group cursor-pointer flex flex-col" data-purpose="episode-card">
+<div class="relative aspect-video w-full overflow-hidden bg-slate-900">
+<img alt="Shinseiki Evangelion - 3" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ease-out" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA2bzKFWj8UV942zkLAKlHy9A7cycl0Bq0_fGbceUDuNJJQe4yXPF-p4NSAZvbpsolFOXzcWyHOY2CaeFkViCrzdU-IwrVfZ9mzHs6kWwlm7g1n3n5HiCQ_KciMxqYTCp_TJP56f-F8WpBg0LaZQCphcdukFR_HJWjZzwxuH_CtWIZYk1BWkBn4PYm3hhz4qZDMGp6l01y_93F2_a2Cr4_J7O9KU3O5fHupVx9ftARc2_mALUBBCI2JMw"/>
+<div class="absolute bottom-2.5 left-2.5 px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500 text-slate-950 tracking-wider shadow-sm">
+              EP. 3
+            </div>
+<div class="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
+<div class="w-10 h-10 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center shadow-lg transform scale-75 group-hover:scale-100 transition-transform duration-200">
+<i class="fa-solid fa-play text-xs pl-0.5"></i>
+</div>
+</div>
+</div>
+<div class="p-3 sm:p-3.5 flex flex-col justify-between flex-1">
+<h3 class="text-xs sm:text-sm font-semibold text-slate-200 group-hover:text-emerald-400 transition-colors line-clamp-1">
+              Shinseiki Evangelion - 3
+            </h3>
+<span class="text-[11px] text-slate-500 mt-1">24 min</span>
+</div>
+</article>
+<!-- Episode Item 4 -->
+<article class="glass-card-item rounded-2xl overflow-hidden group cursor-pointer flex flex-col" data-purpose="episode-card">
+<div class="relative aspect-video w-full overflow-hidden bg-slate-900">
+<img alt="Shinseiki Evangelion - 4" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ease-out" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBba8sB43p3OnjdD7K8eA6F-iCI1cN4-40S8enUDE2jVI6xMKyP-pO4MLyRQtONl5x-8l-sM_nrWCZ2XWm9piQNCxQ3QidnDkjYijJggcDBzhlJvHzinrExnZKE_rxHiILOz0RhJpFOt8yhmoItanK5zf95-EV7iltBaEhz-K9VnXbB3Y_o7RsP3ZoIdlJDo_BDu_HmOpfpf_Y9sufhu5VLTnqVCTCKyK2GHvyM1pSyUQ899m4GLW0N3A"/>
+<div class="absolute bottom-2.5 left-2.5 px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500 text-slate-950 tracking-wider shadow-sm">
+              EP. 4
+            </div>
+<div class="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
+<div class="w-10 h-10 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center shadow-lg transform scale-75 group-hover:scale-100 transition-transform duration-200">
+<i class="fa-solid fa-play text-xs pl-0.5"></i>
+</div>
+</div>
+</div>
+<div class="p-3 sm:p-3.5 flex flex-col justify-between flex-1">
+<h3 class="text-xs sm:text-sm font-semibold text-slate-200 group-hover:text-emerald-400 transition-colors line-clamp-1">
+              Shinseiki Evangelion - 4
+            </h3>
+<span class="text-[11px] text-slate-500 mt-1">24 min</span>
+</div>
+</article>
+<!-- Episode Item 5 -->
+<article class="glass-card-item rounded-2xl overflow-hidden group cursor-pointer flex flex-col" data-purpose="episode-card">
+<div class="relative aspect-video w-full overflow-hidden bg-slate-900">
+<img alt="Shinseiki Evangelion - 5" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ease-out" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDHenX07_lc9RIoHPpEUP4ub_OtNGYLLhrtyXfahoXeQoXybQ2ZS8yFUtvs9Yq_3kRdffmplBCNWKyoC6TQ0V7vHpeclNAwZReuLOCCq3rO9CXgKzOt5J-0Do6gwHzJaTprLrTHtLgyD1PwVlYZMZbSOj7dzBFHIq5yeUw5gnVR3EOALDL1jASAztuYGMswVBnNCWKIdcv4l95k7Ey765erI74l8sqx0SPsZWFp6bsmxqMGfgf76icOjA"/>
+<div class="absolute bottom-2.5 left-2.5 px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500 text-slate-950 tracking-wider shadow-sm">
+              EP. 5
+            </div>
+<div class="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
+<div class="w-10 h-10 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center shadow-lg transform scale-75 group-hover:scale-100 transition-transform duration-200">
+<i class="fa-solid fa-play text-xs pl-0.5"></i>
+</div>
+</div>
+</div>
+<div class="p-3 sm:p-3.5 flex flex-col justify-between flex-1">
+<h3 class="text-xs sm:text-sm font-semibold text-slate-200 group-hover:text-emerald-400 transition-colors line-clamp-1">
+              Shinseiki Evangelion - 5
+            </h3>
+<span class="text-[11px] text-slate-500 mt-1">24 min</span>
+</div>
+</article>
+</div>
+</section>
+<!-- END: Episodes Grid Section -->
+<!-- BEGIN: Footer -->
+<footer class="pt-12 pb-6 border-t border-white/5 text-center text-xs text-slate-500" data-purpose="page-footer">
+<p>© 1995 GAINAX / Project Eva. Shinseiki Evangelion - Interfaz optimizada.</p>
+</footer>
+<!-- END: Footer -->
+</div>
+<!-- END: Main Page Container -->
+</body></html>

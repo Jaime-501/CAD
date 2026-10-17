@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+
+<html class="dark scroll-smooth" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Buscador de Anime - Portal Streaming</title>
+<!-- Google Fonts: Inter & Outfit -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=Outfit:wght@500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- FontAwesome Icons -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+<!-- Tailwind CSS v3 -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Outfit', 'sans-serif'],
+          },
+          colors: {
+            obsidian: '#090d16',
+            surface: {
+              DEFAULT: '#0f172a',
+              card: 'rgba(17, 24, 39, 0.65)',
+              border: 'rgba(255, 255, 255, 0.08)',
+              glow: 'rgba(16, 185, 129, 0.15)'
+            },
+            neon: {
+              green: '#10b981',
+              emerald: '#059669',
+              teal: '#14b8a6',
+              accent: '#34d399'
+            }
+          },
+          boxShadow: {
+            'glow-emerald': '0 0 25px -4px rgba(16, 185, 129, 0.45)',
+            'card-glass': '0 8px 32px 0 rgba(0, 0, 0, 0.37)'
+          }
+        }
+      }
+    }
+  </script>
+<!-- BEGIN: Custom Glass & Micro-Interactions Styling -->
+<style data-purpose="glass-effects">
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+    }
+    .glass-input {
+      background: rgba(18, 26, 45, 0.7);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+    }
+    .glass-card {
+      background: rgba(16, 23, 41, 0.55);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .glass-card:hover {
+      transform: translateY(-6px) scale(1.015);
+      border-color: rgba(52, 211, 153, 0.35);
+      box-shadow: 0 16px 36px -10px rgba(0, 0, 0, 0.7), 0 0 20px -3px rgba(16, 185, 129, 0.25);
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .custom-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+<!-- END: Custom Glass & Micro-Interactions Styling -->
+</head>
+<body class="bg-obsidian text-slate-200 min-h-screen font-sans selection:bg-neon-green selection:text-black antialiased relative overflow-x-hidden">
+<!-- Ambient Background Glows -->
+<div class="fixed top-[-10vw] left-1/2 -translate-x-1/2 w-[900px] h-[550px] bg-gradient-to-tr from-emerald-600/15 via-teal-500/10 to-indigo-600/15 blur-[140px] pointer-events-none rounded-full -z-10"></div>
+<div class="fixed bottom-[-15vw] right-[-10vw] w-[600px] h-[600px] bg-purple-900/10 blur-[160px] pointer-events-none rounded-full -z-10"></div>
+<!-- BEGIN: MainHeader -->
+<header class="w-full pt-10 pb-6 px-4 md:px-8 max-w-7xl mx-auto flex flex-col items-center">
+<!-- Brand / Title with Live Badge -->
+<div class="flex items-center gap-3.5 mb-7" data-purpose="header-brand">
+<div class="w-10 h-10 rounded-xl bg-gradient-to-br from-neon-green to-teal-700 flex items-center justify-center shadow-glow-emerald">
+<i class="fa-solid fa-play text-slate-950 text-sm ml-0.5"></i>
+</div>
+<h1 class="text-3xl md:text-4xl font-extrabold tracking-tight font-display text-white">
+        Buscador de <span class="text-transparent bg-clip-text bg-gradient-to-r from-neon-accent via-teal-400 to-emerald-200">anime</span>
+</h1>
+<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-neon-accent border border-emerald-500/20 shadow-sm backdrop-blur-md">
+        v2.4
+      </span>
+</div>
+<!-- Search Bar Wrapper -->
+<div class="w-full max-w-3xl" data-purpose="search-container">
+<div class="relative flex items-center group">
+<div class="absolute left-4 text-slate-400 group-focus-within:text-neon-accent transition-colors duration-200 pointer-events-none">
+<i class="fa-solid fa-magnifying-glass text-lg"></i>
+</div>
+<input class="w-full pl-12 pr-32 py-4 rounded-2xl glass-input text-sm md:text-base text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-neon-green/50 focus:border-neon-green/60 shadow-inner transition-all duration-300" id="anime-search-input" placeholder="Ej: Death Note, Jujutsu Kaisen..." type="text"/>
+<button class="absolute right-2.5 px-6 py-2.5 rounded-xl bg-neon-green hover:bg-neon-accent text-slate-950 font-bold text-sm tracking-wide transition-all duration-200 shadow-glow-emerald active:scale-95 flex items-center gap-2" data-purpose="search-action-button" type="button">
+<span>Buscar</span>
+<i class="fa-solid fa-arrow-right-long text-xs opacity-80"></i>
+</button>
+</div>
+</div>
+<!-- Main Navigation Tabs -->
+<div class="w-full max-w-7xl mt-8 border-b border-white/5 flex items-center justify-between" data-purpose="navigation-tabs">
+<nav aria-label="Tabs" class="flex space-x-8">
+<!-- Tab: Descubrir (Active) -->
+<button class="relative py-3.5 text-sm md:text-base font-semibold text-white group flex items-center gap-2 focus:outline-none">
+<i class="fa-solid fa-compass text-neon-accent text-sm"></i>
+<span>Descubrir</span>
+<div class="absolute bottom-0 left-0 w-full h-[2.5px] bg-gradient-to-r from-neon-green to-teal-400 rounded-full shadow-[0_-2px_12px_rgba(16,185,129,0.8)]"></div>
+</button>
+<!-- Tab: Favoritos -->
+<button class="relative py-3.5 text-sm md:text-base font-medium text-slate-400 hover:text-white transition-colors duration-200 flex items-center gap-2 group focus:outline-none">
+<i class="fa-solid fa-star text-amber-400 group-hover:scale-110 transition-transform"></i>
+<span>Favoritos</span>
+<span class="px-2 py-0.5 text-xs rounded-full bg-slate-800 text-slate-300 group-hover:bg-slate-700 transition-colors">7</span>
+</button>
+</nav>
+<!-- Submenu / Quick View Options -->
+<div class="hidden sm:flex items-center gap-3 text-xs text-slate-400">
+<span class="inline-flex items-center gap-1.5"><i class="fa-regular fa-clock text-emerald-400"></i> Auto-sync</span>
+</div>
+</div>
+</header>
+<!-- END: MainHeader -->
+<!-- BEGIN: MainContent -->
+<main class="max-w-7xl mx-auto px-4 md:px-8 py-6 space-y-12">
+<!-- Section Title & Global Controls -->
+<div class="flex items-center justify-between" data-purpose="section-header-main">
+<div class="flex items-center gap-3">
+<span class="relative flex h-3 w-3">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+<span class="relative inline-flex rounded-full h-3 w-3 bg-neon-green"></span>
+</span>
+<h2 class="text-2xl md:text-3xl font-extrabold font-display tracking-tight text-white">Novedades</h2>
+</div>
+<button class="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-panel text-xs md:text-sm font-semibold text-emerald-300 hover:text-white hover:bg-emerald-500/20 border border-emerald-500/30 hover:border-emerald-400 shadow-sm transition-all duration-200 active:scale-95" id="btn-actualizar" type="button">
+<i class="fa-solid fa-rotate text-xs transition-transform group-hover:rotate-180"></i>
+<span>Actualizar</span>
+</button>
+</div>
+<!-- BEGIN: CarouselRow1 - JKAnime En emisión -->
+<section class="space-y-4" data-purpose="category-row-emision">
+<div class="flex items-center justify-between">
+<div class="flex items-baseline gap-2.5">
+<span class="text-xs uppercase font-bold tracking-wider text-slate-400">JKAnime</span>
+<h3 class="text-lg md:text-xl font-bold text-white tracking-wide">En emisión</h3>
+</div>
+<!-- Navigation Controls -->
+<div class="flex items-center gap-2">
+<button aria-label="Anterior" class="w-8 h-8 rounded-full glass-panel flex items-center justify-center text-slate-300 hover:text-white hover:border-emerald-500/50 transition" onclick="scrollCarousel('carousel-1', -1)">
+<i class="fa-solid fa-chevron-left text-xs"></i>
+</button>
+<button aria-label="Siguiente" class="w-8 h-8 rounded-full glass-panel flex items-center justify-center text-slate-300 hover:text-white hover:border-emerald-500/50 transition" onclick="scrollCarousel('carousel-1', 1)">
+<i class="fa-solid fa-chevron-right text-xs"></i>
+</button>
+</div>
+</div>
+<!-- Poster Carousel Container -->
+<div class="flex gap-4 overflow-x-auto pb-4 pt-1 custom-scrollbar scroll-smooth" id="carousel-1">
+<!-- Card 1 -->
+<article class="flex-none w-[170px] md:w-[190px] rounded-2xl glass-card overflow-hidden group cursor-pointer">
+<div class="relative aspect-[3/4.2] overflow-hidden">
+<img alt="Dark Machine: The Animation" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBEfLT6zpFz1hB_SdC9hrVk-R2GpYnOeYecImE2lnF26_-z_PrzPmzsepNieWvZOpM7v2sQadRqlXhWIR0PcT4iaEBOuNggH4HvFNqP3EDHtbkZdqHXB6sD7gzlC2AcHLH8iD8ILUfsuRFd-IJFXf0i3m-MLZjpoaKZiug_DvvorNHD8ZVdS_iQSHbbU4yjtiQpNH_Orv75ZW7fCYCkbSWOjpXnlnWPS2HxvEltHGo2CbFcpzGt9xhkOA"/>
+<div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-85"></div>
+<span class="absolute top-2.5 left-2.5 px-2 py-0.5 text-[10px] font-bold bg-emerald-500 text-slate-950 rounded shadow-md">EP 08</span>
+<span class="absolute top-2.5 right-2.5 text-xs text-white/70 hover:text-amber-400"><i class="fa-regular fa-bookmark"></i></span>
+</div>
+<div class="p-3">
+<h4 class="text-sm font-semibold text-slate-100 group-hover:text-neon-accent line-clamp-2 transition-colors">
+              Dark Machine: The Animation
+            </h4>
+<div class="mt-1 flex items-center gap-2 text-[11px] text-slate-400">
+<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-star text-[10px]"></i> 8.4</span>
+<span>•</span>
+<span>Sci-Fi</span>
+</div>
+</div>
+</article>
+<!-- Card 2 -->
+<article class="flex-none w-[170px] md:w-[190px] rounded-2xl glass-card overflow-hidden group cursor-pointer">
+<div class="relative aspect-[3/4.2] overflow-hidden">
+<img alt="Chitose-kun wa Ramune Bin no Naka" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDLT1e7_3r347FX48eEsqlNIm__HIwggFxJ8FDxmk8m8qsVLdTJb5TKxmjsM511BUcBk5oc4LIuf53HPpkZU2RGPmdYYUblBLht1DiGJlc90llGQL7RyD679Xj0CcNEnG8z7SXETYUdwnGse8hH0wwl9LcNZtfFhE_H3me6STD6WTjZeJgC9HGrxJAZYzs4Qx02kwjZoUMXMJh-WmdO97mVr0cYCzTBqu7VpY0gF1z54Q9nEI1O4pCFcg"/>
+<div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-85"></div>
+<span class="absolute top-2.5 left-2.5 px-2 py-0.5 text-[10px] font-bold bg-emerald-500 text-slate-950 rounded shadow-md">EP 03</span>
+<span class="absolute top-2.5 right-2.5 text-xs text-white/70 hover:text-amber-400"><i class="fa-regular fa-bookmark"></i></span>
+</div>
+<div class="p-3">
+<h4 class="text-sm font-semibold text-slate-100 group-hover:text-neon-accent line-clamp-2 transition-colors">
+              Chitose-kun wa Ramune Bin no Na...
+            </h4>
+<div class="mt-1 flex items-center gap-2 text-[11px] text-slate-400">
+<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-star text-[10px]"></i> 7.9</span>
+<span>•</span>
+<span>Romance</span>
+</div>
+</div>
+</article>
+<!-- Card 3 -->
+<article class="flex-none w-[170px] md:w-[190px] rounded-2xl glass-card overflow-hidden group cursor-pointer">
+<div class="relative aspect-[3/4.2] overflow-hidden">
+<img alt="Dragon Ball Super: Beerus" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBquo-uKP3jFzhAX5HruycsF-YwOrWAeEL2okiJj7Z3N-v7lZXLcoKyCELcSuTP8fmwROzPf3iIf3GoYECfjgjjTNj_vgmgZnAcHXbIXIxFjt5yzIyQ75Iee0CKulHuUmm9kZDQvbE9R5UZ86vpLb1SYm6i3WEvNHOB4yaOUXslGpLFZDV9QipOunBVibRvFQChRoEdzmIoTXIXqxb2QW8S47SJQv9WPoJ57f1q78_WMKMIdvwEHiU1yQ"/>
+<div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-85"></div>
+<span class="absolute top-2.5 left-2.5 px-2 py-0.5 text-[10px] font-bold bg-cyan-500 text-slate-950 rounded shadow-md">Película</span>
+<span class="absolute top-2.5 right-2.5 text-xs text-white/70 hover:text-amber-400"><i class="fa-regular fa-bookmark"></i></span>
+</div>
+<div class="p-3">
+<h4 class="text-sm font-semibold text-slate-100 group-hover:text-neon-accent line-clamp-2 transition-colors">
+              Dragon Ball Super: Beerus
+            </h4>
+<div class="mt-1 flex items-center gap-2 text-[11px] text-slate-400">
+<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-star text-[10px]"></i> 8.8</span>
+<span>•</span>
+<span>Acción</span>
+</div>
+</div>
+</article>
+<!-- Card 4 -->
+<article class="flex-none w-[170px] md:w-[190px] rounded-2xl glass-card overflow-hidden group cursor-pointer">
+<div class="relative aspect-[3/4.2] overflow-hidden">
+<img alt="Yozakura-san Chi no Daisakusen 2nd" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDB7sYE8-bssNVsvPooBOcyQgdhzWXU_kXDEk-EWOvGwN3JjqRoWEy78kDi2KOmFmTqpecm2Qo7lyhj536Ubs5XEfo3udfMGcFZcMvTTXLOb_YkpPVyjQzxVQZqnniXD9tui4pSS-hOz70svXUwM5frCh4sVzZxxT_3RcrPb4GCv0yuP6uPGvZR9XGFc-Q8Y4HspsMm1I4iI8wRESF6lIYtvUQUV60IWpEOjOTMV_iCSvOpShNVFAmSUA"/>
+<div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-85"></div>
+<span class="absolute top-2.5 left-2.5 px-2 py-0.5 text-[10px] font-bold bg-emerald-500 text-slate-950 rounded shadow-md">EP 12</span>
+<span class="absolute top-2.5 right-2.5 text-xs text-white/70 hover:text-amber-400"><i class="fa-regular fa-bookmark"></i></span>
+</div>
+<div class="p-3">
+<h4 class="text-sm font-semibold text-slate-100 group-hover:text-neon-accent line-clamp-2 transition-colors">
+              Yozakura-san Chi no Daisakusen 2nd...
+            </h4>
+<div class="mt-1 flex items-center gap-2 text-[11px] text-slate-400">
+<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-star text-[10px]"></i> 8.1</span>
+<span>•</span>
+<span>Comedia</span>
+</div>
+</div>
+</article>
+<!-- Card 5 -->
+<article class="flex-none w-[170px] md:w-[190px] rounded-2xl glass-card overflow-hidden group cursor-pointer">
+<div class="relative aspect-[3/4.2] overflow-hidden">
+<img alt="Diamond no Ace: Act II Second" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD-1ht7bp0UzifKQpuvMvP_lYgNQQuW9EIeWE1GW3_qnBXUV6YF9LfrkEOBI3f559bQlPWLHp5xbH1saVehHFJcVujJvT13bYeJTGDeqhaETlBvVbEzpyjzC7ZaAzjaMRHFDFzFbjvZlVcJdhLW23hVcqRs3XQlxkj2QZHV7XQUJqVkJ2kjmNC3EvWO7wHi-bFcOKkfHBSyC8Zmy4fwlgrqnlhjMJjEWs1GjhpcdNRlfVZ38akcgv6dOw"/>
+<div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-85"></div>
+<span class="absolute top-2.5 left-2.5 px-2 py-0.5 text-[10px] font-bold bg-emerald-500 text-slate-950 rounded shadow-md">EP 06</span>
+<span class="absolute top-2.5 right-2.5 text-xs text-white/70 hover:text-amber-400"><i class="fa-regular fa-bookmark"></i></span>
+</div>
+<div class="p-3">
+<h4 class="text-sm font-semibold text-slate-100 group-hover:text-neon-accent line-clamp-2 transition-colors">
+              Diamond no Ace: Act II Second...
+            </h4>
+<div class="mt-1 flex items-center gap-2 text-[11px] text-slate-400">
+<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-star text-[10px]"></i> 8.6</span>
+<span>•</span>
+<span>Deportes</span>
+</div>
+</div>
+</article>
+<!-- Card 6 -->
+<article class="flex-none w-[170px] md:w-[190px] rounded-2xl glass-card overflow-hidden group cursor-pointer">
+<div class="relative aspect-[3/4.2] overflow-hidden">
+<img alt="Shinja Zero no Megami-sama to..." class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDmbQw-ucWexD4ob54jIu-xzy_9nr9F2AbJ4ThONuCXD2sTLgvlPf_e9yczm8DbohTaVo_7UuZLHpAlOQ0Z-fEMFr0kzAJHk6cqWvlzVPiHCFCjr_bLW1mn7vhTZ6tXYaHIrFMhsf52Hx0mgH3wvhEJneEqoUT0wRhzDE0KHafN86RtBFJ21KQ3zuOEssocH1d9IAOhxr_AMfF4iHIjK_jA_UHOyX6ZN4u5qlc8LlhVQ992yok73T-afw"/>
+<div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-85"></div>
+<span class="absolute top-2.5 left-2.5 px-2 py-0.5 text-[10px] font-bold bg-emerald-500 text-slate-950 rounded shadow-md">EP 04</span>
+<span class="absolute top-2.5 right-2.5 text-xs text-white/70 hover:text-amber-400"><i class="fa-regular fa-bookmark"></i></span>
+</div>
+<div class="p-3">
+<h4 class="text-sm font-semibold text-slate-100 group-hover:text-neon-accent line-clamp-2 transition-colors">
+              Shinja Zero no Megami-sama to...
+            </h4>
+<div class="mt-1 flex items-center gap-2 text-[11px] text-slate-400">
+<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-star text-[10px]"></i> 7.5</span>
+<span>•</span>
+<span>Isekai</span>
+</div>
+</div>
+</article>
+<!-- Card 7 -->
+<article class="flex-none w-[170px] md:w-[190px] rounded-2xl glass-card overflow-hidden group cursor-pointer">
+<div class="relative aspect-[3/4.2] overflow-hidden">
+<img alt="Shuiro no Kamen" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCTnRtylz5uUesnqFFaaaTiIV9Oalt8froqgvYIBiGEr1mFaxDgQmwVQ-GYmaPaheFKB-C2Ud9s1V2O2qUOo34wKA13mtJf7bekG-RrtZStlpToY-2m7bSCZdgeHCu8Thz7KiOhNZxDeJOEM0pTtQB882sS763q3kTIpWjiqtxPZqynDfuIemA5vFsO7N0G9oMSX9SEARs1mKgTI_wB29-gg5ykgAc76eaQsnRWvGzPDyAz4-7gS3_MuQ"/>
+<div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-85"></div>
+<span class="absolute top-2.5 left-2.5 px-2 py-0.5 text-[10px] font-bold bg-rose-500 text-white rounded shadow-md">ESTRENO</span>
+<span class="absolute top-2.5 right-2.5 text-xs text-white/70 hover:text-amber-400"><i class="fa-regular fa-bookmark"></i></span>
+</div>
+<div class="p-3">
+<h4 class="text-sm font-semibold text-slate-100 group-hover:text-neon-accent line-clamp-2 transition-colors">
+              Shuiro no Kamen
+            </h4>
+<div class="mt-1 flex items-center gap-2 text-[11px] text-slate-400">
+<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-star text-[10px]"></i> 8.0</span>
+<span>•</span>
+<span>Sobrenatural</span>
+</div>
+</div>
+</article>
+</div>
+</section>
+<!-- END: CarouselRow1 -->
+<!-- BEGIN: CarouselRow2 - JKAnime Ánimes recientes -->
+<section class="space-y-4" data-purpose="category-row-recientes">
+<div class="flex items-center justify-between">
+<div class="flex items-baseline gap-2.5">
+<span class="text-xs uppercase font-bold tracking-wider text-slate-400">JKAnime</span>
+<h3 class="text-lg md:text-xl font-bold text-white tracking-wide">Ánimes recientes</h3>
+</div>
+<!-- Navigation Controls -->
+<div class="flex items-center gap-2">
+<button aria-label="Anterior" class="w-8 h-8 rounded-full glass-panel flex items-center justify-center text-slate-300 hover:text-white hover:border-emerald-500/50 transition" onclick="scrollCarousel('carousel-2', -1)">
+<i class="fa-solid fa-chevron-left text-xs"></i>
+</button>
+<button aria-label="Siguiente" class="w-8 h-8 rounded-full glass-panel flex items-center justify-center text-slate-300 hover:text-white hover:border-emerald-500/50 transition" onclick="scrollCarousel('carousel-2', 1)">
+<i class="fa-solid fa-chevron-right text-xs"></i>
+</button>
+</div>
+</div>
+<!-- Poster Carousel Container -->
+<div class="flex gap-4 overflow-x-auto pb-4 pt-1 custom-scrollbar scroll-smooth" id="carousel-2">
+<!-- Card 1 -->
+<article class="flex-none w-[170px] md:w-[190px] rounded-2xl glass-card overflow-hidden group cursor-pointer">
+<div class="relative aspect-[3/4.2] overflow-hidden">
+<img alt="Marudase Kintarou" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCevANEJn4ySlxINySrv7FXyUj3ZLkPxcZn9yKmJ6XlGM9qJ6KcDwoVoew2j7NRy0OxttpdwbWiKaLKhbU2FRUj8NpAL-5ZcxeE5fBEKzYEsVry0bFyVxrH-0BZ3BNTKfcpK3WlmZhwzq4Uhs8qwLeFCp6LkONrg8-JC3kzpCDbe8A63oJI73apxf6gncSeHJb-7s1GMVyrHAtmtvQFP3--mCDwXX7BiwIZmUNP2R83jWfmCGqzLZen-w"/>
+<div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-85"></div>
+<span class="absolute top-2.5 left-2.5 px-2 py-0.5 text-[10px] font-bold bg-indigo-500/80 backdrop-blur-md text-white rounded shadow-md">HD</span>
+</div>
+<div class="p-3">
+<h4 class="text-sm font-semibold text-slate-100 group-hover:text-neon-accent line-clamp-2 transition-colors">
+              Marudase Kintarou
+            </h4>
+<div class="mt-1 flex items-center gap-2 text-[11px] text-slate-400">
+<span>OVA</span>
+<span>•</span>
+<span>Comedia</span>
+</div>
+</div>
+</article>
+<!-- Card 2 -->
+<article class="flex-none w-[170px] md:w-[190px] rounded-2xl glass-card overflow-hidden group cursor-pointer">
+<div class="relative aspect-[3/4.2] overflow-hidden">
+<img alt="Da Wang Rao Ming 3" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC4YaZiOT-T6J4AboLL_pXfhCARfX_OfcbsWqJYNC1CWPr-ZYUuuhmNzY0j9gtaSpGymz6_OpwQhJjLkNrtKTXeRKIxhK4tKvEQELZKqwnlHt8YV8pAg8vlX1lk6Y6-yM-NkbtiXqjMHqwPjdXWRztCDekbPCpdqpfqay3vFDp1buFMVfIlJqu3_9mxzHbudLFxPInSH_Zc5BpJ1p4b4Zg9MNnluAkkgRtFsXJxyLJDlk529PttG16ZSg"/>
+<div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-85"></div>
+<span class="absolute top-2.5 left-2.5 px-2 py-0.5 text-[10px] font-bold bg-emerald-500 text-slate-950 rounded shadow-md">T3</span>
+</div>
+<div class="p-3">
+<h4 class="text-sm font-semibold text-slate-100 group-hover:text-neon-accent line-clamp-2 transition-colors">
+              Da Wang Rao Ming 3
+            </h4>
+<div class="mt-1 flex items-center gap-2 text-[11px] text-slate-400">
+<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-star text-[10px]"></i> 8.9</span>
+<span>•</span>
+<span>Donghua</span>
+</div>
+</div>
+</article>
+<!-- Card 3 -->
+<article class="flex-none w-[170px] md:w-[190px] rounded-2xl glass-card overflow-hidden group cursor-pointer">
+<div class="relative aspect-[3/4.2] overflow-hidden">
+<img alt="Da Wang Rao Ming 2" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC3oY8lRRRTva1EvaCkZkcvl6Diucmqz6L15IkTnNF4uW5mfdbcSBjfbaKOJyToEOV4cLONVTc4RWEiU3CF80fL0_LbIzj8VGCdjrS96gavaBWIf_-drDfGrg2V3Ko0hnCsC57AaH5pG0wbb7KWoq0raUfGKHZAJPMZZIR1oFYRSPIKz3JZML7z5-8SqvWpjo1RSsUEQaqzYXpeq2Vqp8Ls0NNOjJh137-k06SgrrZtFD8emUUgmYt19g"/>
+<div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-85"></div>
+<span class="absolute top-2.5 left-2.5 px-2 py-0.5 text-[10px] font-bold bg-slate-700 text-white rounded shadow-md">COMPLETO</span>
+</div>
+<div class="p-3">
+<h4 class="text-sm font-semibold text-slate-100 group-hover:text-neon-accent line-clamp-2 transition-colors">
+              Da Wang Rao Ming 2
+            </h4>
+<div class="mt-1 flex items-center gap-2 text-[11px] text-slate-400">
+<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-star text-[10px]"></i> 8.7</span>
+<span>•</span>
+<span>Donghua</span>
+</div>
+</div>
+</article>
+<!-- Card 4 -->
+<article class="flex-none w-[170px] md:w-[190px] rounded-2xl glass-card overflow-hidden group cursor-pointer">
+<div class="relative aspect-[3/4.2] overflow-hidden">
+<img alt="Joshikousei: Girl's High Specials" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD7BhqmG9zMLNIzRCjGZRlzhlWOp-OChws51ruLygDG4VyTyKoZbvYnZ3PQcukJXjBR56SPcVLsUaLC_URT7M0WiY6kAMvF1knCBrpnsEap9pz1M6-XhJX29GJDbXLWnjgKqlff-71C1PzShFhePi0ctisdkP8H8YdNguxkneac7V8KQ1CzT9HN3GJuU82zCtWz5EoVhWWisp_koRlX1v8njJ_R2XXv-H8uYKdAcD3zZ8ULWBmM2N_Olg"/>
+<div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-85"></div>
+<span class="absolute top-2.5 left-2.5 px-2 py-0.5 text-[10px] font-bold bg-indigo-500/80 backdrop-blur-md text-white rounded">Especial</span>
+</div>
+<div class="p-3">
+<h4 class="text-sm font-semibold text-slate-100 group-hover:text-neon-accent line-clamp-2 transition-colors">
+              Joshikousei: Girl's High Specials
+            </h4>
+<div class="mt-1 flex items-center gap-2 text-[11px] text-slate-400">
+<span>Recuentos</span>
+<span>•</span>
+<span>Escolar</span>
+</div>
+</div>
+</article>
+<!-- Card 5 -->
+<article class="flex-none w-[170px] md:w-[190px] rounded-2xl glass-card overflow-hidden group cursor-pointer">
+<div class="relative aspect-[3/4.2] overflow-hidden">
+<img alt="Joshikousei: Girl's High" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDxJ7Qls9cHdh5gDCLKVQFsLOlySt2l0-wmxaiu_fOXLU2xQElnX1Nt1cEQN8gMZ1jjffu2r2N0U3uGC1-WfNVPKi0uVKez1_u2ERzEOi4tTja0h6ZeeB_62pDngtStx-yKZLq_iBmfPao2ckOIiAE3wSYFFbTLDopa4R5X3yPhkANXCnXqvfSE5UVdolllswzcfZ6u1Yunop-8ZnCs8dyXWm0G8XmQ8h--89f8hD12dVkGvYQ2-mGKNg"/>
+<div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-85"></div>
+<span class="absolute top-2.5 left-2.5 px-2 py-0.5 text-[10px] font-bold bg-slate-700 text-white rounded">SERIE</span>
+</div>
+<div class="p-3">
+<h4 class="text-sm font-semibold text-slate-100 group-hover:text-neon-accent line-clamp-2 transition-colors">
+              Joshikousei: Girl's High
+            </h4>
+<div class="mt-1 flex items-center gap-2 text-[11px] text-slate-400">
+<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-star text-[10px]"></i> 7.3</span>
+<span>•</span>
+<span>Comedia</span>
+</div>
+</div>
+</article>
+<!-- Card 6 -->
+<article class="flex-none w-[170px] md:w-[190px] rounded-2xl glass-card overflow-hidden group cursor-pointer">
+<div class="relative aspect-[3/4.2] overflow-hidden">
+<img alt="Sanxian Lun Hui" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD6BRqA3IZojfEu3jdkIGPd3g9cc8MvN8wU6OrfDc1Z7pnXsJwPJnlvxkuvhInzJFoCdt7lvnIp7m8YTH0WcKs00qN2IKY2KjEEsEqBQVZMdaQVy6YUCXMRZhAYEKISqMIoFrLV6l9JPhk3_uVpxb_gn_XHHILHA-tQJGxYnVO8kf2-jnGrjioRzD5V1A9q5UoSph4fWsrEtW-XG6ziHEi8mq4m77QKgCkkAF8OF5f-oa9WI6gM8epRYQ"/>
+<div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-85"></div>
+<span class="absolute top-2.5 left-2.5 px-2 py-0.5 text-[10px] font-bold bg-emerald-500 text-slate-950 rounded">EP 02</span>
+</div>
+<div class="p-3">
+<h4 class="text-sm font-semibold text-slate-100 group-hover:text-neon-accent line-clamp-2 transition-colors">
+              Sanxian Lun Hui
+            </h4>
+<div class="mt-1 flex items-center gap-2 text-[11px] text-slate-400">
+<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-star text-[10px]"></i> 8.1</span>
+<span>•</span>
+<span>Misterio</span>
+</div>
+</div>
+</article>
+<!-- Card 7 -->
+<article class="flex-none w-[170px] md:w-[190px] rounded-2xl glass-card overflow-hidden group cursor-pointer">
+<div class="relative aspect-[3/4.2] overflow-hidden">
+<img alt="Kenkou Zenrakei Suiei-bu Umishou" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBwxDcz7-zn6CPE6TWSdE6YGPFj2yEFty9D8xRntTxr7lIjee-ksHBNTIOiYF0TQhXQWG2VueS4CvSY41IeKqXaBYCaP4Q5HitvYTEU9c3FwzhxfXAsZgbu7aCtonbKG5YG-SrwEixvjkFx7Xn65Gyu5zC4DjSjR_gTzijamrVj0iClaG-t0EZEp_K_fj0NPQ7IsFrepsRBUBfs7uecio1AwCNZNi7UuTLsvNa9FBi3EbXRhLWtEIEKMw"/>
+<div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-85"></div>
+<span class="absolute top-2.5 left-2.5 px-2 py-0.5 text-[10px] font-bold bg-slate-700 text-white rounded">13 EPS</span>
+</div>
+<div class="p-3">
+<h4 class="text-sm font-semibold text-slate-100 group-hover:text-neon-accent line-clamp-2 transition-colors">
+              Kenkou Zenrakei Suiei-bu Umishou
+            </h4>
+<div class="mt-1 flex items-center gap-2 text-[11px] text-slate-400">
+<span>Ecchi</span>
+<span>•</span>
+<span>Natación</span>
+</div>
+</div>
+</article>
+</div>
+</section>
+<!-- END: CarouselRow2 -->
+<!-- BEGIN: CarouselRow3 - AnimeAV1 En emisión -->
+<section class="space-y-4 pb-12" data-purpose="category-row-animeav1">
+<div class="flex items-center justify-between">
+<div class="flex items-baseline gap-2.5">
+<span class="text-xs uppercase font-bold tracking-wider text-slate-400">AnimeAV1</span>
+<h3 class="text-lg md:text-xl font-bold text-white tracking-wide">En emisión</h3>
+</div>
+<!-- Navigation Controls -->
+<div class="flex items-center gap-2">
+<button aria-label="Anterior" class="w-8 h-8 rounded-full glass-panel flex items-center justify-center text-slate-300 hover:text-white hover:border-emerald-500/50 transition" onclick="scrollCarousel('carousel-3', -1)">
+<i class="fa-solid fa-chevron-left text-xs"></i>
+</button>
+<button aria-label="Siguiente" class="w-8 h-8 rounded-full glass-panel flex items-center justify-center text-slate-300 hover:text-white hover:border-emerald-500/50 transition" onclick="scrollCarousel('carousel-3', 1)">
+<i class="fa-solid fa-chevron-right text-xs"></i>
+</button>
+</div>
+</div>
+<!-- Poster Carousel Container -->
+<div class="flex gap-4 overflow-x-auto pb-4 pt-1 custom-scrollbar scroll-smooth" id="carousel-3">
+<!-- AV1 Card 1 -->
+<article class="flex-none w-[170px] md:w-[190px] rounded-2xl glass-card overflow-hidden group cursor-pointer">
+<div class="relative aspect-[3/4.2] overflow-hidden">
+<img alt="Overlord V" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAodw7zTIy-oVJ8kLcgN3ZgyxD6iOtHrGFt-Jv1Rg_-uRj2fOr1taMEet_eRi92J5OnRf0QGKt4h2pr3YA2KQjOqfRAKUnzTvFy-WodkOcGnK0hFg_OD_Y_iowGhuTFg4FEb7HjwA-H7BSiWt8BrHZqMjEckCwmiThNQBhybn6d5PA9MsQDhLnv9k5OkFG0RKUd8m3WnfTDAkm4dvwxSBhbG8WID2V6VAvzwS2r_iUo18jJ2n4K25Mhqw"/>
+<div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-85"></div>
+<span class="absolute top-2.5 left-2.5 px-2 py-0.5 text-[10px] font-bold bg-neon-green text-slate-950 rounded">AV1 1080p</span>
+</div>
+<div class="p-3">
+<h4 class="text-sm font-semibold text-slate-100 group-hover:text-neon-accent line-clamp-2 transition-colors">
+              Overlord Season V
+            </h4>
+<div class="mt-1 flex items-center gap-2 text-[11px] text-slate-400">
+<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-star text-[10px]"></i> 9.1</span>
+<span>•</span>
+<span>Fantasía</span>
+</div>
+</div>
+</article>
+<!-- AV1 Card 2 -->
+<article class="flex-none w-[170px] md:w-[190px] rounded-2xl glass-card overflow-hidden group cursor-pointer">
+<div class="relative aspect-[3/4.2] overflow-hidden">
+<img alt="Solo Leveling S2" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDaqQNGQLXoUUogMDGEV4mMCuWRqHF4P-M1EjVuv1a7zsgSrFyZ8UnPcevEa3QAl_afKSmvqiaqpJtxgSKQhDRc0FYnodz5RjChXMsrgJLZPR3Z1d_NNzCyn-U3hsgQcSf6QFKgSGG0_E3BA-aG25dLQAkSaCpXfJ_gjtlvE3cEuf3KaWWgtsJ5hb9uKIldXRVaxe3h8D_eTXoH95PJGlJvLDZ4_slVy9NLTUgVWWzvnrZ0dhll02Zuow"/>
+<div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-85"></div>
+<span class="absolute top-2.5 left-2.5 px-2 py-0.5 text-[10px] font-bold bg-neon-green text-slate-950 rounded">AV1 1080p</span>
+</div>
+<div class="p-3">
+<h4 class="text-sm font-semibold text-slate-100 group-hover:text-neon-accent line-clamp-2 transition-colors">
+              Solo Leveling: Arise
+            </h4>
+<div class="mt-1 flex items-center gap-2 text-[11px] text-slate-400">
+<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-star text-[10px]"></i> 9.4</span>
+<span>•</span>
+<span>Acción</span>
+</div>
+</div>
+</article>
+<!-- AV1 Card 3 -->
+<article class="flex-none w-[170px] md:w-[190px] rounded-2xl glass-card overflow-hidden group cursor-pointer">
+<div class="relative aspect-[3/4.2] overflow-hidden">
+<img alt="Kaiju No. 8" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCZLNyLaUwegx5T77DFgpPIx0td0WAZ6wrDMl_AEkCmo-BuCcmS7tvUE20yiGGfjCZNGjsw1QywJlH_piQ4xasP-F8lPpwOdJA4l6gbWefnLEuxHjki1fClK7fj9gWQbEiI0Yw_-Pgqce0VAlgfUSDRZ43hD0XFuMz0CcYFv6llshz7OV0OlJSsCdAILR6LXQB0Ndw7NrGCzCdbpR5FhGBbLP6eQihWCtJ4gm_FYT2VZU495mVd7e8yXQ"/>
+<div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-85"></div>
+<span class="absolute top-2.5 left-2.5 px-2 py-0.5 text-[10px] font-bold bg-neon-green text-slate-950 rounded">AV1 1080p</span>
+</div>
+<div class="p-3">
+<h4 class="text-sm font-semibold text-slate-100 group-hover:text-neon-accent line-clamp-2 transition-colors">
+              Kaiju No. 8 Part 2
+            </h4>
+<div class="mt-1 flex items-center gap-2 text-[11px] text-slate-400">
+<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-star text-[10px]"></i> 8.6</span>
+<span>•</span>
+<span>Militar</span>
+</div>
+</div>
+</article>
+<!-- AV1 Card 4 -->
+<article class="flex-none w-[170px] md:w-[190px] rounded-2xl glass-card overflow-hidden group cursor-pointer">
+<div class="relative aspect-[3/4.2] overflow-hidden">
+<img alt="Bleach: TYBW" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBiON1v9cFaYzG77vugl4QRK2C6dddXgBnAnVaP2WOHWKhJrYWGsRCB0CEcY3f-yK9Y9L4JauRA_gdQaqYvxwnHguDDJEqLcfv7czssVZCTFZ4TC9a9mu7JSjzrkoQjPJuSYgyGeaBdGvVjSBMie9unFQcBlS4WBco3jSktMa8MCBCmh-zee9IhSJlYkYjrCBAtyca_QJ67hj69sR803Ut3-ZPLp5KOsHiDkvKukn-s7GncYVFNv8z7UQ"/>
+<div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-85"></div>
+<span class="absolute top-2.5 left-2.5 px-2 py-0.5 text-[10px] font-bold bg-neon-green text-slate-950 rounded">AV1 1080p</span>
+</div>
+<div class="p-3">
+<h4 class="text-sm font-semibold text-slate-100 group-hover:text-neon-accent line-clamp-2 transition-colors">
+              Bleach: Sennen Kessen-hen
+            </h4>
+<div class="mt-1 flex items-center gap-2 text-[11px] text-slate-400">
+<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-star text-[10px]"></i> 9.2</span>
+<span>•</span>
+<span>Shonen</span>
+</div>
+</div>
+</article>
+<!-- AV1 Card 5 -->
+<article class="flex-none w-[170px] md:w-[190px] rounded-2xl glass-card overflow-hidden group cursor-pointer">
+<div class="relative aspect-[3/4.2] overflow-hidden">
+<img alt="Blue Lock S2" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCOQ3TQ-kfMSwRsrWWd5yvg2enUDRst6A0UBrjAAiRB1YHXjUXlWow64-WIGfaiYvIiiNDhNlaOtZBmneFjzXo34onseX32WSgeN5-LwjT77O65_kNtmCuuoDRjqD1cXLEicl2GExkWx5D8f0zU7NLSgOgBjKgWJsBCUZXqKcxbJhV_8K5hyFzo_4-Pg4Ao0F3-W_0vNFK-QTupNq_Y5kQdXOhUwJMP5ALpp9Qd2TjXH3Jb8yJDuiS8yA"/>
+<div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-85"></div>
+<span class="absolute top-2.5 left-2.5 px-2 py-0.5 text-[10px] font-bold bg-neon-green text-slate-950 rounded">AV1 1080p</span>
+</div>
+<div class="p-3">
+<h4 class="text-sm font-semibold text-slate-100 group-hover:text-neon-accent line-clamp-2 transition-colors">
+              Blue Lock vs. U-20 Japan
+            </h4>
+<div class="mt-1 flex items-center gap-2 text-[11px] text-slate-400">
+<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-star text-[10px]"></i> 8.4</span>
+<span>•</span>
+<span>Deportes</span>
+</div>
+</div>
+</article>
+</div>
+</section>
+<!-- END: CarouselRow3 -->
+</main>
+<!-- END: MainContent -->
+<!-- BEGIN: Navigation Script -->
+<script data-purpose="carousel-navigation">
+    /**
+     * Desplaza horizontalmente el carrusel de tarjetas por fila
+     * @param {string} id - El ID del elemento carrusel
+     * @param {number} direction - -1 para izquierda, 1 para derecha
+     */
+    function scrollCarousel(id, direction) {
+      const container = document.getElementById(id);
+      if (container) {
+        const scrollAmount = 450;
+        container.scrollBy({
+          left: direction * scrollAmount,
+          behavior: 'smooth'
+        });
+      }
+    }
+
+    // Microinteracción para botón Actualizar
+    const btnActualizar = document.getElementById('btn-actualizar');
+    if (btnActualizar) {
+      btnActualizar.addEventListener('click', () => {
+        const icon = btnActualizar.querySelector('i');
+        if (icon) {
+          icon.classList.add('animate-spin');
+          setTimeout(() => {
+            icon.classList.remove('animate-spin');
+          }, 800);
+        }
+      });
+    }
+  </script>
+<!-- END: Navigation Script -->
+</body></html>
