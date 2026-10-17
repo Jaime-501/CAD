@@ -17,7 +17,7 @@ Aplicación de escritorio para Windows (la ventana se titula **CAD · Comfort An
  
 - **Buscar** anime por nombre (busca a la vez en **JKAnime** y **AnimeAV1**, con los resultados de JKAnime primero).
 - **Descubrir** novedades en la pantalla de inicio: filas por proveedor (**En emisión** y **recientes** de JKAnime y AnimeAV1), con botón **Actualizar**. Si un proveedor falla, el otro sigue visible y puedes pulsar **Reintentar**.
-- **Ver el detalle y los episodios** de cada serie (la lista aparece poco a poco mientras carga).
+- **Ver el detalle y los episodios** de cada serie (la lista aparece poco a poco mientras carga y cada tarjeta se revela con una animación breve al entrar en pantalla; se respeta la preferencia de *reducir movimiento*).
 - **Reproducir** el episodio directamente en la app, con selector de servidor/calidad e idioma (SUB/DUB) si el episodio tiene varias fuentes, y subtítulos cuando la fuente los incluye.
 - **Retomar donde lo dejaste:** la app recuerda el minuto de cada episodio, marca los vistos y tiene un botón **Continuar**. Además, la **barra lateral del historial** agrupa tus animes por proveedor (lo más reciente primero) y **retoma con un clic**: continúa donde estabas o salta al siguiente episodio.
 - **Borrar lo que quieras del historial:** deslizar la tarjeta hacia los lados o pulsar la ✕, con el aviso **Deshacer** durante 5 segundos; también puedes borrar el historial de un proveedor entero o todo el historial, con confirmación.

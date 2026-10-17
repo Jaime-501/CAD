@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.3.0
+
+### Añadido
+
+- **Revelado animado de las tarjetas de episodio** (T65): al entrar en el viewport, cada tarjeta aparece con una animación breve de opacidad y desplazamiento, escalonada por columna de la fila; respeta `prefers-reduced-motion: reduce` (sin animación) y no se repite al volver del reproductor. La lógica de retardos vive en `ventana.ts` y la acción de revelado en `revelar.ts`.
+
+### Corregido
+
+- **Scroll del detalle separado por proveedor + slug** (T66): la clave de scroll del detalle y del reproductor incluye ahora el proveedor, así que «bleach» en JKAnime y en AnimeAV1 ya no comparten posición de desplazamiento.
+- **Restauración del scroll del detalle al recargar la lista** (T67): al volver a un detalle cuyos episodios se recargan por lotes, la posición guardada se restaura en cuanto la lista alcanza la altura necesaria (y se cancela si el usuario hace un gesto), en vez de quedarse arriba.
+- **Altura reservada de las tarjetas de episodio** (T65): `contain-intrinsic-size` pasa de `auto 210px` a `auto 170px` (la altura real medida), eliminando el salto de scroll al entrar tarjetas fuera de pantalla.
+
 ## 1.2.1
 
 ### Añadido

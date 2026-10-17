@@ -1,10 +1,10 @@
-   # PROGRESO — Comfort Anime Desktop (T01–T63 hechas)
+    # PROGRESO — Comfort Anime Desktop (T01–T68 hechas)
 
 > Este archivo es la **memoria entre sesiones**. Cada sesión lo lee al inicio y lo actualiza al final.
 > Reglas y layout: `tareas/00_REGLAS.md`. Detalle de cada tarea: `tareas/Txx.md`.
 > Firmas reales por paquete: `docs/firmas/<paquete>.md` · Bitácora, desviaciones históricas y pendientes cerrados: `docs/BITACORA.md`.
 > **Si una firma de `docs/firmas` no coincide con el código, manda el código (`go doc`).**
-> **Archivos históricos**: el estado de **T01–T29 + T30** (v1.0) está en **`docs/PROGRESO_v1.0.md`**, el de **T30–T35** (AnimeAV1, v1.1.0, con sus desviaciones por tarea, fixtures y pruebas manuales) en **`docs/PROGRESO_v1.1.md`** y el de **T39–T58** (v1.2.0: Home, historial, favoritos, "Siguiente" y sus bugs; incluye los cierres T56/T59) en **`docs/PROGRESO_v1.2.md`**. Aquí solo queda lo vigente. Estado del producto: **v1.2.1 PUBLICADA** — ciclo **T39–T59** (v1.2.0 publicada en T56–T58, con T53b y T57; los dos bugs visuales son **T58**; el cierre documental —post-v1.2.0 y de la v1.2.1— es **T59**). La **prueba manual con el `.exe` de la v1.2.0** y la **release** las hizo el humano; T57 se probó con el `.exe` sin incidencias. `wails.json` → `productVersion` **1.2.1**: **sin tag ni release aún** (los hace el humano). **Numeración (colisión resuelta en T59):** `tareas/T58.md` = bugs visuales (fila/bloque T58); el cierre documental pasó de T58 a **T59** (sin borrar contenido).
+> **Archivos históricos**: el estado de **T01–T29 + T30** (v1.0) está en **`docs/PROGRESO_v1.0.md`**, el de **T30–T35** (AnimeAV1, v1.1.0, con sus desviaciones por tarea, fixtures y pruebas manuales) en **`docs/PROGRESO_v1.1.md`** y el de **T39–T58** (v1.2.0: Home, historial, favoritos, "Siguiente" y sus bugs; incluye los cierres T56/T59) en **`docs/PROGRESO_v1.2.md`**, y el de **T64–T67** (v1.3.0: `ventana.ts`, revelado animado y scroll del detalle) en **`docs/PROGRESO_v1.3.md`**. Aquí solo queda lo vigente. Estado del producto: **v1.2.1 PUBLICADA** (tag `v1.2.1`; ciclo **T39–T59**: v1.2.0 publicada en T56–T58, con T53b y T57; los dos bugs visuales son **T58**; el cierre documental —post-v1.2.0 y de la v1.2.1— es **T59**) y **v1.3.0 PREPARADA** — serie **T64–T68** en la rama **`feature/episodios-incrementales`** (episodios incrementales + revelado animado; cierre documental en **T68**). La **prueba manual con el `.exe` de la v1.2.0** y la **release** las hizo el humano; T57 se probó con el `.exe` sin incidencias. `wails.json` → `productVersion` **1.3.0**: **sin tag ni release aún** (los hace el humano). **Numeración (colisión resuelta en T59):** `tareas/T58.md` = bugs visuales (fila/bloque T58); el cierre documental pasó de T58 a **T59** (sin borrar contenido).
 
 ## Protocolo de sesión
 
@@ -131,10 +131,17 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha y verificada
 | [x] | T61 | Conectar el resolver de MP4Upload a JKAnime y AnimeAV1 | T60 |
 | [x] | T62 | Redactar tokens en el PATH de las URLs de medio (`logx` + `stream`) | T60 |
 | [x] | T63 | UI: selector de fuentes (principales primero, iframes como extra) | T61 |
+| [x] | T64 | Lógica pura de ventana de episodios (`ventana.ts` + tests) | — |
+| [x] | T65 | Revelado animado de tarjetas de episodio por visibilidad (sin paginar) | T64 |
+| [x] | T66 | Clave de scroll del detalle por proveedor + slug | T65 |
+| [x] | T67 | Restaurar el scroll del detalle tras la recarga por lotes | T66 |
+| [x] | T68 | Cierre documental de la v1.3.0 (T64–T67) | T67 |
 
 T01–T29 = v1.0 (`docs/PROGRESO_v1.0.md`) · T30–T35 = v1.1.0 AnimeAV1 (`docs/PROGRESO_v1.1.md`) · T36 = cierre de la v1.1.0 · T37 = portabilidad Android · T38 = cierre documental de T37.
 T39–T57 = v1.2.0 (Home, historial lateral, favoritos, "Siguiente" y su estado discreto; **incluye T53b y T57**); plan en `tareas/v1.2_PLAN.md`, detalle **T39–T58 + cierres T56/T59** archivado en `docs/PROGRESO_v1.2.md`, con resúmenes al final de este archivo.
 La **v1.2.0 está PUBLICADA** (prueba manual con el `.exe` y release hechas por el humano). La **v1.2.1** (T58 bugs + T59 cierre documental) está **preparada**: `productVersion` 1.2.1, sin tag ni release aún — los hace el humano.
+
+**v1.3.0 — episodios incrementales** (rama `feature/episodios-incrementales`): serie **T64–T69** para mostrar los episodios del detalle de forma incremental y con animación de entrada. **T64** (lógica pura de `ventana.ts` + tests), **T65** (revelado animado por visibilidad, sin paginar), **T66** (clave de scroll del detalle por proveedor + slug) y **T67** (restauración del scroll del detalle cuando la lista se recarga) hechas; **T68** (cierre documental de la v1.3.0) hecho: `productVersion` **1.3.0**, **sin tag ni release** (los hace el humano). Los **T66–T67 originales** (paginado / ventana client-side) quedan **descartados** por las mediciones de T65 (sin jank y con 0 saltos de scroll; el coste real es de red, ya cubierto por el mostrado por lotes); **T69 pendiente** de la serie. Notas largas de T64–T67 archivadas en `docs/PROGRESO_v1.3.md`.
 
 ## Auditoría de portabilidad (T37)
 
@@ -262,11 +269,13 @@ Solo `.md`, sin tocar código. Contraste con `go doc ./internal/db`, `go doc ./i
 
 ## Pendientes activos
 
-> Solo lo que una tarea futura debe resolver. Los cerrados/históricos están en `docs/BITACORA.md`; los de T01–T29 en `docs/PROGRESO_v1.0.md`; los de T30–T35 en `docs/PROGRESO_v1.1.md`; los de T39–T58 en `docs/PROGRESO_v1.2.md`.
+> Solo lo que una tarea futura debe resolver. Los cerrados/históricos están en `docs/BITACORA.md`; los de T01–T29 en `docs/PROGRESO_v1.0.md`; los de T30–T35 en `docs/PROGRESO_v1.1.md`; los de T39–T58 en `docs/PROGRESO_v1.2.md`; los de T64–T67 en `docs/PROGRESO_v1.3.md`.
 
 - **(4) Verificación visual de los avisos de error** (heredado de la v1.0, detalle en `docs/PROGRESO_v1.0.md` → "Pendientes activos"): los avisos de error que ningún test provoca (hoy: el aviso `episodesError` con un fallo real del backend). Los heredados (1) título de la ventana, (2) marca de tiempo y (3) borrado del historial están **cerrados** (T56, T40/T41 y T51–T52).
-- **Verificación con el `.exe` de los fixes T58** (carátula al retomar y contador de favoritos al arrancar): en el flujo navegador no hay vídeo real (proxy local, AGENTS.md), así que el guardado con posición no se ejercitó; los fixes se verificaron por lógica + log y end-to-end del contador (nota completa en `docs/PROGRESO_v1.2.md` → T58). Probar con el `.exe` en la próxima release (v1.2.1 o posterior).
+- **Verificación con el `.exe` de T65/T67** (revelado animado y restauración del scroll del detalle): el flujo navegador no ejercita el vídeo real (proxy local, AGENTS.md) ni todos los ciclos de recarga; T65 y T67 se verificaron con Playwright (8/8 y 6/6) y por lógica+log. Probar con el `.exe` en la próxima release (v1.3.0 o posterior). Los **fixes T58** (carátula al retomar y contador de favoritos) se dieron por cerrados con la **v1.2.1 publicada**.
+- **Release de la v1.3.0** (tag + release): la hace el humano. La **v1.2.1 ya está taggeada** (`v1.2.1`); `productVersion` está en **1.3.0** a la espera de tag/release.
 - **`Type` de `models.Anime`** sigue sin existir (pendiente de producto heredado: los items del Home y la búsqueda salen sin tipo; si el producto lo quiere hay que ampliar `models` en una tarea nueva).
+- **Idea futura (no es tarea): chips de rango de episodios.** T65 descartó paginar; la ventana de `ventana.ts` (T64) queda disponible y probada por si más adelante se quiere una selección por rangos en lugar del mostrado por lotes.
 
 ---
 
@@ -317,13 +326,18 @@ fricción, H3 se sostiene).
   **T60, T61 y T62 hechas** (MP4Upload: resolver neutro `embeds` —T60—, cableado a JKAnime y
   AnimeAV1 —T61— y redacción del token del path en logs —T62—; ver sus bloques aquí abajo) ·
   **T63** reorganización del selector de fuentes (principales primero, iframes como extra;
-  hecha, ver bloque al final) · **T64** extractor Voe (portar el descifrado del `loader`) ·
-  **T65** extractor Byse (`/api/videos/<id>/embed/details`; el proof-of-work queda fuera) ·
-  **T66** UPNShare (API cifrada) · **T67** Streamtape (token + captcha) · **T68** purga de
+  hecha, ver bloque al final) · **T70** extractor Voe (portar el descifrado del `loader`) ·
+  **T71** extractor Byse (`/api/videos/<id>/embed/details`; el proof-of-work queda fuera) ·
+  **T72** UPNShare (API cifrada) · **T73** Streamtape (token + captcha) · **T74** purga de
   hosts muertos del inventario (`sfastwish.com`; vigilar `mixdrop`/`dsvplay`/`vidhidevip`, no
-  muestreados) · **T69** (solo si se quiere) `sandbox` **por host** y sin `allow-same-origin`,
+  muestreados) · **T75** (solo si se quiere) `sandbox` **por host** y sin `allow-same-origin`,
   nunca global — **NO PROBADA** en esta investigación: solo se probó en Chromium de escritorio,
   sin clic y sin WebView2.
+  **Nota de renumeración (T64):** los números **T64–T69** quedaron reservados para la serie
+  **v1.3.0 — episodios incrementales** (rama `feature/episodios-incrementales`; T64 = lógica
+  pura de `ventana.ts`, ver bloque al final), por lo que estas propuestas de extractores pasan
+  a **T70–T75**. El texto histórico de arriba (T64 = Voe, etc.) no se borra: la numeración
+  vigente es la de esta lista.
 
 ---
 
@@ -557,3 +571,54 @@ Hecha el **2026-10-15**. Solo frontend (`etiquetas.ts` + `etiquetas.test.ts`, `S
 - **Prueba manual del humano con el `.exe`**: con el proxy real, comprobar que al fallar una fuente el salto recorre los principales antes que los iframes y que el selector se pliega/despliega como se espera; el MP4Upload `· directo` debe reproducirse sin anuncios y sin saltar al `· iframe`.
 - Sin tag ni release: no aplica a esta tarea.
 
+---
+
+## Resumen de la v1.3.0 (T64–T67) — detalle largo en `docs/PROGRESO_v1.3.md`
+
+> En T68 se movieron a `docs/PROGRESO_v1.3.md` (texto literal) las notas largas de T64–T67. Aquí queda lo esencial.
+
+### T64 — Lógica pura de ventana de episodios (`ventana.ts` + tests) — resumen
+
+Solo frontend: `frontend/src/ventana.ts` (nuevo, TS puro) exporta las constantes (`FILAS_INICIAL = 5`, `FILAS_TRAMO = 4`, `COLUMNAS_POR_DEFECTO = 4`, `RETARDO_POR_COLUMNA_MS = 50`, `RETARDO_MAXIMO_MS = 300`), las funciones puras `normalizarColumnas`/`tamanoInicial`/`siguienteTamano`/`cubrirIndice`/`retardoEntrada`/`claveVentana` y la memoria por sesión `recordarVisibles`/`recuperarVisibles`/`olvidarVisibles`; ninguna entrada inválida (NaN, Infinity, negativos) lanza. `ventana.test.ts`: **48 comprobaciones** (esbuild + node). Compuerta de Go **no ejecutada** en esa sesión (daemon de Docker parado; Go no se tocó) → repetida en verde en T65.
+
+### T65 — Revelado animado de tarjetas por visibilidad (sin paginar) — resumen
+
+Solo frontend: `frontend/src/revelar.ts` (nuevo), `VistaDetalle.svelte` (envoltorio `.celda`, acción `use:revelar`, keyframes `entra-celda`, medición de columnas) y `TarjetaEpisodio.svelte` (`contain-intrinsic-size: auto 210px → auto 170px`, único cambio exigido por la medición). Un `IntersectionObserver` compartido (threshold 0.15) revela cada tarjeta al entrar, con retardo por columna (`retardoEntrada`); no re-anima ids ya revelados, ni con `prefers-reduced-motion: reduce`, ni sin `IntersectionObserver`. **Mediciones Playwright**: tarjeta 170,39 px reales frente a 210 px reservados (desajuste ~39,6 px/tarjeta, > 20 px → ajuste); 366 tarjetas / 1830 nodos y hasta 1180 (One Piece) **sin jank y 0 saltos de scroll**; JKAnime tarda ~16 s (red, no render). **Decisión: NO paginar** (los T66–T67 originales, paginado / ventana client-side, quedan descartados). Go intacto: **435 `--- PASS`**.
+
+### T66 — Clave de scroll del detalle por proveedor + slug — resumen
+
+Solo frontend: `frontend/src/views.ts` (`claveScroll` del detalle y del reproductor incluyen el proveedor: `detalle:<provider>:<animeID>`) y `views.test.ts` (nuevo, **13 comprobaciones**). Corrige que «bleach» en JKAnime y AnimeAV1 compartieran posición de scroll. Go intacto: **435 `--- PASS`**.
+
+### T67 — Restaurar el scroll del detalle tras la recarga por lotes — resumen
+
+Solo frontend: `frontend/src/VistaDetalle.svelte` (`scrollPendiente` + `intentarRestaurarScroll` reactivo por lote dentro de `requestAnimationFrame`, con cancelación del usuario por gesto). Cierra la observación de T66 (el restaurado se recortaba a 0 si la lista no estaba pintada). Verificación Playwright **6/6**. Go intacto: **435 `--- PASS`**.
+
+### T68 — Cierre documental de la v1.3.0 — bloque de esta sesión
+
+Cierre documental de la **v1.3.0**, solo documentación y versión, sin cambios de comportamiento (fecha **2026-10-16**):
+
+- **`wails.json` (paso 1)**: `info.productVersion` → **`"1.3.0"`** (único cambio del archivo).
+- **`CHANGELOG.md` (paso 2)**: entrada **1.3.0** (Añadido: revelado animado de las tarjetas de episodio, respeta `reduced-motion`; Corregido: scroll del detalle separado por proveedor+slug, restauración del scroll al recargar la lista y altura reservada a 170 px). La **v1.2.1 está taggeada** (`v1.2.1`), así que la nota «sin tag» ya no aplica.
+- **Archivo histórico (paso 3)**: notas largas de **T64–T67** movidas **texto literal** a `docs/PROGRESO_v1.3.md`; aquí solo resúmenes. Incluye la decisión de no paginar con las mediciones de T65.
+- **`ventana.ts` (paso 4)**: se documenta (en `docs/PROGRESO_v1.3.md` y en este bloque) que del módulo **solo se usa `retardoEntrada`** y que el resto queda disponible para una posible **paginación futura**; **NO se borró código ni se tocó `frontend/**`** (regla "NO debes tocar" de T68, coherente con «no se toca frontend»).
+- **`AGENTS.md` y `docs/DESARROLLO.md` (paso 5)**: estado **T1–T68 / v1.3.0 preparada**, rango de "Trabajo con agentes" hasta T68 y mención de `revelar.ts`, `ventana.ts` y sus tests.
+- **`README.md` (paso 6)**: línea en funciones (animación de episodios al aparecer).
+- **`docs/BITACORA.md` (paso 7)**: filas T64–T68 y desviaciones vigentes.
+- **Pendientes activos (paso 8)**: verificación con el `.exe` de T65/T67, release de la v1.2.1/v1.3.0 por el humano e idea futura (chips de rango).
+- **Archivos tocados**: `PROGRESO.md`, `CHANGELOG.md`, `AGENTS.md`, `README.md`, `docs/DESARROLLO.md`, `docs/BITACORA.md`, `docs/PROGRESO_v1.3.md` (nuevo) y `wails.json` (solo `info.productVersion`). **Nada tocado fuera de "Puedes tocar"**: `*.go`, `frontend/**`, `tareas/00_REGLAS.md` y `docs/firmas/**` intactos.
+
+### Comprobación — 2026-10-16, todo en verde
+
+| Comando | Resultado |
+|---|---|
+| `gofmt -l .` | **sin salida** |
+| `go vet ./...` · `go vet -tags integration ./...` | limpios |
+| `go build ./...` | OK |
+| `go test -race -count=1 ./...` | **11 paquetes `ok`** (`miapp` sin tests de paquete) |
+| recuento `^--- PASS` (`-count=1 -v`) | **435** — idéntico al de T63/T65/T66/T67 (Go intacto) |
+| `npm run check` (frontend) | **svelte-check found 0 errors and 0 warnings** |
+| `wails build -platform windows/amd64` | **OK** → `build/bin/miapp.exe` (compila con `productVersion` 1.3.0) |
+| `git status --porcelain` | solo los archivos de "Puedes tocar" |
+| `git diff --stat -- '*.go'` | **vacío** (ningún `.go` con cambios reales) |
+
+**No se creó tag ni release** (lo hace el humano). Detalle largo de T64–T67 en `docs/PROGRESO_v1.3.md`; sesión en `docs/BITACORA.md`.

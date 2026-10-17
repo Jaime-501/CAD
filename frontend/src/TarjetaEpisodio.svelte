@@ -67,7 +67,7 @@
     /* Rendimiento con listas largas (366 episodios): solo se pinta lo cercano
        y se reserva el hueco de cada tarjeta para que el scroll no salte. */
     content-visibility: auto;
-    contain-intrinsic-size: auto 210px;
+    contain-intrinsic-size: auto 170px;
 
     background: #1e1e24;
     border: none;

@@ -35,7 +35,10 @@ let historial: VistaNombre[] = [];
 /**
  * Scroll guardado por clave (T26: por vista + anime/episodio, para que al
  * volver de otra pantalla no se restaure el scroll de otro anime).
- * Claves: `busqueda` · `detalle:<animeID>` · `reproductor:<episodeID>`.
+ * T66: la clave incluye el proveedor («bleach» existe en JKAnime y AnimeAV1 y
+ * antes compartían posición de scroll).
+ * Claves: `busqueda` · `detalle:<provider>:<animeID>` ·
+ * `reproductor:<provider>:<episodeID>`.
  */
 const scrollPorClave: Record<string, number> = {};
 
@@ -65,11 +68,12 @@ export function recuperarScroll(clave: string): number {
 
 /**
  * Clave de scroll de una vista: la búsqueda es única; el detalle se recuerda
- * por anime y el reproductor por episodio (T26).
+ * por proveedor + anime y el reproductor por proveedor + episodio (T26/T66; el
+ * `episodeID` ya lleva prefijo de proveedor, pero se añade por coherencia).
  */
 export function claveScroll(v: VistaNombre): string {
   const sel = get(seleccion);
-  if (v === 'detalle') return `detalle:${sel?.animeID ?? ''}`;
-  if (v === 'reproductor') return `reproductor:${sel?.episodeID ?? ''}`;
+  if (v === 'detalle') return `detalle:${sel?.provider ?? ''}:${sel?.animeID ?? ''}`;
+  if (v === 'reproductor') return `reproductor:${sel?.provider ?? ''}:${sel?.episodeID ?? ''}`;
   return v;
 }
