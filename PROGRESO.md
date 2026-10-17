@@ -1,10 +1,10 @@
-    # PROGRESO — Comfort Anime Desktop (T01–T69 hechas)
+    # PROGRESO — Comfort Anime Desktop (T01–T70 hechas)
 
 > Este archivo es la **memoria entre sesiones**. Cada sesión lo lee al inicio y lo actualiza al final.
 > Reglas y layout: `tareas/00_REGLAS.md`. Detalle de cada tarea: `tareas/Txx.md`.
 > Firmas reales por paquete: `docs/firmas/<paquete>.md` · Bitácora, desviaciones históricas y pendientes cerrados: `docs/BITACORA.md`.
 > **Si una firma de `docs/firmas` no coincide con el código, manda el código (`go doc`).**
-> **Archivos históricos**: el estado de **T01–T29 + T30** (v1.0) está en **`docs/PROGRESO_v1.0.md`**, el de **T30–T35** (AnimeAV1, v1.1.0, con sus desviaciones por tarea, fixtures y pruebas manuales) en **`docs/PROGRESO_v1.1.md`** y el de **T39–T58** (v1.2.0: Home, historial, favoritos, "Siguiente" y sus bugs; incluye los cierres T56/T59) en **`docs/PROGRESO_v1.2.md`**, y el de **T64–T67** (v1.3.0: `ventana.ts`, revelado animado y scroll del detalle) en **`docs/PROGRESO_v1.3.md`**. Aquí solo queda lo vigente. Estado del producto: **v1.2.1 PUBLICADA** (tag `v1.2.1`; ciclo **T39–T59**: v1.2.0 publicada en T56–T58, con T53b y T57; los dos bugs visuales son **T58**; el cierre documental —post-v1.2.0 y de la v1.2.1— es **T59**) y **v1.3.0 PREPARADA** — serie **T64–T68** en la rama **`feature/episodios-incrementales`** (episodios incrementales + revelado animado; cierre documental en **T68**). La **prueba manual con el `.exe` de la v1.2.0** y la **release** las hizo el humano; T57 se probó con el `.exe` sin incidencias. `wails.json` → `productVersion` **1.3.0**: **sin tag ni release aún** (los hace el humano). **Numeración (colisión resuelta en T59):** `tareas/T58.md` = bugs visuales (fila/bloque T58); el cierre documental pasó de T58 a **T59** (sin borrar contenido). **Nueva serie v1.4.0 (rediseño y enfoque móvil, rama `feature/rediseno-movil`)**: comienza con **T69** (auditoría de UI base, solo lectura) **hecha** — informe en `docs/investigacion/ui_base.md`, capturas en `docs/img/v1.4/base/` y scripts en `docs/investigacion/ui/`; **sin cambios de código**.
+> **Archivos históricos**: el estado de **T01–T29 + T30** (v1.0) está en **`docs/PROGRESO_v1.0.md`**, el de **T30–T35** (AnimeAV1, v1.1.0, con sus desviaciones por tarea, fixtures y pruebas manuales) en **`docs/PROGRESO_v1.1.md`** y el de **T39–T58** (v1.2.0: Home, historial, favoritos, "Siguiente" y sus bugs; incluye los cierres T56/T59) en **`docs/PROGRESO_v1.2.md`**, y el de **T64–T67** (v1.3.0: `ventana.ts`, revelado animado y scroll del detalle) en **`docs/PROGRESO_v1.3.md`**. Aquí solo queda lo vigente. Estado del producto: **v1.2.1 PUBLICADA** (tag `v1.2.1`; ciclo **T39–T59**: v1.2.0 publicada en T56–T58, con T53b y T57; los dos bugs visuales son **T58**; el cierre documental —post-v1.2.0 y de la v1.2.1— es **T59**) y **v1.3.0 PREPARADA** — serie **T64–T68** en la rama **`feature/episodios-incrementales`** (episodios incrementales + revelado animado; cierre documental en **T68**). La **prueba manual con el `.exe` de la v1.2.0** y la **release** las hizo el humano; T57 se probó con el `.exe` sin incidencias. `wails.json` → `productVersion` **1.3.0**: **sin tag ni release aún** (los hace el humano). **Numeración (colisión resuelta en T59):** `tareas/T58.md` = bugs visuales (fila/bloque T58); el cierre documental pasó de T58 a **T59** (sin borrar contenido). **Nueva serie v1.4.0 (rediseño y enfoque móvil, rama `feature/rediseno-movil`)**: comienza con **T69** (auditoría de UI base, solo lectura) **hecha** — informe en `docs/investigacion/ui_base.md`, capturas en `docs/img/v1.4/base/` y scripts en `docs/investigacion/ui/`; **sin cambios de código**. Le sigue **T70** (tokens de diseño en `style.css`: solo variables nuevas, sin cambio visual) **hecha** — `docs/investigacion/ui_tokens.md` y `docs/investigacion/ui/contraste.mjs`; los `--cad-*` quedan como legado hasta T93.
 
 ## Protocolo de sesión
 
@@ -137,6 +137,7 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha y verificada
 | [x] | T67 | Restaurar el scroll del detalle tras la recarga por lotes | T66 |
 | [x] | T68 | Cierre documental de la v1.3.0 (T64–T67) | T67 |
 | [x] | T69 | Auditoría de UI base (v1.4.0, solo lectura) | — |
+| [x] | T70 | Tokens de diseño en `style.css` (v1.4.0) | T69 |
 
 T01–T29 = v1.0 (`docs/PROGRESO_v1.0.md`) · T30–T35 = v1.1.0 AnimeAV1 (`docs/PROGRESO_v1.1.md`) · T36 = cierre de la v1.1.0 · T37 = portabilidad Android · T38 = cierre documental de T37.
 T39–T57 = v1.2.0 (Home, historial lateral, favoritos, "Siguiente" y su estado discreto; **incluye T53b y T57**); plan en `tareas/v1.2_PLAN.md`, detalle **T39–T58 + cierres T56/T59** archivado en `docs/PROGRESO_v1.2.md`, con resúmenes al final de este archivo.
@@ -144,7 +145,7 @@ La **v1.2.0 está PUBLICADA** (prueba manual con el `.exe` y release hechas por 
 
 **v1.3.0 — episodios incrementales** (rama `feature/episodios-incrementales`): serie **T64–T69** para mostrar los episodios del detalle de forma incremental y con animación de entrada. **T64** (lógica pura de `ventana.ts` + tests), **T65** (revelado animado por visibilidad, sin paginar), **T66** (clave de scroll del detalle por proveedor + slug) y **T67** (restauración del scroll del detalle cuando la lista se recarga) hechas; **T68** (cierre documental de la v1.3.0) hecho: `productVersion` **1.3.0**, **sin tag ni release** (los hace el humano). Los **T66–T67 originales** (paginado / ventana client-side) quedan **descartados** por las mediciones de T65 (sin jank y con 0 saltos de scroll; el coste real es de red, ya cubierto por el mostrado por lotes); **T69 pendiente** de la serie. Notas largas de T64–T67 archivadas en `docs/PROGRESO_v1.3.md`.
 
-**v1.4.0 — rediseño y enfoque móvil** (rama `feature/rediseno-movil`): serie nueva que empieza con **T69** (auditoría de UI base, **solo lectura**: inventario, literales CSS, 24 capturas a 360/768/1280, métricas por vista y extracción de la paleta de los 4 HTML de Stitch), hecha y documentada en `docs/investigacion/ui_base.md`; los scripts de medición viven en `docs/investigacion/ui/` y las capturas en `docs/img/v1.4/base/`. **No se tocó código** (`frontend/**`, `*.go`, `package.json`, `wails.json` intactos). Próximas tareas de la serie: pendientes de definir.
+**v1.4.0 — rediseño y enfoque móvil** (rama `feature/rediseno-movil`): serie nueva que empieza con **T69** (auditoría de UI base, **solo lectura**: inventario, literales CSS, 24 capturas a 360/768/1280, métricas por vista y extracción de la paleta de los 4 HTML de Stitch), hecha y documentada en `docs/investigacion/ui_base.md`; los scripts de medición viven en `docs/investigacion/ui/` y las capturas en `docs/img/v1.4/base/`. **No se tocó código** (`frontend/**`, `*.go`, `package.json`, `wails.json` intactos). Le sigue **T70** (tokens de diseño: un bloque `:root` **añadido** a `frontend/src/style.css` con las variables del rediseño —colores, superficies, bordes, texto, marca, semánticos, radios, sombras, marco de póster, blur, movimiento, espacio, táctil, gutter y capas—, **sin modificar ninguna línea existente** y sin cambio visual; documentadas en `docs/investigacion/ui_tokens.md` con la tabla de contraste de `docs/investigacion/ui/contraste.mjs`; las `--cad-*` quedan como legado hasta **T93**). Próximas tareas de la serie: pendientes de definir.
 
 ## Auditoría de portabilidad (T37)
 
@@ -650,3 +651,53 @@ Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**
 | `git status --porcelain` | solo `docs/img/v1.4/` y `docs/investigacion/ui/` (nuevos, sin trackear) |
 
 **Sin cambios de código**; no se creó tag ni release. Próxima tarea de la serie v1.4.0: pendiente de definir.
+
+---
+
+## T70 — Tokens de diseño en `style.css` (v1.4.0) — bloque de esta sesión
+
+Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**. Fecha **2026-10-17**. Añade el **sistema de tokens** del rediseño como **única fuente de verdad**, sin que ningún componente lo consuma todavía (eso llega con **T72b** y las tareas de vista) y **sin cambio visual**. Solo se **añaden** líneas a `frontend/src/style.css`: las variables `--cad-*` existentes **no se modifican** (quedan marcadas `/* legado: se retira en T93 */`).
+
+**Qué se hizo:**
+
+- **`frontend/src/style.css`** (solo adición): un bloque `:root` nuevo y comentado por grupos con los 65 tokens (Fondos, Superficies, Bordes, Texto —con el comentario obligatorio en `--text-4`—, Marca —incluidos `--grad-brand`/`--grad-chip-active` con `var()`—, Semánticos, Radios, Sombras —incluido `--ring` con `var()`—, Marco de póster, Blur, Movimiento, Espacio `--sp-1..8`, Táctil, Gutter y Capas), más las consultas `@media (max-width:767px){--blur-lg:14px}`, `@media (min-width:480px){--gutter:20px}`, `@media (min-width:768px){--gutter:24px}` y `@media (min-width:1024px){--gutter:32px}`. La línea `/* legado: se retira en T93 */` se insertó **dentro** del `:root` existente (línea nueva, ninguna borrada).
+- **`docs/investigacion/ui_tokens.md`** (nuevo): tabla token → valor → uso previsto, breakpoints oficiales **480/768/1024** documentados como números (las variables CSS no resuelven dentro de `@media`), la regla «desde T72b, ningún componente escribe colores, radios ni sombras literales» y la tabla de contraste.
+- **`docs/investigacion/ui/contraste.mjs`** (nuevo): script Node **sin dependencias** que calcula la relación WCAG de `--text-1..4`, `--brand-400` y `--danger` sobre `--bg-0` y `--on-brand` sobre `--brand-500`, y marca AA (≥ 4.5:1).
+
+**Verificación de tokens (Playwright, `localhost:34115`, resultado real):** `getComputedStyle(document.documentElement).getPropertyValue()` devuelve **valor no vacío en los 65 tokens** (`vacios: []`); muestra: `--bg-0=#090d16`, `--grad-brand=linear-gradient(90deg, #10b981, #2dd4bf)`, `--ring=0 0 0 2px #090d16, 0 0 0 4px #34d399`, `--sp-8=32px`, `--tap=44px`, `--text-4=#64748b`. Breakpoints: **`--blur-lg` = `14px` a 360 px y `28px` a 1280 px**; `--gutter` = `16px` a 360 px y `32px` a 1280 px.
+
+**Capturas antes/después (1280×800, `prefers-reduced-motion: reduce`, espera al revelado de T65):**
+
+- **Detalle (animeav1, bleach)**: `detalle_antes.png` vs `detalle_despues.png` → **1 canal distinto de 3 072 000** (delta 1, ruido de render). La página sí varía entre ejecuciones por las imágenes de red: `detalle_despues.png` vs una repetición posterior difiere en ~21 000 canales (≈ 7 031 px) **con y sin** el cambio, y dos capturas consecutivas de la misma sesión son **idénticas** → la diferencia no la introduce el CSS.
+- **Reproductor**: `reproductor_antes.png` vs `reproductor_despues.png` → **byte-idénticas** (`0` canales distintos). El estado se capturó una vez asentado (fuente embebida 12 s), estable.
+
+**Contraste (salida real de `contraste.mjs`):** `--text-1` **17.74:1**, `--text-2` **13.09:1**, `--text-3` **7.58:1**, `--text-4` **4.08:1 (NO AA)**, `--brand-400` **10.11:1**, `--on-brand`/`--brand-500` **7.95:1**, `--danger` **7.02:1**. Pasan AA todos salvo **`--text-4`**, que es el token **decorativo previsto** (el propio `style.css` lo comenta); **`--text-3` y `--brand-400` sí pasan**, así que no hay que reportar fallo de esos. No se cambió ningún valor.
+
+**Compuerta (resultado real):**
+
+| Comando | Resultado |
+|---|---|
+| `git diff --numstat -- frontend/src/style.css` | **126 añadidas, 0 borradas** |
+| verificación de tokens (Playwright) | **65/65 no vacíos**; `--blur-lg` 14px@360 / 28px@1280 |
+| capturas antes/después | detalle **1 canal** (delta 1, ruido); reproductor **byte-idénticas** |
+| `npm run check` (frontend) | **svelte-check found 0 errors and 0 warnings** |
+| `npm run build` | **OK** (aviso de chunk >500 kB preexistente) |
+| `*.test.ts` (esbuild + node) | **etiquetas 32 · ventana 48 · views 13** (todas OK) |
+| `grep -rn wailsjs frontend/src` | **solo `api.ts`** |
+| `gofmt -l .` | **sin salida** |
+| `go vet ./...` · `go build ./...` | limpio · OK |
+| `go test -race -count=1 -v ./...` | **11 paquetes `ok`**; recuento `^--- PASS` = **435**, `^--- FAIL` = **0** (Go intacto, idéntico a T63/T65–T69) |
+
+**Desviaciones:**
+
+- **No se versionó un script Playwright de verificación de tokens** (no figura en "Puedes tocar"): la comprobación de tokens y las capturas se hicieron con Playwright **vía el MCP** (`localhost:34115`) y la comparación antes/después con un decodificador PNG en Node; el script de diff y las capturas quedaron en el directorio temporal fuera del repositorio. El único script nuevo versionado es `contraste.mjs` (sí autorizado).
+- **El detalle no es byte-idéntico** (1 canal de 3 072 000, delta 1) por ruido de render; se demuestra que no lo causa el CSS (variación run-to-run con y sin el cambio, y capturas consecutivas idénticas). El reproductor sí es byte-idéntico.
+- **`--text-4` no cumple AA (4.08:1)** por diseño: es decorativo (comentario obligatorio en `style.css` y en `ui_tokens.md`). No se cambió el valor (como pide la ficha).
+- **El comentario `/* legado: se retira en T93 */`** se añadió como **línea nueva** dentro del `:root` existente → `git diff` sin líneas `-`.
+
+**Pendientes:**
+
+- **Verificación de tokens/capturas no reproducible por script versionado** (ver desviación): si se quiere dejar como artefacto del repo, habría que añadir un `docs/investigacion/ui/verificar_tokens.mjs` en una tarea que lo autorice (o reutilizar `medir_ui.mjs`).
+- Sin tag ni release: no aplica a esta tarea. Las `--cad-*` siguen vigentes hasta **T93**.
+
+**Archivos tocados:** `frontend/src/style.css` (solo adiciones), `docs/investigacion/ui_tokens.md` (nuevo), `docs/investigacion/ui/contraste.mjs` (nuevo) y `PROGRESO.md`. **Nada fuera de "Puedes tocar"** (regla 7 no se activó): ningún `.svelte`, ningún `*.go`, `frontend/wailsjs/**`, `index.html` ni `package.json` tocados; `frontend/dist` regenerado por `npm run build` (ignorado por git).
