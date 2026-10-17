@@ -36,10 +36,10 @@
     flex: 0 0 140px;
     padding: 0;
     border: 1px solid transparent;
-    border-radius: 10px;
+    border-radius: var(--r-md);
     overflow: hidden;
-    background: var(--cad-superficie);
-    color: var(--cad-texto);
+    background: var(--surface-card);
+    color: var(--text-1);
     font-family: inherit;
     text-align: center;
     cursor: pointer;
@@ -53,11 +53,11 @@
   }
   .tarjeta:hover {
     transform: translateY(-3px);
-    border-color: var(--cad-acento);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
+    border-color: var(--brand-400);
+    box-shadow: var(--sh-card-hover);
   }
   .tarjeta:focus-visible {
-    outline: 2px solid var(--cad-acento);
+    outline: 2px solid var(--brand-400);
     outline-offset: 2px;
   }
   .tarjeta img {
@@ -65,7 +65,7 @@
     width: 100%;
     height: 210px;
     object-fit: cover;
-    background: #2a2a35;
+    background: var(--bg-2);
   }
   /* Insignia del proveedor (T54): fuera del flujo para no alterar la columna
      de la portada; solo la pinta la cuadrícula de favoritos. */
@@ -74,10 +74,10 @@
     top: 6px;
     left: 6px;
     padding: 2px 6px;
-    background: var(--cad-fondo);
-    border: 1px solid var(--cad-borde);
-    border-radius: var(--cad-radio);
-    color: var(--cad-texto);
+    background: var(--bg-0);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    color: var(--text-1);
     font-size: 11px;
     line-height: 1.3;
     pointer-events: none;

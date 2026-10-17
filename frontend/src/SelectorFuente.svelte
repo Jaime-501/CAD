@@ -92,7 +92,7 @@
   }
   .titulo {
     display: block;
-    color: #a1a1aa;
+    color: var(--text-3);
     font-size: 13px;
     margin-bottom: 8px;
   }
@@ -103,24 +103,24 @@
   }
   .botones button {
     padding: 7px 14px;
-    border-radius: 999px;
-    border: 1px solid #3f3f46;
-    background: #1e1e24;
-    color: #d4d4d8;
+    border-radius: var(--r-full);
+    border: 1px solid var(--border);
+    background: var(--surface-card);
+    color: var(--text-2);
     font-size: 13px;
     cursor: pointer;
   }
   .botones button:hover {
-    border-color: #4ade80;
+    border-color: var(--brand-400);
   }
   .botones button:focus-visible {
-    outline: 2px solid #4ade80;
+    outline: 2px solid var(--brand-400);
     outline-offset: 2px;
   }
   .botones button.activa {
-    background: #4ade80;
-    border-color: #4ade80;
-    color: #111;
+    background: var(--brand-500);
+    border-color: var(--brand-400);
+    color: var(--on-brand);
     font-weight: bold;
   }
   .plegable {
@@ -129,20 +129,20 @@
     gap: 6px;
     margin-top: 12px;
     padding: 6px 10px;
-    border-radius: 8px;
+    border-radius: var(--r-md);
     border: 1px solid transparent;
     background: transparent;
-    color: #a1a1aa;
+    color: var(--text-3);
     font-size: 13px;
     text-align: left;
     cursor: pointer;
   }
   .plegable:hover {
-    color: #d4d4d8;
-    border-color: #3f3f46;
+    color: var(--text-2);
+    border-color: var(--border);
   }
   .plegable:focus-visible {
-    outline: 2px solid #4ade80;
+    outline: 2px solid var(--brand-400);
     outline-offset: 2px;
   }
   .flecha {

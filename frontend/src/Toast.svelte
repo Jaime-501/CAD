@@ -43,10 +43,10 @@
     gap: 12px;
     max-width: min(420px, calc(100vw - 32px));
     padding: 10px 12px;
-    background: var(--cad-superficie);
-    color: var(--cad-texto);
-    border: 1px solid var(--cad-borde);
-    border-radius: var(--cad-radio);
+    background: var(--surface-card);
+    color: var(--text-1);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
     text-align: left;
   }
   .mensaje {
@@ -63,30 +63,30 @@
     flex-shrink: 0;
     padding: 4px 8px;
     background: transparent;
-    border: 1px solid var(--cad-borde);
-    border-radius: var(--cad-radio);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
     font-family: inherit;
     cursor: pointer;
   }
   .accion {
-    color: var(--cad-acento);
+    color: var(--brand-400);
     font-weight: bold;
   }
   .cerrar {
     padding: 4px;
-    color: var(--cad-texto-suave);
+    color: var(--text-3);
   }
   .accion:hover,
   .cerrar:hover {
-    border-color: var(--cad-acento);
+    border-color: var(--brand-400);
   }
   .cerrar:hover {
-    color: var(--cad-peligro);
-    border-color: var(--cad-peligro);
+    color: var(--danger);
+    border-color: var(--danger);
   }
   .accion:focus-visible,
   .cerrar:focus-visible {
-    outline: 2px solid var(--cad-acento);
+    outline: 2px solid var(--brand-400);
     outline-offset: 2px;
   }
 </style>

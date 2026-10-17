@@ -69,15 +69,15 @@
     content-visibility: auto;
     contain-intrinsic-size: auto 170px;
 
-    background: #1e1e24;
+    background: var(--surface-card);
     border: none;
-    border-radius: 10px;
+    border-radius: var(--r-md);
     overflow: hidden;
     text-align: left;
     transition: transform 0.2s;
     cursor: pointer;
     padding: 0;
-    color: white;
+    color: var(--text-1);
     font-family: inherit;
     display: flex;
     flex-direction: column;
@@ -88,7 +88,7 @@
   .miniatura {
     position: relative;
     height: 118px;
-    background: #2a2a35;
+    background: var(--bg-2);
   }
   .miniatura img {
     width: 100%;
@@ -117,12 +117,12 @@
     position: absolute;
     left: 8px;
     bottom: 8px;
-    background: rgba(0, 0, 0, 0.75);
-    color: #4ade80;
+    background: var(--surface-panel);
+    color: var(--brand-400);
     font-size: 11px;
     font-weight: bold;
     padding: 3px 7px;
-    border-radius: 6px;
+    border-radius: var(--r-sm);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -136,28 +136,28 @@
     margin: 0 10px 10px;
     align-self: flex-start;
     background: #14532d;
-    color: #4ade80;
+    color: var(--brand-400);
     font-size: 12px;
     font-weight: bold;
     padding: 3px 8px;
-    border-radius: 6px;
+    border-radius: var(--r-sm);
   }
   .barra {
     height: 6px;
     margin: 0 10px;
-    background: #3f3f46;
-    border-radius: 4px;
+    background: var(--border-strong);
+    border-radius: var(--r-sm);
     overflow: hidden;
   }
   .barra span {
     display: block;
     height: 100%;
-    background: #4ade80;
+    background: var(--brand-500);
     transition: width 0.3s;
   }
   .porcentaje {
     padding: 4px 10px 10px;
     font-size: 11px;
-    color: #a1a1aa;
+    color: var(--text-3);
   }
 </style>

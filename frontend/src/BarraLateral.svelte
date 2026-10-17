@@ -308,9 +308,9 @@
     display: flex;
     flex-direction: column;
     width: 300px;
-    background: var(--cad-superficie);
-    color: var(--cad-texto);
-    border-right: 1px solid var(--cad-borde);
+    background: var(--surface-card);
+    color: var(--text-1);
+    border-right: 1px solid var(--border);
     text-align: left;
     transition: width 180ms ease;
   }
@@ -323,7 +323,7 @@
     align-items: center;
     gap: 8px;
     padding: 12px;
-    border-bottom: 1px solid var(--cad-borde);
+    border-bottom: 1px solid var(--border);
   }
   .titulo {
     flex: 1;
@@ -342,13 +342,13 @@
     flex-shrink: 0;
     padding: 6px;
     background: transparent;
-    border: 1px solid var(--cad-borde);
-    border-radius: var(--cad-radio);
-    color: var(--cad-texto);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    color: var(--text-1);
     cursor: pointer;
   }
   .alternar:focus-visible {
-    outline: 2px solid var(--cad-acento);
+    outline: 2px solid var(--brand-400);
     outline-offset: 2px;
   }
   .cuerpo {
@@ -359,21 +359,21 @@
   }
   .vacio {
     margin: 0;
-    color: var(--cad-texto-suave);
+    color: var(--text-3);
   }
   .reintentar {
     box-sizing: border-box;
     padding: 6px 12px;
     background: transparent;
-    border: 1px solid var(--cad-borde);
-    border-radius: var(--cad-radio);
-    color: var(--cad-acento);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    color: var(--brand-400);
     font-family: inherit;
     font-weight: bold;
     cursor: pointer;
   }
   .reintentar:focus-visible {
-    outline: 2px solid var(--cad-acento);
+    outline: 2px solid var(--brand-400);
     outline-offset: 2px;
   }
   .grupo {
@@ -388,10 +388,10 @@
     font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: var(--cad-texto-suave);
+    color: var(--text-3);
   }
   .grupo-contador {
-    color: var(--cad-texto-suave);
+    color: var(--text-3);
   }
   /* Papelera del grupo (T52): siempre visible (regla P6), al final de la fila. */
   .papelera {
@@ -403,49 +403,49 @@
     margin-left: auto;
     padding: 4px;
     background: transparent;
-    border: 1px solid var(--cad-borde);
-    border-radius: var(--cad-radio);
-    color: var(--cad-texto-suave);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    color: var(--text-3);
     cursor: pointer;
   }
   .papelera:hover {
-    color: var(--cad-peligro);
-    border-color: var(--cad-peligro);
+    color: var(--danger);
+    border-color: var(--danger);
   }
   .papelera:focus-visible {
-    outline: 2px solid var(--cad-acento);
+    outline: 2px solid var(--brand-400);
     outline-offset: 2px;
   }
   /* Pie fijo con el "borrar todo" (T52): solo con historial y barra expandida. */
   .pie {
     box-sizing: border-box;
     padding: 12px;
-    border-top: 1px solid var(--cad-borde);
+    border-top: 1px solid var(--border);
   }
   .borrar-todo {
     box-sizing: border-box;
     width: 100%;
     padding: 6px 12px;
     background: transparent;
-    border: 1px solid var(--cad-borde);
-    border-radius: var(--cad-radio);
-    color: var(--cad-texto-suave);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    color: var(--text-3);
     font-family: inherit;
     text-align: left;
     cursor: pointer;
   }
   .borrar-todo:hover {
-    border-color: var(--cad-peligro);
-    color: var(--cad-peligro);
+    border-color: var(--danger);
+    color: var(--danger);
   }
   .borrar-todo:focus-visible {
-    outline: 2px solid var(--cad-acento);
+    outline: 2px solid var(--brand-400);
     outline-offset: 2px;
   }
   .confirmar-texto {
     margin: 0 0 8px;
     font-size: 13px;
-    color: var(--cad-texto);
+    color: var(--text-1);
   }
   .confirmar-acciones {
     display: flex;
@@ -457,9 +457,9 @@
     min-width: 0;
     padding: 6px 8px;
     background: transparent;
-    border: 1px solid var(--cad-peligro);
-    border-radius: var(--cad-radio);
-    color: var(--cad-peligro);
+    border: 1px solid var(--danger);
+    border-radius: var(--r-md);
+    color: var(--danger);
     font-family: inherit;
     font-weight: bold;
     cursor: pointer;
@@ -470,15 +470,15 @@
     min-width: 0;
     padding: 6px 8px;
     background: transparent;
-    border: 1px solid var(--cad-borde);
-    border-radius: var(--cad-radio);
-    color: var(--cad-texto);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    color: var(--text-1);
     font-family: inherit;
     cursor: pointer;
   }
   .si-borrar:focus-visible,
   .cancelar:focus-visible {
-    outline: 2px solid var(--cad-acento);
+    outline: 2px solid var(--brand-400);
     outline-offset: 2px;
   }
   /* Fantasmas de carga (T49): mismas medidas que la tarjeta real. */
@@ -495,8 +495,8 @@
     flex-shrink: 0;
     width: 48px;
     height: 68px;
-    border-radius: var(--cad-radio);
-    background: var(--cad-borde);
+    border-radius: var(--r-md);
+    background: var(--border-strong);
   }
   .esqueleto-datos {
     flex: 1;
@@ -508,8 +508,8 @@
   .esqueleto-linea,
   .esqueleto-barra {
     display: block;
-    border-radius: 4px;
-    background: var(--cad-borde);
+    border-radius: var(--r-sm);
+    background: var(--border-strong);
   }
   .esqueleto-linea.ancha {
     width: 80%;
@@ -563,7 +563,7 @@
     background: rgba(0, 0, 0, 0.75);
   }
   .fondo-cajon:focus-visible {
-    outline: 2px solid var(--cad-acento);
+    outline: 2px solid var(--brand-400);
     outline-offset: -2px;
   }
   @media (prefers-reduced-motion: reduce) {

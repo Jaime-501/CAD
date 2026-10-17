@@ -120,13 +120,13 @@
   }
   .proveedor {
     font-size: 12px;
-    color: var(--cad-texto-suave);
+    color: var(--text-3);
   }
   .titulo-fila {
     margin: 0;
     font-size: 16px;
     font-weight: bold;
-    color: var(--cad-texto);
+    color: var(--text-1);
   }
   .flechas {
     margin-left: auto;
@@ -141,22 +141,22 @@
     width: 32px;
     height: 32px;
     padding: 0;
-    background: var(--cad-superficie);
-    border: 1px solid var(--cad-borde);
-    border-radius: 50%;
-    color: var(--cad-texto);
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-full);
+    color: var(--text-1);
     cursor: pointer;
   }
   .flecha:hover:not(:disabled) {
-    border-color: var(--cad-acento);
-    color: var(--cad-acento);
+    border-color: var(--brand-400);
+    color: var(--brand-400);
   }
   .flecha:disabled {
     opacity: 0.45;
     cursor: not-allowed;
   }
   .flecha:focus-visible {
-    outline: 2px solid var(--cad-acento);
+    outline: 2px solid var(--brand-400);
     outline-offset: 2px;
   }
   .carrusel {

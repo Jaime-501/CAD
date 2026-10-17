@@ -42,10 +42,10 @@
     bottom: 72px;
     z-index: 3;
     padding: 8px 16px;
-    border-radius: var(--cad-radio);
-    border: 1px solid var(--cad-borde);
-    background: var(--cad-superficie);
-    color: var(--cad-texto);
+    border-radius: var(--r-md);
+    border: 1px solid var(--border);
+    background: var(--surface-card);
+    color: var(--text-1);
     font-family: inherit;
     font-weight: bold;
     font-size: 14px;
@@ -56,11 +56,11 @@
     cursor: default;
   }
   .boton-siguiente:focus-visible {
-    outline: 2px solid var(--cad-acento);
+    outline: 2px solid var(--brand-400);
     outline-offset: 2px;
   }
   .boton-siguiente:hover:not(:disabled) {
-    border-color: var(--cad-acento);
+    border-color: var(--brand-400);
   }
   /* T57: discreto = atenuado y desenfocado mientras se reproduce; solo con
      estado `listo` (la clase no se aplica en los demás). Clicable y con foco. */
@@ -81,9 +81,9 @@
     }
   }
   .boton-siguiente.resaltado {
-    border-color: var(--cad-acento);
-    background: var(--cad-acento);
-    color: #111;
+    border-color: var(--brand-400);
+    background: var(--brand-500);
+    color: var(--on-brand);
   }
   @media (prefers-reduced-motion: no-preference) {
     .boton-siguiente.resaltado {

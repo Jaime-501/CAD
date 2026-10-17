@@ -121,17 +121,17 @@
     padding: 8px 36px 8px 8px;
     background: transparent;
     border: none;
-    border-radius: var(--cad-radio);
-    color: var(--cad-texto);
+    border-radius: var(--r-md);
+    color: var(--text-1);
     font-family: inherit;
     text-align: left;
     cursor: pointer;
   }
   .tarjeta:hover:not(:disabled) {
-    background: var(--cad-borde);
+    background: var(--border-strong);
   }
   .tarjeta:focus-visible {
-    outline: 2px solid var(--cad-acento);
+    outline: 2px solid var(--brand-400);
     outline-offset: -2px;
   }
   .tarjeta:disabled {
@@ -143,9 +143,9 @@
     flex-shrink: 0;
     width: 48px;
     height: 68px;
-    border-radius: var(--cad-radio);
+    border-radius: var(--r-md);
     object-fit: cover;
-    background: var(--cad-fondo);
+    background: var(--bg-0);
   }
   .sin-portada {
     display: inline-flex;
@@ -153,7 +153,7 @@
     justify-content: center;
     font-size: 22px;
     font-weight: bold;
-    color: var(--cad-texto-suave);
+    color: var(--text-3);
   }
   .datos {
     flex: 1;
@@ -174,7 +174,7 @@
   }
   .secundaria {
     font-size: 12px;
-    color: var(--cad-texto-suave);
+    color: var(--text-3);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -182,18 +182,18 @@
   .barra {
     display: block;
     height: 4px;
-    background: var(--cad-borde);
-    border-radius: 4px;
+    background: var(--border-strong);
+    border-radius: var(--r-sm);
     overflow: hidden;
   }
   .barra-relleno {
     display: block;
     height: 100%;
-    background: var(--cad-acento);
+    background: var(--brand-500);
   }
   .mensaje {
     font-size: 11px;
-    color: var(--cad-texto-suave);
+    color: var(--text-3);
   }
   /* ✕ de borrar (T51): oculto hasta hover o foco dentro del envoltorio; en
      pantallas táctiles (sin hover) siempre visible. `visibility` lo saca del
@@ -208,10 +208,10 @@
     align-items: center;
     justify-content: center;
     padding: 6px;
-    background: var(--cad-superficie);
-    border: 1px solid var(--cad-borde);
-    border-radius: var(--cad-radio);
-    color: var(--cad-texto-suave);
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    color: var(--text-3);
     cursor: pointer;
     visibility: hidden;
     opacity: 0;
@@ -222,11 +222,11 @@
     opacity: 1;
   }
   .borrar:hover:not(:disabled) {
-    color: var(--cad-peligro);
-    border-color: var(--cad-peligro);
+    color: var(--danger);
+    border-color: var(--danger);
   }
   .borrar:focus-visible {
-    outline: 2px solid var(--cad-acento);
+    outline: 2px solid var(--brand-400);
     outline-offset: 2px;
     visibility: visible;
     opacity: 1;

@@ -720,23 +720,23 @@
   }
   .linea {
     margin: 4px 0 0;
-    color: #a1a1aa;
+    color: var(--text-3);
     font-size: 14px;
   }
   .atras {
     padding: 8px 16px;
-    border-radius: 8px;
+    border-radius: var(--r-md);
     border: none;
-    background: #4ade80;
-    color: #111;
+    background: var(--brand-500);
+    color: var(--on-brand);
     font-weight: bold;
     cursor: pointer;
     white-space: nowrap;
   }
   .error-caja {
-    background: #2a2a35;
-    border: 1px solid #f87171;
-    border-radius: 8px;
+    background: var(--bg-2);
+    border: 1px solid var(--danger);
+    border-radius: var(--r-md);
     padding: 12px 14px;
     margin-bottom: 1rem;
     display: flex;
@@ -746,23 +746,23 @@
   }
   .error {
     margin: 0;
-    color: #f87171;
+    color: var(--danger);
     flex: 1;
     min-width: 220px;
   }
   .reintentar {
     padding: 8px 16px;
-    border-radius: 8px;
+    border-radius: var(--r-md);
     border: none;
-    background: #4ade80;
-    color: #111;
+    background: var(--brand-500);
+    color: var(--on-brand);
     font-weight: bold;
     cursor: pointer;
   }
   .aviso {
-    color: #fbbf24;
-    background: #2a2a35;
-    border-radius: 8px;
+    color: var(--fav);
+    background: var(--bg-2);
+    border-radius: var(--r-md);
     padding: 10px 14px;
     margin: 0 0 1rem;
   }
@@ -770,8 +770,8 @@
     position: relative;
     width: 100%;
     aspect-ratio: 16 / 9;
-    background: #000;
-    border-radius: 12px;
+    background: var(--bg-0);
+    border-radius: var(--r-md);
     overflow: hidden;
   }
   .video {
@@ -780,7 +780,7 @@
     width: 100%;
     height: 100%;
     display: none;
-    background: #000;
+    background: var(--bg-0);
   }
   .video.visible {
     display: block;
@@ -791,7 +791,7 @@
     width: 100%;
     height: 100%;
     border: none;
-    background: #000;
+    background: var(--bg-0);
   }
   .placeholder {
     position: absolute;
@@ -800,7 +800,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #a1a1aa;
+    color: var(--text-3);
     font-size: 15px;
   }
   .cargando-overlay {
@@ -810,7 +810,7 @@
     align-items: center;
     justify-content: center;
     background: rgba(0, 0, 0, 0.65);
-    color: #f4f4f5;
+    color: var(--text-1);
     font-size: 15px;
     z-index: 2;
   }

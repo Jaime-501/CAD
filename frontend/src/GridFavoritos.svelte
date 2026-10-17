@@ -60,33 +60,33 @@
   }
   .error-favoritos {
     padding: 12px;
-    background: var(--cad-superficie);
-    border: 1px solid var(--cad-borde);
-    border-radius: var(--cad-radio);
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
     text-align: left;
   }
   .error-texto {
     margin: 0 0 10px;
-    color: var(--cad-texto);
+    color: var(--text-1);
   }
   .reintentar {
     box-sizing: border-box;
     padding: 6px 12px;
     background: transparent;
-    border: 1px solid var(--cad-borde);
-    border-radius: var(--cad-radio);
-    color: var(--cad-acento);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    color: var(--brand-400);
     font-family: inherit;
     font-weight: bold;
     cursor: pointer;
   }
   .reintentar:focus-visible {
-    outline: 2px solid var(--cad-acento);
+    outline: 2px solid var(--brand-400);
     outline-offset: 2px;
   }
   .vacio,
   .cargando {
-    color: var(--cad-texto-suave);
+    color: var(--text-3);
     text-align: center;
   }
 </style>

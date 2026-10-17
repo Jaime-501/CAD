@@ -1,4 +1,4 @@
-    # PROGRESO — Comfort Anime Desktop (T01–T72 hechas)
+    # PROGRESO — Comfort Anime Desktop (T01–T72b hechas)
 
 > Este archivo es la **memoria entre sesiones**. Cada sesión lo lee al inicio y lo actualiza al final.
 > Reglas y layout: `tareas/00_REGLAS.md`. Detalle de cada tarea: `tareas/Txx.md`.
@@ -140,6 +140,7 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha y verificada
 | [x] | T70 | Tokens de diseño en `style.css` (v1.4.0) | T69 |
 | [x] | T71 | Base global: tipografía, viewport, fondo y safe-area (v1.4.0) | T70 |
 | [x] | T72 | Primitivas de UI e iconos (v1.4.0) | T70, T71 |
+| [x] | T72b | Puente de color: literales a tokens (v1.4.0) | T70, T71, T72 |
 
 T01–T29 = v1.0 (`docs/PROGRESO_v1.0.md`) · T30–T35 = v1.1.0 AnimeAV1 (`docs/PROGRESO_v1.1.md`) · T36 = cierre de la v1.1.0 · T37 = portabilidad Android · T38 = cierre documental de T37.
 T39–T57 = v1.2.0 (Home, historial lateral, favoritos, "Siguiente" y su estado discreto; **incluye T53b y T57**); plan en `tareas/v1.2_PLAN.md`, detalle **T39–T58 + cierres T56/T59** archivado en `docs/PROGRESO_v1.2.md`, con resúmenes al final de este archivo.
@@ -147,7 +148,7 @@ La **v1.2.0 está PUBLICADA** (prueba manual con el `.exe` y release hechas por 
 
 **v1.3.0 — episodios incrementales** (rama `feature/episodios-incrementales`): serie **T64–T69** para mostrar los episodios del detalle de forma incremental y con animación de entrada. **T64** (lógica pura de `ventana.ts` + tests), **T65** (revelado animado por visibilidad, sin paginar), **T66** (clave de scroll del detalle por proveedor + slug) y **T67** (restauración del scroll del detalle cuando la lista se recarga) hechas; **T68** (cierre documental de la v1.3.0) hecho: `productVersion` **1.3.0**, **sin tag ni release** (los hace el humano). Los **T66–T67 originales** (paginado / ventana client-side) quedan **descartados** por las mediciones de T65 (sin jank y con 0 saltos de scroll; el coste real es de red, ya cubierto por el mostrado por lotes); **T69 pendiente** de la serie. Notas largas de T64–T67 archivadas en `docs/PROGRESO_v1.3.md`.
 
-**v1.4.0 — rediseño y enfoque móvil** (rama `feature/rediseno-movil`): serie nueva que empieza con **T69** (auditoría de UI base, **solo lectura**: inventario, literales CSS, 24 capturas a 360/768/1280, métricas por vista y extracción de la paleta de los 4 HTML de Stitch), hecha y documentada en `docs/investigacion/ui_base.md`; los scripts de medición viven en `docs/investigacion/ui/` y las capturas en `docs/img/v1.4/base/`. **No se tocó código** (`frontend/**`, `*.go`, `package.json`, `wails.json` intactos). Le sigue **T70** (tokens de diseño: un bloque `:root` **añadido** a `frontend/src/style.css` con las variables del rediseño —colores, superficies, bordes, texto, marca, semánticos, radios, sombras, marco de póster, blur, movimiento, espacio, táctil, gutter y capas—, **sin modificar ninguna línea existente** y sin cambio visual; documentadas en `docs/investigacion/ui_tokens.md` con la tabla de contraste de `docs/investigacion/ui/contraste.mjs`; las `--cad-*` quedan como legado hasta **T93**) y **T71** (base global móvil: fuentes locales **Inter**/Outfit por subconjunto latin, escala tipográfica y safe-area como tokens, `viewport-fit=cover`, corrección del fondo dividido, `:focus-visible` y ajustes táctiles; herramienta reutilizable `docs/investigacion/ui/verificar_ui.mjs`). Le sigue **T72** (primitivas de UI e iconos: 6 componentes **nuevos** — `Icono`, `Btn`, `Chip`, `Insignia`, `Esqueleto` y `EstadoVista` — con tokens, sin migrar ningún componente existente; el arnés de galería fue temporal). Próximas tareas de la serie: pendientes de definir.
+**v1.4.0 — rediseño y enfoque móvil** (rama `feature/rediseno-movil`): serie nueva que empieza con **T69** (auditoría de UI base, **solo lectura**: inventario, literales CSS, 24 capturas a 360/768/1280, métricas por vista y extracción de la paleta de los 4 HTML de Stitch), hecha y documentada en `docs/investigacion/ui_base.md`; los scripts de medición viven en `docs/investigacion/ui/` y las capturas en `docs/img/v1.4/base/`. **No se tocó código** (`frontend/**`, `*.go`, `package.json`, `wails.json` intactos). Le sigue **T70** (tokens de diseño: un bloque `:root` **añadido** a `frontend/src/style.css` con las variables del rediseño —colores, superficies, bordes, texto, marca, semánticos, radios, sombras, marco de póster, blur, movimiento, espacio, táctil, gutter y capas—, **sin modificar ninguna línea existente** y sin cambio visual; documentadas en `docs/investigacion/ui_tokens.md` con la tabla de contraste de `docs/investigacion/ui/contraste.mjs`; las `--cad-*` quedan como legado hasta **T93**) y **T71** (base global móvil: fuentes locales **Inter**/Outfit por subconjunto latin, escala tipográfica y safe-area como tokens, `viewport-fit=cover`, corrección del fondo dividido, `:focus-visible` y ajustes táctiles; herramienta reutilizable `docs/investigacion/ui/verificar_ui.mjs`). Le sigue **T72** (primitivas de UI e iconos: 6 componentes **nuevos** — `Icono`, `Btn`, `Chip`, `Insignia`, `Esqueleto` y `EstadoVista` — con tokens, sin migrar ningún componente existente; el arnés de galería fue temporal) y **T72b** (puente de color: los 15 `.svelte` existentes dejan de escribir literales de color/radio/sombra/`--cad-*` y pasan a los tokens de T70 —solo dentro de `<style>`—, documentado en `docs/investigacion/ui_mapeo_color.md`; sin cambio de geometría). Próximas tareas de la serie: pendientes de definir. Los `--cad-*` siguen **definidos** en `style.css` (sin uso) hasta **T93**.
 
 ## Auditoría de portabilidad (T37)
 
@@ -820,3 +821,75 @@ Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**
 - Sin tag ni release: no aplica a esta tarea. `--cad-*` siguen vigentes hasta **T93**.
 
 **Archivos tocados:** `frontend/src/{Icono,Btn,Chip,Insignia,Esqueleto,EstadoVista}.svelte` (nuevos), `docs/img/v1.4/primitivas/*.png` (12 capturas nuevas, versionadas), `docs/investigacion/ui/verificar_ui.mjs` (solo el modo `tactiles` que autoriza la adenda) y `PROGRESO.md`. **Nada fuera de "Puedes tocar"** (regla 7 no se activó): ningún componente existente, ningún `*.go`, `frontend/wailsjs/**`, `main.go`, `package.json` ni `style.css` tocados; el arnés temporal se borró y `App.svelte` quedó idéntico.
+
+---
+
+## T72b — Puente de color: literales a tokens (v1.4.0) — bloque de esta sesión
+
+Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**. Fecha **2026-10-17**. Pasada **MECÁNICA**: sustituye en los componentes **existentes** los literales de color (`#hex`/`rgba`), las variables `--cad-*` y los radios/sombras literales por los tokens de T70, para que toda la app use una sola paleta (verde de Stitch) **antes** de rediseñar las vistas. **No cambia layout, estructura, markup ni lógica**: solo color, sombra y radio, y **solo dentro de `<style>`**.
+
+**Mapeo (fuente de verdad: `docs/investigacion/ui_mapeo_color.md`).** Reglas por uso real (no solo por luminosidad):
+
+| Literal | Token | Nota |
+|---|---|---|
+| `#151515` | `--bg-0` | fondo base |
+| `#1e1e24` | `--surface-card` | superficies/tarjetas |
+| `#2a2a35` | `--surface-chip` (chips·botones) · `--bg-2` (bloques) · `--surface-input` (campo texto) | según uso |
+| `#3f3f46` | `--border` (borde 1 px) · `--border-strong` (relleno) | según uso |
+| `#ffffff`/`white` | `--text-1` | texto/iconos principales |
+| `#a1a1aa` | `--text-3` | secundario |
+| `#4ade80` | `--brand-400` (texto/iconos/bordes) · `--brand-500` (rellenos) | marca |
+| `#111` sobre verde | `--on-brand` | texto sobre relleno verde |
+| `#f87171` | `--danger` | semántico |
+| `#fbbf24` | `--fav` | favorito |
+| `#d4d4d8`/`#f4f4f5` | `--text-2`/`--text-1` | aproximados por luminosidad |
+| `#555`/`#999` (`:disabled`) | `--bg-2`/`--text-3` | aproximados |
+| `var(--cad-radio)`/`8px`/`10px`/`12px` | `--r-md` | radios medios |
+| `4px`/`6px` | `--r-sm` | radios pequeños |
+| `50%`/`999px` | `--r-full` | círculos |
+| sombra de hover de `TarjetaAnime` `0 6px 16px rgba(0,0,0,0.45)` | `--sh-card-hover` | solo hover |
+| overlay de la insignia de episodio `rgba(0,0,0,0.75)` | `--surface-panel` | contraste de etiqueta |
+| fondo del degradado de `VistaInicio` `rgba(255,255,255,0.08)` | `--border` | |
+
+**Excepciones dejadas literales (justificadas):**
+
+- **`TarjetaEpisodio.svelte`** (6 líneas hex): `:107` `#52525b` (relleno de flecha inactiva), `:110-113` pendiente del degradado `#2a2a35`/`#26262e` (dos paradas de un mismo `linear-gradient`, sin token equivalente), `:138` `#14532d` (verde oscuro del contador «Sin ver»). No hay token exacto; se listan en `ui_mapeo_color.md`.
+- **Scrims negros de degradado/overlay** (se quedan por diseño): `BarraLateral.svelte:563` (`rgba(0,0,0,0.75)`, con comentario que apunta a `TarjetaEpisodio`), `VistaReproductor.svelte:812` (`rgba(0,0,0,0.65)`).
+- **Keyframes de `BotonSiguiente.svelte`** `:96`/`:99` (`rgba(74,222,128,·)` del pulso) — animación, no paleta.
+- **Máscaras de `FilaAnimes.svelte`** `black` (`:185,186,189,190,194,195,197,198`) — `black` aquí es alfa de máscara, no color de la paleta.
+- `--text-4` no aparece; no se usó.
+
+**Archivos migrados (15 `.svelte` existentes; 237 inserciones / 237 borrados, 4–23 hunks/archivo):** `App`, `BarraLateral`, `BotonFavorito`, `BotonSiguiente`, `FilaAnimes`, `GridFavoritos`, `SelectorFuente`, `TarjetaAnime`, `TarjetaEpisodio`, `TarjetaHistorial`, `Toast`, `VistaBusqueda`, `VistaDetalle`, `VistaInicio`, `VistaReproductor`. **`style.css` NO se tocó**: las `--cad-*` quedan definidas y sin uso hasta **T93**. Ningún `*.ts`, `*.go`, `wailsjs/**`, `index.html` ni los 6 componentes de T72 tocados.
+
+**Verificación (compuerta, resultado real):**
+
+| Comprobación | Resultado |
+|---|---|
+| `grep -rnE "#[0-9a-fA-F]{3,8}\b" frontend/src/*.svelte` | **6 líneas**, todas excepción en `TarjetaEpisodio.svelte` |
+| `grep -rn -- "--cad-" frontend/src/*.svelte` | **0 usos** (142 → 0) |
+| `git diff` solo dentro de `<style>` | **15/15 OK** (primer cambio nuevo ≥ línea de `<style>` en cada archivo) |
+| Geometría (`verificar_ui.mjs` a 360/768/1280) | **sin cambios**: tarj. episodio **170,39**, tarj. Home **263,8**, pestaña **38**, botones idénticos; **`overflowH = 0`** en todas las vistas y anchos |
+| Capturas antes/después (12 PNG × 2) | **12 con diferencias de color** (esperado: paleta global), máx Δ 199–246 (tol ≤ 2); **0 idénticas** |
+| `npm run check` | **0 errores, 0 avisos** |
+| `npm run build` | **OK** (aviso de chunk >500 kB preexistente) |
+| `*.test.ts` (esbuild + node) | **etiquetas 32 · ventana 48 · views 13** (todas OK) |
+| `grep -rn wailsjs frontend/src` | **solo `api.ts`** |
+| `go test -count=1 -v ./...` | **11 paquetes `ok`**; `^--- PASS` = **435**, `^--- FAIL` = **0** (Go intacto) |
+| `git status` | 15 `.svelte` modificados + `verif_antes/` + `verif_despues/` + `ui_mapeo_color.md` + `PROGRESO.md` (+ `tareas/T72b.md`, ya presente) |
+
+**Desviaciones:**
+
+- **`docs/investigacion/ui_mapeo_color.md` generado antes de editar** (paso 1) con un script temporal **fuera del repo** (`%TEMP%/opencode/`), como pide la ficha.
+- **Mapeos aproximados por luminosidad** (documentados en la tabla): `#d4d4d8`/`#f4f4f5` → `--text-2`/`--text-1`, `#555`/`#999` en `:disabled` → `--bg-2`/`--text-3`, `#000` → `--bg-0`. Ante duda se eligió el más cercano y se anotó.
+- **Órdenes del resumen de geometría con nº de tarjetas distinto** (3 de 12 métricas): el conteo de tarjetas de episodio cargadas por lotes cambió entre capturas (48/32 en «antes» vs 366 en «después») por temporización de red —**no** por T72b—; el tamaño de cada tarjeta (170/216/223 × 170) no varía.
+- **La sombra de hover de `TarjetaAnime`** pasa a `--sh-card-hover` (incluye un halo verde del rediseño): cambia el aspecto **solo en hover**, que las capturas (sin hover) no registran; el tamaño no cambia.
+- **`tareas/T72b.md`** ya existía en el árbol de trabajo (sin trackear); no se creó aquí.
+- **Carpetas de captura nuevas** `docs/investigacion/ui/verif_antes/` y `verif_despues/`: son la salida exigida por el paso 4 (capturas + `resumen.json`), no una edición de archivos existentes.
+
+**Pendientes:**
+
+- **Migración a las primitivas de T72** (`Btn`, `Chip`, `Insignia`, `Esqueleto`, `EstadoVista`, `Icono`): es de las **tareas de vista**, no de T72b; aquí solo se mapeó color/radio/sombra.
+- **`--cad-*`**: siguen **definidas** en `style.css` (sin uso) hasta **T93**.
+- Sin tag ni release: no aplica a esta tarea.
+
+**Archivos tocados:** 15 `.svelte` existentes (solo `<style>`), `docs/investigacion/ui_mapeo_color.md` (nuevo), `docs/investigacion/ui/verif_antes/` y `docs/investigacion/ui/verif_despues/` (12 PNG + `resumen.json` cada uno, capturas de la comprobación) y `PROGRESO.md`. **Nada fuera de "Puedes tocar"** (regla 7 no se activó): `style.css` intacto, ningún `*.ts`/`*.go`/`wailsjs/**`/`index.html` ni componente de T72 tocados.

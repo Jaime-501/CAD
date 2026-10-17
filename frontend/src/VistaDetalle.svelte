@@ -309,10 +309,10 @@
   }
   .atras {
     padding: 8px 16px;
-    border-radius: 8px;
+    border-radius: var(--r-md);
     border: none;
-    background: #4ade80;
-    color: #111;
+    background: var(--brand-500);
+    color: var(--on-brand);
     font-weight: bold;
     cursor: pointer;
     white-space: nowrap;
@@ -321,8 +321,8 @@
     display: flex;
     gap: 24px;
     margin-bottom: 2rem;
-    background: #1e1e24;
-    border-radius: 12px;
+    background: var(--surface-card);
+    border-radius: var(--r-md);
     padding: 20px;
   }
   .portada {
@@ -331,8 +331,8 @@
     height: fit-content;
     aspect-ratio: 2 / 3;
     object-fit: cover;
-    border-radius: 8px;
-    background: #2a2a35;
+    border-radius: var(--r-md);
+    background: var(--bg-2);
     flex-shrink: 0;
   }
   .datos {
@@ -341,7 +341,7 @@
   }
   .linea {
     margin: 0 0 10px;
-    color: #a1a1aa;
+    color: var(--text-3);
     font-size: 14px;
   }
   .generos {
@@ -353,30 +353,30 @@
     padding: 0;
   }
   .generos li {
-    background: #2a2a35;
-    color: #4ade80;
+    background: var(--surface-chip);
+    color: var(--brand-400);
     font-size: 12px;
     padding: 4px 10px;
-    border-radius: 999px;
+    border-radius: var(--r-full);
   }
   .sinopsis {
     margin: 0 0 16px;
     line-height: 1.5;
-    color: #d4d4d8;
+    color: var(--text-2);
     white-space: pre-line;
   }
   .continuar {
     padding: 10px 20px;
-    border-radius: 8px;
+    border-radius: var(--r-md);
     border: none;
-    background: #4ade80;
-    color: #111;
+    background: var(--brand-500);
+    color: var(--on-brand);
     font-weight: bold;
     cursor: pointer;
   }
   .continuar:disabled {
-    background: #555;
-    color: #999;
+    background: var(--bg-2);
+    color: var(--text-3);
     cursor: not-allowed;
   }
   .titular {
@@ -422,20 +422,20 @@
     }
   }
   .estado {
-    color: #a1a1aa;
+    color: var(--text-3);
   }
   .error {
-    color: #f87171;
+    color: var(--danger);
   }
   .aviso {
-    color: #fbbf24;
-    background: #2a2a35;
-    border-radius: 8px;
+    color: var(--fav);
+    background: var(--bg-2);
+    border-radius: var(--r-md);
     padding: 10px 14px;
     margin-bottom: 1rem;
   }
   .cargando {
-    color: #a1a1aa;
+    color: var(--text-3);
     text-align: center;
     padding: 1rem 0;
   }

@@ -120,32 +120,32 @@
   input {
     flex: 1;
     padding: 10px 15px;
-    border-radius: 8px;
+    border-radius: var(--r-md);
     border: none;
-    background: #2a2a35;
-    color: white;
+    background: var(--surface-input);
+    color: var(--text-1);
     font-size: 16px;
   }
   button {
     padding: 10px 20px;
-    border-radius: 8px;
+    border-radius: var(--r-md);
     border: none;
-    background: #4ade80;
-    color: #111;
+    background: var(--brand-500);
+    color: var(--on-brand);
     font-weight: bold;
     cursor: pointer;
   }
   button:disabled {
-    background: #555;
-    color: #999;
+    background: var(--bg-2);
+    color: var(--text-3);
     cursor: not-allowed;
   }
   .estado {
-    color: #a1a1aa;
+    color: var(--text-3);
     text-align: center;
   }
   .error {
-    color: #f87171;
+    color: var(--danger);
   }
   .rejilla {
     display: grid;
@@ -153,15 +153,15 @@
     gap: 20px;
   }
   .tarjeta {
-    background: #1e1e24;
+    background: var(--surface-card);
     border: none;
-    border-radius: 10px;
+    border-radius: var(--r-md);
     overflow: hidden;
     text-align: center;
     transition: transform 0.2s;
     cursor: pointer;
     padding: 0;
-    color: white;
+    color: var(--text-1);
     font-family: inherit;
     display: flex;
     flex-direction: column;
@@ -173,7 +173,7 @@
     width: 100%;
     height: 230px;
     object-fit: cover;
-    background: #2a2a35;
+    background: var(--bg-2);
   }
   .titulo {
     padding: 10px 10px 4px;
@@ -186,6 +186,6 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: #4ade80;
+    color: var(--brand-400);
   }
 </style>

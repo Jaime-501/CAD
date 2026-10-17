@@ -107,8 +107,8 @@
     padding: 6px;
     background: transparent;
     border: none;
-    border-radius: var(--cad-radio);
-    color: var(--cad-texto-suave);
+    border-radius: var(--r-md);
+    color: var(--text-3);
     cursor: pointer;
   }
   .estrella svg {
@@ -118,24 +118,24 @@
     stroke-linejoin: round;
   }
   .estrella.marcada {
-    color: var(--cad-acento);
+    color: var(--brand-400);
   }
   .estrella.marcada svg {
     fill: currentColor;
   }
   .estrella:hover:not(:disabled) {
-    color: var(--cad-acento);
+    color: var(--brand-400);
   }
   .estrella:disabled {
     opacity: 0.6;
     cursor: default;
   }
   .estrella:focus-visible {
-    outline: 2px solid var(--cad-acento);
+    outline: 2px solid var(--brand-400);
     outline-offset: 2px;
   }
   .aviso {
     font-size: 13px;
-    color: var(--cad-peligro);
+    color: var(--danger);
   }
 </style>

@@ -190,7 +190,7 @@
   .pestanas {
     display: flex;
     gap: 4px;
-    border-bottom: 1px solid var(--cad-borde);
+    border-bottom: 1px solid var(--border);
     margin-bottom: 1.5rem;
   }
   .pestana {
@@ -200,21 +200,21 @@
     background: transparent;
     border: none;
     border-bottom: 2px solid transparent;
-    color: var(--cad-texto-suave);
+    color: var(--text-3);
     font-family: inherit;
     font-size: 15px;
     font-weight: bold;
     cursor: pointer;
   }
   .pestana:hover {
-    color: var(--cad-texto);
+    color: var(--text-1);
   }
   .pestana[aria-selected='true'] {
-    color: var(--cad-texto);
-    border-bottom-color: var(--cad-acento);
+    color: var(--text-1);
+    border-bottom-color: var(--brand-400);
   }
   .pestana:focus-visible {
-    outline: 2px solid var(--cad-acento);
+    outline: 2px solid var(--brand-400);
     outline-offset: -2px;
   }
   .cabecera {
@@ -230,57 +230,57 @@
   }
   .actualizar {
     padding: 8px 16px;
-    border-radius: var(--cad-radio);
+    border-radius: var(--r-md);
     border: none;
-    background: var(--cad-acento);
-    color: #111;
+    background: var(--brand-500);
+    color: var(--on-brand);
     font-weight: bold;
     font-family: inherit;
     cursor: pointer;
   }
   .actualizar:disabled {
-    background: #555;
-    color: #999;
+    background: var(--bg-2);
+    color: var(--text-3);
     cursor: not-allowed;
   }
   .actualizar:focus-visible {
-    outline: 2px solid var(--cad-acento);
+    outline: 2px solid var(--brand-400);
     outline-offset: 2px;
   }
   .error-proveedor {
     margin: 0 0 28px;
     padding: 12px;
-    background: var(--cad-superficie);
-    border: 1px solid var(--cad-borde);
-    border-radius: var(--cad-radio);
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
   }
   .error-texto {
     margin: 0 0 4px;
-    color: var(--cad-texto);
+    color: var(--text-1);
   }
   .error-detalle {
     margin: 0 0 10px;
     font-size: 13px;
-    color: var(--cad-texto-suave);
+    color: var(--text-3);
     overflow-wrap: anywhere;
   }
   .reintentar {
     box-sizing: border-box;
     padding: 6px 12px;
     background: transparent;
-    border: 1px solid var(--cad-borde);
-    border-radius: var(--cad-radio);
-    color: var(--cad-acento);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    color: var(--brand-400);
     font-family: inherit;
     font-weight: bold;
     cursor: pointer;
   }
   .reintentar:focus-visible {
-    outline: 2px solid var(--cad-acento);
+    outline: 2px solid var(--brand-400);
     outline-offset: 2px;
   }
   .vacio {
-    color: var(--cad-texto-suave);
+    color: var(--text-3);
     text-align: center;
   }
   /* Fila de carga (T53b): mismas medidas que la fila real (8 tarjetas
@@ -297,7 +297,7 @@
   }
   .proveedor-fantasma {
     font-size: 12px;
-    color: var(--cad-texto-suave);
+    color: var(--text-3);
   }
   .carrusel-fantasma {
     display: flex;
@@ -308,12 +308,12 @@
     flex: 0 0 140px;
     width: 140px;
     height: 264px;
-    border-radius: 10px;
+    border-radius: var(--r-md);
     background: linear-gradient(
       100deg,
-      var(--cad-borde) 45%,
-      rgba(255, 255, 255, 0.08) 50%,
-      var(--cad-borde) 55%
+      var(--border-strong) 45%,
+      var(--border) 50%,
+      var(--border-strong) 55%
     );
     background-size: 200% 100%;
   }

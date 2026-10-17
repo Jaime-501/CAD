@@ -148,22 +148,22 @@
     align-items: center;
     justify-content: center;
     padding: 8px;
-    background: var(--cad-superficie);
-    border: 1px solid var(--cad-borde);
-    border-radius: var(--cad-radio);
-    color: var(--cad-texto);
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    color: var(--text-1);
     cursor: pointer;
   }
   .hamburguesa:focus-visible {
-    outline: 2px solid var(--cad-acento);
+    outline: 2px solid var(--brand-400);
     outline-offset: 2px;
   }
   .aviso-puente {
-    color: var(--cad-peligro);
+    color: var(--danger);
     margin: 1rem auto;
     max-width: 640px;
     padding: 10px 14px;
-    background: #2a2a35;
-    border-radius: 8px;
+    background: var(--bg-2);
+    border-radius: var(--r-md);
   }
 </style>
