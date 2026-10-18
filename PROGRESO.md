@@ -1005,3 +1005,40 @@ Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**
 - Sin tag ni release: no aplica a esta tarea. `--cad-*` siguen definidas y sin uso hasta **T93**.
 
 **Archivos tocados:** `frontend/src/BarraLateral.svelte` (solo `<style>`), `docs/img/v1.4/shell/t73b-cajon-360.png` y `t73b-escritorio-1280.png` (capturas nuevas de la verificación) y `PROGRESO.md`. **Nada fuera de "Puedes tocar"** (regla 7 no se activó): `style.css` intacto (no hizo falta el token), ningún `<script>`, markup, `*.go`, `wailsjs/**` ni otro componente tocados.
+
+## T74 — Cabecera compacta de detalle y reproductor (v1.4.0) — bloque de esta sesión
+
+Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**. Fecha **2026-10-17**. Unifica la cabecera de **detalle** y **reproductor** en un componente nuevo `CabeceraVista.svelte` (botón "Atrás" con `Icono` `flecha-izq`, título `h2` de una línea con elipsis, subtítulo opcional y slot `acciones` a la derecha para la estrella de `BotonFavorito`). En **modo estrecho** (`< 900 px`, mismo corte que `isNarrow`) gana **táctiles de 44 px**, gutter de 16 px y, en el detalle, **cabecera fija** (`sticky` con `--surface-panel` + blur y borde inferior). En **≥ 900 px** la fila no cambia salvo el glifo "←", que pasa a ser el icono. **Sin cambios de comportamiento**: "Atrás" sigue llamando a `atras()` y el scroll (T66/T67) funciona igual.
+
+**Resultados de la verificación** (modo `cabecera` nuevo en `verificar_ui.mjs`, localhost:34115, red real):
+
+| comprobación | resultado |
+|---|---|
+| 360/390/768: "Atrás" ≥ 44×44 | **sí** (82,63×44) |
+| 360/390/768: estrella ≥ 44×44 | **sí** (44×44) |
+| 360/390/768: `overflowH` | **0** en todas las vistas |
+| 360: título largo ("Tensei Kenja no Isekai Life…", 90 car.) | **una línea** (`nowrap` + `ellipsis`), `recortado=true` |
+| 360: cabecera del detalle fija tras bajar 2000 px | **sí** (`y=0` ≈ `--sat`, `position: sticky`) y sin desbordes |
+| 360: detalle JKAnime | **cabecera OK**, "Atrás" 82,63×44 |
+| 360/768: reproductor | cabecera **NO fija** (`static`), subtítulo del episodio presente, estrella **sí** (detalle coincide) |
+| estrella desde la cabecera | **alterna** el estado (pulsar marca/desmarca) |
+| `prefers-reduced-motion: reduce` | **sin** transición en la cabecera |
+| táctiles < 44 px que siguen en modo estrecho | **solo "Continuar"** (103×35) — esperado, se trata en T80/T83 |
+| **Capturas 1280 antes/después (tol ≤ 2)** | **342 px distintos, caja `x=347..399, y=41..54`** — **dentro del botón "Atrás"** (el glifo "←" → icono); `máx Δ179` |
+| altura de "Atrás" en 1280 | **31 px** (igual que antes) |
+| geometría ≥ 900 px (referencia) | tarjeta de Home **263,8**, tarjeta de episodio **170,39**, pestaña **38** (sin cambios) |
+| `npm run check` | **0 errores / 0 avisos** |
+| `npm run build` | **OK** |
+| tests `.ts` | **48 / 13 / 32** comprobaciones OK (`ventana`, `views`, `etiquetas`) |
+| `grep -rn wailsjs frontend/src` | **solo `api.ts`** |
+| Go (`go test ./...`) | **716 `--- PASS`**, 0 FAIL (12 paquetes `ok`, `*.go` intactos) |
+
+**Desviaciones (documentadas):**
+- **`.atras` con `padding: 8px 14.27px`**: el icono (20 px) es más ancho que el glifo "←" (≈16,5 px); para que el botón **conserve su ancho exterior** y la fila de ≥ 900 px no se desplace, se recorta el padding lateral. Sin ese ajuste la caja de diferencia a 1280 llegaba hasta el título y la estrella (desplazados ~7,5 px).
+- **Import en el `<script>` del reproductor**: se añadió `CabeceraVista` (imprescindible para usar el componente) **en lugar de** `Icono` (los iconos viven dentro de `CabeceraVista`); además del `BotonFavorito` y la única sentencia reactiva `$: detalleDelEpisodio = ...`. `VistaDetalle` solo añadió el import del componente.
+- **Slot mediante `<svelte:fragment slot="acciones">`** (no `slot="acciones"` directo sobre `BotonFavorito`): es lo que `svelte-check` 4 / Svelte 5 5.55 acepta sin marcar el contenido como `children`; mismo resultado.
+- **Cabecera del reproductor con doble gutter en estrecho** (x=32 a 360): la spec pide "fuera de `fija`, mismo padding sin fondo", y `.contenedor` ya aporta `var(--gutter)`; es el comportamiento literal de la especificación.
+
+**Capturas** en `docs/img/v1.4/cabecera/`: `detalle_{360,768,1280}.png`, `detalle_largo_360.png`, `detalle_scroll_360.png`, `detalle_jkanime_360.png`, `reproductor_{360,768}.png` (+ `cabecera.json`).
+
+**Archivos tocados:** `frontend/src/CabeceraVista.svelte` (nuevo), `frontend/src/{VistaDetalle,VistaReproductor,BotonFavorito}.svelte` (markup/`<style>`/padding de `.contenedor`; en el reproductor, además, el import y una sentencia reactiva), `docs/investigacion/ui/verificar_ui.mjs` (modo `cabecera`), `docs/img/v1.4/cabecera/**` y `PROGRESO.md`. **Nada fuera de "Puedes tocar"** (regla 7 no se activó): `*.go`, `frontend/wailsjs/**`, `api.ts`, `stores.ts`, `views.ts`, `ui.ts`, `BarraInferior`, `BotonSiguiente.svelte`, el selector de fuentes, las tarjetas, `revelar.ts`, `ventana.ts`, la lógica de scroll (T66/T67) e `index.html` intactos. **Sin tag ni release** (los hace el humano).

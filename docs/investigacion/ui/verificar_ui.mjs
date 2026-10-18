@@ -280,6 +280,49 @@ const TACTILES_CHICOS = () => {
     .filter((x) => x.w < 44 || x.h < 44);
 };
 
+// T74: medición de la cabecera compacta (detalle y reproductor).
+const MEDIR_CABECERA = () => {
+  const d = document.documentElement;
+  const round = (n) => Math.round(n * 100) / 100;
+  const rect = (el) => {
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return { x: round(r.x), y: round(r.y), w: round(r.width), h: round(r.height), bottom: round(r.bottom) };
+  };
+  const cab = document.querySelector('main .cabecera');
+  const atras = document.querySelector('main .cabecera .atras');
+  const h2 = document.querySelector('main .cabecera h2');
+  const sub = document.querySelector('main .cabecera .subtitulo');
+  const accion = document.querySelector('main .cabecera .acciones .favorito');
+  const estrella = document.querySelector('main .cabecera .acciones .estrella');
+  const cs = cab ? getComputedStyle(cab) : null;
+  const csH2 = h2 ? getComputedStyle(h2) : null;
+  return {
+    overflowH: d.scrollWidth - d.clientWidth,
+    scrollY: round(window.scrollY),
+    sat: getComputedStyle(d).getPropertyValue('--sat').trim(),
+    cabecera: rect(cab),
+    posicion: cs ? cs.position : null,
+    topCss: cs ? cs.top : null,
+    atras: rect(atras),
+    titulo: h2
+      ? {
+          texto: (h2.textContent || '').trim(),
+          rect: rect(h2),
+          whiteSpace: csH2.whiteSpace,
+          overflow: csH2.overflow,
+          textOverflow: csH2.textOverflow,
+          recortado: h2.scrollWidth > h2.clientWidth + 1,
+          textoCompleto: h2.scrollWidth <= h2.clientWidth + 1,
+        }
+      : null,
+    subtitulo: sub ? { texto: (sub.textContent || '').trim(), rect: rect(sub) } : null,
+    accion: rect(accion),
+    estrella: rect(estrella),
+    estrellaMarcada: estrella ? estrella.classList.contains('marcada') : null,
+  };
+};
+
 async function gotoApp(page) {
   await page.goto(BASE, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('.buscador input', { timeout: 20000 });
@@ -595,6 +638,267 @@ async function shell() {
 }
 
 // ---------------------------------------------------------------------------
+// Modo cabecera (T74): cabecera compacta de detalle y reproductor
+// ---------------------------------------------------------------------------
+
+const ANCHOS_CABECERA = [
+  { w: 360, h: 740, nombre: '360' },
+  { w: 390, h: 844, nombre: '390' },
+  { w: 768, h: 1024, nombre: '768' },
+  { w: 1280, h: 800, nombre: '1280' },
+];
+
+/** Abre el detalle del proveedor cuya tarjeta tenga el título más largo. */
+async function abrirDetalleLargo(page, proveedor) {
+  const tarjetas = page.locator('main .rejilla .tarjeta');
+  const n = await tarjetas.count();
+  let elegido = -1;
+  let maxLargo = -1;
+  for (let i = 0; i < n; i++) {
+    const t = tarjetas.nth(i);
+    const prov = ((await t.locator('.proveedor').first().textContent()) ?? '').trim();
+    if (prov !== proveedor) continue;
+    const largo = ((await t.locator('.titulo').first().textContent()) ?? '').trim().length;
+    if (largo > maxLargo) {
+      maxLargo = largo;
+      elegido = i;
+    }
+  }
+  if (elegido >= 0) await tarjetas.nth(elegido).click();
+  await page.waitForSelector('.ficha, .estado', { timeout: 45000 });
+  await page.waitForTimeout(700);
+}
+
+async function abrirReproductor(page) {
+  const ep = page.locator('.rejilla .celda .tarjeta').first();
+  if (!(await ep.count())) return false;
+  await ep.click();
+  await page.waitForSelector('.cabecera .atras', { timeout: 30000 }).catch(() => {});
+  await page.waitForTimeout(1500);
+  return true;
+}
+
+async function cabecera() {
+  const dirOut = process.argv[3] ?? 'docs/img/v1.4/cabecera';
+  mkdirSync(dirOut, { recursive: true });
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  const rep = { anchos: [], funciones: [], tactiles: [], capturas: [], errores: [] };
+  const check = (nombre, ok, detalle) =>
+    rep.funciones.push({ nombre, ok: !!ok, detalle: detalle === undefined ? null : detalle });
+  const captura = async (nombre) => {
+    try {
+      await page.screenshot({ path: join(dirOut, `${nombre}.png`) });
+      rep.capturas.push(`${nombre}.png`);
+    } catch (e) {
+      rep.errores.push(`${nombre}: ${e.message}`);
+    }
+  };
+
+  const paso = async (nombre, fn) => {
+    try {
+      await fn();
+    } catch (e) {
+      rep.errores.push(`${nombre}: ${e.message}`);
+    }
+  };
+
+  // --- A. Geometría por ancho (detalle AnimeAV1) ---
+  await paso('A', async () => {
+    for (const a of ANCHOS_CABECERA) {
+      await page.setViewportSize({ width: a.w, height: a.h });
+      await gotoApp(page);
+      await page.waitForSelector('.fila .carrusel .tarjeta', { timeout: 60000 }).catch(() => {});
+      await buscar(page, 'bleach');
+      await abrirDetalle(page, 'animeav1');
+      const med = await page.evaluate(MEDIR_CABECERA);
+      rep.anchos.push({ ancho: a.nombre, vista: 'detalle', ...med });
+      if (['360', '768', '1280'].includes(a.nombre)) await captura(`detalle_${a.nombre}`);
+      if (a.w < 900) {
+        check(`${a.nombre}: Atrás ≥44×44`, med.atras && med.atras.w >= 44 && med.atras.h >= 44, med.atras);
+        check(`${a.nombre}: estrella ≥44×44`, med.estrella && med.estrella.w >= 44 && med.estrella.h >= 44, med.estrella);
+        check(`${a.nombre}: sin overflow horizontal`, med.overflowH === 0, med.overflowH);
+        check(`${a.nombre}: subtítulo ausente en detalle`, med.subtitulo === null, med.subtitulo);
+      }
+      log('cabecera ancho', a.nombre, 'atras=', JSON.stringify(med.atras), 'pos=', med.posicion);
+    }
+  });
+
+  // --- B. Título largo recortado a una línea (360) ---
+  await paso('B', async () => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await gotoApp(page);
+    await buscar(page, 'tensei');
+    await abrirDetalleLargo(page, 'animeav1');
+    const largo = await page.evaluate(MEDIR_CABECERA);
+    check('360: título largo en una línea', largo.titulo && largo.titulo.whiteSpace === 'nowrap' && largo.titulo.textOverflow === 'ellipsis', largo.titulo?.whiteSpace);
+    check('360: título largo recortado', !!largo.titulo?.recortado, largo.titulo);
+    rep.anchos.push({ ancho: '360', vista: 'detalle_largo', ...largo });
+    await captura('detalle_largo_360');
+  });
+
+  // --- C. Cabecera fija al hacer scroll (detalle 360) ---
+  await paso('C', async () => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await gotoApp(page);
+    await buscar(page, 'bleach');
+    await abrirDetalle(page, 'animeav1');
+    await page.evaluate(() => window.scrollTo(0, 2000));
+    await page.waitForTimeout(500);
+    const fija = await page.evaluate(MEDIR_CABECERA);
+    const satPx = parseFloat(fija.sat) || 0;
+    check('360: cabecera fija pegada arriba al scrollear', fija.cabecera && Math.abs(fija.cabecera.y - satPx) <= 2, { y: fija.cabecera?.y, sat: fija.sat, scrollY: fija.scrollY });
+    check('360: posición sticky', fija.posicion === 'sticky', fija.posicion);
+    rep.anchos.push({ ancho: '360', vista: 'detalle_scroll', ...fija });
+    await captura('detalle_scroll_360');
+  });
+
+  // --- D. Detalle JKAnime (360) ---
+  await paso('D', async () => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await gotoApp(page);
+    await buscar(page, 'bleach');
+    await abrirDetalle(page, 'jkanime');
+    const jk = await page.evaluate(MEDIR_CABECERA);
+    check('360: detalle JKAnime con cabecera', !!jk.cabecera, jk.cabecera);
+    check('360: JKAnime Atrás ≥44×44', jk.atras && jk.atras.w >= 44 && jk.atras.h >= 44, jk.atras);
+    rep.anchos.push({ ancho: '360', vista: 'detalle_jkanime', ...jk });
+    await captura('detalle_jkanime_360');
+  });
+
+  // --- E. Reproductor (360 y 768) ---
+  await paso('E', async () => {
+    for (const a of [{ w: 360, h: 740, nombre: '360' }, { w: 768, h: 1024, nombre: '768' }]) {
+      await page.setViewportSize({ width: a.w, height: a.h });
+      await gotoApp(page);
+      await buscar(page, 'bleach');
+      await abrirDetalle(page, 'animeav1');
+      const abierto = await abrirReproductor(page);
+      if (!abierto) {
+        check(`${a.nombre}: reproductor abierto`, false, 'sin tarjetas de episodio');
+        continue;
+      }
+      const rep1 = await page.evaluate(MEDIR_CABECERA);
+      check(`${a.nombre}: reproductor con cabecera`, !!rep1.cabecera, rep1.cabecera);
+      check(`${a.nombre}: reproductor cabecera NO fija`, rep1.posicion !== 'sticky', rep1.posicion);
+      check(`${a.nombre}: reproductor con estrella (detalle cargado)`, !!rep1.estrella, rep1.accion);
+      check(`${a.nombre}: subtítulo del episodio presente`, !!rep1.subtitulo, rep1.subtitulo);
+      if (a.w < 900) {
+        check(`${a.nombre}: reproductor Atrás ≥44`, rep1.atras && rep1.atras.w >= 44 && rep1.atras.h >= 44, rep1.atras);
+        check(`${a.nombre}: reproductor estrella ≥44`, rep1.estrella && rep1.estrella.w >= 44 && rep1.estrella.h >= 44, rep1.estrella);
+        check(`${a.nombre}: reproductor sin overflow`, rep1.overflowH === 0, rep1.overflowH);
+      }
+      rep.anchos.push({ ancho: a.nombre, vista: 'reproductor', ...rep1 });
+      await captura(`reproductor_${a.nombre}`);
+      // La cabecera no fija se va con el scroll (si la vista tiene scroll).
+      if (a.w < 900) {
+        await page.evaluate(() => window.scrollTo(0, 1200));
+        await page.waitForTimeout(400);
+        const tras = await page.evaluate(MEDIR_CABECERA);
+        if (tras.scrollY > 0) {
+          check(`${a.nombre}: cabecera del reproductor se va con el scroll`, tras.cabecera && tras.cabecera.y < 0, { y: tras.cabecera?.y, scrollY: tras.scrollY });
+        } else {
+          check(`${a.nombre}: cabecera del reproductor se va con el scroll`, true, 'sin scroll (vista corta)');
+        }
+      }
+    }
+  });
+
+  // --- F. Alternar la estrella desde la cabecera (360) ---
+  await paso('F', async () => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await gotoApp(page);
+    await buscar(page, 'bleach');
+    await abrirDetalle(page, 'animeav1');
+    const antesFav = await page.evaluate(MEDIR_CABECERA);
+    await page.locator("main .cabecera .acciones .estrella").click();
+    await page.waitForTimeout(600);
+    const despuesFav = await page.evaluate(MEDIR_CABECERA);
+    check('360: la estrella alterna el estado', antesFav.estrellaMarcada !== despuesFav.estrellaMarcada, {
+      antes: antesFav.estrellaMarcada,
+      despues: despuesFav.estrellaMarcada,
+    });
+    await page.locator("main .cabecera .acciones .estrella").click();
+    await page.waitForTimeout(400);
+  });
+
+  // --- G. prefers-reduced-motion: sin transición en la cabecera ---
+  await paso('G', async () => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    check(
+      'reduced-motion: sin transición en la cabecera',
+      (await page.evaluate(() => {
+        const el = document.querySelector('main .cabecera');
+        return el ? getComputedStyle(el).transitionDuration : null;
+      })) === '0s'
+    );
+    await page.emulateMedia({ reducedMotion: null });
+  });
+
+  // --- H. Objetivos táctiles < 44 px restantes en las vistas (360) ---
+  await paso('H', async () => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await page.evaluate(() => window.scrollTo(0, 0));
+    rep.tactiles = (await page.evaluate(TACTILES_CHICOS)).map((t) => ({ ...t, estado: 'detalle_360' }));
+    check(
+      'ninguno de la cabecera <44 px',
+      !(await page.evaluate(() =>
+        [...document.querySelectorAll('main .cabecera button, main .cabecera a')]
+          .filter((b) => b.offsetParent !== null)
+          .some((b) => {
+            const r = b.getBoundingClientRect();
+            return r.width < 44 || r.height < 44;
+          })
+      ))
+    );
+  });
+
+  // --- I. Aviso de error forzado: no debe mover la cabecera (360) ---
+  await paso('I', async () => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await gotoApp(page);
+    await buscar(page, 'bleach');
+    await abrirDetalle(page, 'animeav1');
+    const forzado = await page.evaluate(() => {
+      const app = window.go?.main?.App;
+      if (!app || typeof app.AddFavorite !== 'function') return false;
+      window.__origAddFav = app.AddFavorite;
+      window.__origRemFav = app.RemoveFavorite;
+      app.AddFavorite = () => Promise.reject(new Error('forzado'));
+      app.RemoveFavorite = () => Promise.reject(new Error('forzado'));
+      return true;
+    });
+    if (!forzado) {
+      check('360: aviso de error no cambia la altura', false, 'sin puente window.go en el navegador');
+      return;
+    }
+    const hAntes = (await page.evaluate(MEDIR_CABECERA)).cabecera?.h ?? null;
+    await page.locator('main .cabecera .acciones .estrella').click();
+    await page.waitForSelector('main .cabecera .aviso', { timeout: 5000 });
+    const medAviso = await page.evaluate(MEDIR_CABECERA);
+    const aviso = await page.evaluate(() => {
+      const a = document.querySelector('main .cabecera .aviso');
+      if (!a) return null;
+      const r = a.getBoundingClientRect();
+      return { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) };
+    });
+    check('360: aviso de error no cambia la altura', medAviso.cabecera?.h === hAntes, { antes: hAntes, despues: medAviso.cabecera?.h });
+    check('360: aviso de error flotante (fuera del flujo)', aviso !== null, aviso);
+    rep.anchos.push({ ancho: '360', vista: 'detalle_aviso', ...medAviso });
+    await captura('detalle_aviso_360');
+    await page.evaluate(() => {
+      const app = window.go?.main?.App;
+      if (app && window.__origAddFav) app.AddFavorite = window.__origAddFav;
+      if (app && window.__origRemFav) app.RemoveFavorite = window.__origRemFav;
+    });
+  });
+
+  writeFileSync(join(dirOut, 'cabecera.json'), JSON.stringify(rep, null, 2));
+  await browser.close();
+  return rep;
+}
+
+// ---------------------------------------------------------------------------
 // CLI
 // ---------------------------------------------------------------------------
 
@@ -687,6 +991,36 @@ if (modo === 'comparar') {
   }
   if (rep.errores.length) console.log('\nErrores:', rep.errores);
   console.log(`\nCapturas (docs/img/v1.4/shell/): ${rep.capturas.join(', ') || 'ninguna'}`);
+} else if (modo === 'cabecera') {
+  const rep = await cabecera();
+  console.log('## Modo cabecera (T74) — cabecera compacta de detalle y reproductor\n');
+  console.log('| vista@ancho | posición | cabecera y/h | Atrás w×h | estrella w×h | overflowH |');
+  console.log('|---|---|---:|---:|---:|---:|');
+  for (const m of rep.anchos) {
+    const fmt = (r) => (r ? `${r.w}×${r.h}` : '—');
+    console.log(
+      `| ${m.vista}@${m.ancho} | ${m.posicion ?? '—'} | ${m.cabecera ? `${m.cabecera.y}/${m.cabecera.h}` : '—'} | ` +
+        `${fmt(m.atras)} | ${fmt(m.estrella)} | ${m.overflowH} |`
+    );
+  }
+  console.log('\nTítulos por ancho:');
+  for (const m of rep.anchos) {
+    if (!m.titulo) continue;
+    console.log(
+      `- ${m.vista}@${m.ancho}: "${m.titulo.texto.slice(0, 60)}" whiteSpace=${m.titulo.whiteSpace} recortado=${m.titulo.recortado}`
+    );
+  }
+  console.log('\n| comprobación | ok | detalle |');
+  console.log('|---|:--:|---|');
+  for (const f of rep.funciones) {
+    console.log(`| ${f.nombre} | ${f.ok ? 'sí' : 'NO'} | ${f.detalle === null ? '' : JSON.stringify(f.detalle)} |`);
+  }
+  console.log(`\nTáctiles <44 px visibles (${rep.tactiles.length}):`);
+  for (const t of rep.tactiles) {
+    console.log(`- ${t.estado}: ${t.texto} ${t.w}×${t.h}`);
+  }
+  if (rep.errores.length) console.log('\nErrores:', rep.errores);
+  console.log(`\nCapturas (docs/img/v1.4/cabecera/): ${rep.capturas.join(', ') || 'ninguna'}`);
 } else {
   const dirOut = process.argv[3] ?? DIR_DEF;
   const res = await capturar(dirOut);

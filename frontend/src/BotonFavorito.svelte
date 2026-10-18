@@ -123,8 +123,11 @@
   .estrella.marcada svg {
     fill: currentColor;
   }
-  .estrella:hover:not(:disabled) {
-    color: var(--brand-400);
+  /* T74: el hover solo en punteros finos (no se queda pegado en táctil). */
+  @media (hover: hover) and (pointer: fine) {
+    .estrella:hover:not(:disabled) {
+      color: var(--brand-400);
+    }
   }
   .estrella:disabled {
     opacity: 0.6;
@@ -137,5 +140,26 @@
   .aviso {
     font-size: 13px;
     color: var(--danger);
+  }
+  /* T74: en modo estrecho, objetivo táctil de 44 px y aviso flotante que no
+     cambia la altura de la cabecera. */
+  @media (max-width: 899px) {
+    .favorito {
+      position: relative;
+    }
+    .estrella {
+      min-width: var(--tap);
+      min-height: var(--tap);
+    }
+    .aviso {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      z-index: var(--z-sticky);
+      background: var(--bg-2);
+      padding: var(--sp-1) var(--sp-2);
+      border-radius: var(--r-sm);
+      font-size: var(--fs-xs);
+    }
   }
 </style>
