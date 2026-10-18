@@ -3,9 +3,10 @@
   import { get } from 'svelte/store';
   import type { models } from './api';
   import { search, searchResults, searchState } from './stores';
-  import { limpiarBusqueda } from './ui';
+  import { isNarrow, limpiarBusqueda } from './ui';
   import { navegarA, type SeleccionAnime } from './views';
   import VistaInicio from './VistaInicio.svelte';
+  import Icono from './Icono.svelte';
 
   /** false = no hay puente `window.go` (Vite puro en :5173); lo decide App.svelte. */
   export let puente = true;
@@ -61,6 +62,17 @@
     void search(texto);
   }
 
+  /** Botón ✕ (modo estrecho): vacía el texto, cancela el *debounce*, vuelve al Home. */
+  function limpiar() {
+    texto = '';
+    if (temporizador !== null) {
+      clearTimeout(temporizador);
+      temporizador = null;
+    }
+    programar();
+    document.getElementById('buscador-anime')?.focus();
+  }
+
   function abrir(anime: models.Anime) {
     // Todos los proveedores del registro tienen detalle (T34): toda tarjeta
     // navega al detalle sin reglas especiales.
@@ -77,14 +89,26 @@
   <h2>Buscador de anime</h2>
 
   <div class="buscador">
-    <input
-      id="buscador-anime"
-      type="text"
-      bind:value={texto}
-      placeholder="Ej: Death Note, Jujutsu Kaisen..."
-      on:input={programar}
-      on:keydown={(e) => e.key === 'Enter' && buscarAhora()}
-    />
+    <div class="campo">
+      {#if $isNarrow}
+        <span class="lupa" aria-hidden="true"><Icono nombre="buscar" tam={20} /></span>
+      {/if}
+      <input
+        id="buscador-anime"
+        type="text"
+        bind:value={texto}
+        placeholder="Ej: Death Note, Jujutsu Kaisen..."
+        aria-label="Buscar anime"
+        enterkeyhint="search"
+        on:input={programar}
+        on:keydown={(e) => e.key === 'Enter' && buscarAhora()}
+      />
+      {#if $isNarrow && texto !== ''}
+        <button type="button" class="limpiar" aria-label="Borrar búsqueda" on:click={limpiar}>
+          <Icono nombre="cerrar" tam={20} />
+        </button>
+      {/if}
+    </div>
     <button type="button" on:click={buscarAhora} disabled={!puente || $searchState.loading}>
       {$searchState.loading ? 'Buscando...' : 'Buscar'}
     </button>
@@ -129,6 +153,12 @@
     display: flex;
     gap: 10px;
     margin-bottom: 1.5rem;
+  }
+  /* T75: en escritorio el campo no genera caja (`display: contents`), así que
+     el input sigue siendo hijo directo del flex de `.buscador` (idéntico a
+     antes). En modo estrecho pasa a ser el contenedor visual del buscador. */
+  .campo {
+    display: contents;
   }
   input {
     flex: 1;
@@ -200,5 +230,82 @@
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: var(--brand-400);
+  }
+  /* T75: buscador de modo estrecho (< 900 px): lupa dentro del campo, botón
+     limpiar, táctiles de `--tap` y padding con safe-area. En ≥ 900 px nada de
+     esto se aplica: el buscador de escritorio queda idéntico. */
+  @media (max-width: 899px) {
+    .contenedor {
+      padding: calc(var(--sat) + var(--sp-4)) var(--gutter) var(--sp-4);
+    }
+    h2 {
+      font-size: var(--fs-xl);
+      margin: 0 0 var(--sp-3);
+      text-align: left;
+    }
+    .campo {
+      display: flex;
+      align-items: center;
+      position: relative;
+      flex: 1;
+      min-width: 0;
+      background: var(--surface-input);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+    }
+    .campo:focus-within {
+      box-shadow: var(--ring);
+    }
+    .campo input {
+      min-width: 0;
+      min-height: var(--tap);
+      background: transparent;
+      padding-left: calc(var(--sp-8) + var(--sp-3));
+    }
+    /* El anillo de foco lo dibuja el campo (`:focus-within`), no el input. */
+    .campo input:focus-visible {
+      box-shadow: none;
+    }
+    .lupa {
+      position: absolute;
+      left: var(--sp-3);
+      display: inline-flex;
+      color: var(--text-3);
+      pointer-events: none;
+    }
+    .limpiar {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      width: var(--tap);
+      height: var(--tap);
+      padding: 0;
+      margin-right: var(--sp-1);
+      background: transparent;
+      border: none;
+      border-radius: var(--r-full);
+      color: var(--text-3);
+      cursor: pointer;
+      transition: color var(--dur-fast) var(--ease-std);
+    }
+    .limpiar:active {
+      color: var(--text-1);
+    }
+    .limpiar:focus-visible {
+      outline: none;
+      box-shadow: var(--ring);
+    }
+    .buscador > button {
+      min-height: var(--tap);
+    }
+    .buscador > button:active {
+      background: var(--brand-600);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .limpiar {
+      transition: none;
+    }
   }
 </style>

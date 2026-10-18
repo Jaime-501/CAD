@@ -1,0 +1,626 @@
+{
+  "anchos": [
+    {
+      "ancho": "360",
+      "overflowH": 0,
+      "tablist": false,
+      "roleDescubrir": null,
+      "roleFavoritos": null,
+      "ariaDescubrir": null,
+      "ariaFavoritos": null,
+      "lupa": true,
+      "limpiar": false,
+      "rects": {
+        "input": {
+          "w": 230.8,
+          "h": 64
+        },
+        "campo": {
+          "w": 232.8,
+          "h": 66
+        },
+        "buscar": {
+          "w": 85.2,
+          "h": 66
+        },
+        "lupa": {
+          "w": 20,
+          "h": 20
+        },
+        "limpiar": null,
+        "actualizar": {
+          "w": 98.44,
+          "h": 44
+        },
+        "reintentar": null,
+        "pestana": null,
+        "tarjetaHome": {
+          "w": 140,
+          "h": 263.8
+        }
+      },
+      "panelDescubrirActivo": true,
+      "panelFavoritosActivo": false,
+      "h2Favoritos": "Favoritos (1)"
+    },
+    {
+      "ancho": "390",
+      "overflowH": 0,
+      "tablist": false,
+      "roleDescubrir": null,
+      "roleFavoritos": null,
+      "ariaDescubrir": null,
+      "ariaFavoritos": null,
+      "lupa": true,
+      "limpiar": false,
+      "rects": {
+        "input": {
+          "w": 260.8,
+          "h": 64
+        },
+        "campo": {
+          "w": 262.8,
+          "h": 66
+        },
+        "buscar": {
+          "w": 85.2,
+          "h": 66
+        },
+        "lupa": {
+          "w": 20,
+          "h": 20
+        },
+        "limpiar": null,
+        "actualizar": {
+          "w": 98.44,
+          "h": 44
+        },
+        "reintentar": null,
+        "pestana": null,
+        "tarjetaHome": {
+          "w": 140,
+          "h": 263.8
+        }
+      },
+      "panelDescubrirActivo": true,
+      "panelFavoritosActivo": false,
+      "h2Favoritos": "Favoritos (1)"
+    },
+    {
+      "ancho": "768",
+      "overflowH": 0,
+      "tablist": false,
+      "roleDescubrir": null,
+      "roleFavoritos": null,
+      "ariaDescubrir": null,
+      "ariaFavoritos": null,
+      "lupa": true,
+      "limpiar": false,
+      "rects": {
+        "input": {
+          "w": 622.8,
+          "h": 64
+        },
+        "campo": {
+          "w": 624.8,
+          "h": 66
+        },
+        "buscar": {
+          "w": 85.2,
+          "h": 66
+        },
+        "lupa": {
+          "w": 20,
+          "h": 20
+        },
+        "limpiar": null,
+        "actualizar": {
+          "w": 98.44,
+          "h": 44
+        },
+        "reintentar": null,
+        "pestana": null,
+        "tarjetaHome": {
+          "w": 140,
+          "h": 263.8
+        }
+      },
+      "panelDescubrirActivo": true,
+      "panelFavoritosActivo": false,
+      "h2Favoritos": "Favoritos (1)"
+    },
+    {
+      "ancho": "1024",
+      "overflowH": 0,
+      "tablist": true,
+      "roleDescubrir": "tabpanel",
+      "roleFavoritos": "tabpanel",
+      "ariaDescubrir": "pestana-descubrir",
+      "ariaFavoritos": "pestana-favoritos",
+      "lupa": false,
+      "limpiar": false,
+      "rects": {
+        "input": {
+          "w": 564.8,
+          "h": 38
+        },
+        "campo": {
+          "w": 0,
+          "h": 0
+        },
+        "buscar": {
+          "w": 85.2,
+          "h": 38
+        },
+        "lupa": null,
+        "limpiar": null,
+        "actualizar": {
+          "w": 98.44,
+          "h": 32
+        },
+        "reintentar": null,
+        "pestana": {
+          "w": 100.14,
+          "h": 38
+        },
+        "tarjetaHome": {
+          "w": 140,
+          "h": 263.8
+        }
+      },
+      "panelDescubrirActivo": true,
+      "panelFavoritosActivo": false,
+      "h2Favoritos": null
+    },
+    {
+      "ancho": "1280",
+      "overflowH": 0,
+      "tablist": true,
+      "roleDescubrir": "tabpanel",
+      "roleFavoritos": "tabpanel",
+      "ariaDescubrir": "pestana-descubrir",
+      "ariaFavoritos": "pestana-favoritos",
+      "lupa": false,
+      "limpiar": false,
+      "rects": {
+        "input": {
+          "w": 820.8,
+          "h": 38
+        },
+        "campo": {
+          "w": 0,
+          "h": 0
+        },
+        "buscar": {
+          "w": 85.2,
+          "h": 38
+        },
+        "lupa": null,
+        "limpiar": null,
+        "actualizar": {
+          "w": 98.44,
+          "h": 32
+        },
+        "reintentar": null,
+        "pestana": {
+          "w": 100.14,
+          "h": 38
+        },
+        "tarjetaHome": {
+          "w": 140,
+          "h": 263.8
+        }
+      },
+      "panelDescubrirActivo": true,
+      "panelFavoritosActivo": false,
+      "h2Favoritos": null
+    }
+  ],
+  "funciones": [
+    {
+      "nombre": "360: sin [role=tablist]",
+      "ok": true,
+      "detalle": false
+    },
+    {
+      "nombre": "360: paneles sin role",
+      "ok": true,
+      "detalle": {
+        "descubrir": null,
+        "favoritos": null
+      }
+    },
+    {
+      "nombre": "360: paneles sin aria-labelledby",
+      "ok": true,
+      "detalle": {
+        "descubrir": null,
+        "favoritos": null
+      }
+    },
+    {
+      "nombre": "360: lupa dentro del campo",
+      "ok": true,
+      "detalle": true
+    },
+    {
+      "nombre": "360: sin ✕ sin texto",
+      "ok": true,
+      "detalle": false
+    },
+    {
+      "nombre": "360: overflowH = 0",
+      "ok": true,
+      "detalle": 0
+    },
+    {
+      "nombre": "390: sin [role=tablist]",
+      "ok": true,
+      "detalle": false
+    },
+    {
+      "nombre": "390: paneles sin role",
+      "ok": true,
+      "detalle": {
+        "descubrir": null,
+        "favoritos": null
+      }
+    },
+    {
+      "nombre": "390: paneles sin aria-labelledby",
+      "ok": true,
+      "detalle": {
+        "descubrir": null,
+        "favoritos": null
+      }
+    },
+    {
+      "nombre": "390: lupa dentro del campo",
+      "ok": true,
+      "detalle": true
+    },
+    {
+      "nombre": "390: sin ✕ sin texto",
+      "ok": true,
+      "detalle": false
+    },
+    {
+      "nombre": "390: overflowH = 0",
+      "ok": true,
+      "detalle": 0
+    },
+    {
+      "nombre": "768: sin [role=tablist]",
+      "ok": true,
+      "detalle": false
+    },
+    {
+      "nombre": "768: paneles sin role",
+      "ok": true,
+      "detalle": {
+        "descubrir": null,
+        "favoritos": null
+      }
+    },
+    {
+      "nombre": "768: paneles sin aria-labelledby",
+      "ok": true,
+      "detalle": {
+        "descubrir": null,
+        "favoritos": null
+      }
+    },
+    {
+      "nombre": "768: lupa dentro del campo",
+      "ok": true,
+      "detalle": true
+    },
+    {
+      "nombre": "768: sin ✕ sin texto",
+      "ok": true,
+      "detalle": false
+    },
+    {
+      "nombre": "768: overflowH = 0",
+      "ok": true,
+      "detalle": 0
+    },
+    {
+      "nombre": "1024: [role=tablist] presente",
+      "ok": true,
+      "detalle": true
+    },
+    {
+      "nombre": "1024: paneles con role=tabpanel",
+      "ok": true,
+      "detalle": {
+        "descubrir": "tabpanel",
+        "favoritos": "tabpanel"
+      }
+    },
+    {
+      "nombre": "1024: sin lupa",
+      "ok": true,
+      "detalle": false
+    },
+    {
+      "nombre": "1024: sin ✕",
+      "ok": true,
+      "detalle": false
+    },
+    {
+      "nombre": "1024: overflowH = 0",
+      "ok": true,
+      "detalle": 0
+    },
+    {
+      "nombre": "1280: [role=tablist] presente",
+      "ok": true,
+      "detalle": true
+    },
+    {
+      "nombre": "1280: paneles con role=tabpanel",
+      "ok": true,
+      "detalle": {
+        "descubrir": "tabpanel",
+        "favoritos": "tabpanel"
+      }
+    },
+    {
+      "nombre": "1280: sin lupa",
+      "ok": true,
+      "detalle": false
+    },
+    {
+      "nombre": "1280: sin ✕",
+      "ok": true,
+      "detalle": false
+    },
+    {
+      "nombre": "1280: overflowH = 0",
+      "ok": true,
+      "detalle": 0
+    },
+    {
+      "nombre": "360: Descubrir activo al arrancar",
+      "ok": true,
+      "detalle": null
+    },
+    {
+      "nombre": "360: encabezado Favoritos no visible en Descubrir",
+      "ok": true,
+      "detalle": null
+    },
+    {
+      "nombre": "360: barra → panel Favoritos",
+      "ok": true,
+      "detalle": null
+    },
+    {
+      "nombre": "360: encabezado \"Favoritos (N)\"",
+      "ok": true,
+      "detalle": "Favoritos (1)"
+    },
+    {
+      "nombre": "360: encabezado Favoritos visible en su panel",
+      "ok": true,
+      "detalle": null
+    },
+    {
+      "nombre": "360: barra → panel Descubrir",
+      "ok": true,
+      "detalle": null
+    },
+    {
+      "nombre": "360: ✕ aparece con texto",
+      "ok": true,
+      "detalle": true
+    },
+    {
+      "nombre": "360: ✕ ≥ 44×44",
+      "ok": true,
+      "detalle": {
+        "w": 44,
+        "h": 44
+      }
+    },
+    {
+      "nombre": "360: hay resultados de \"bleach\"",
+      "ok": true,
+      "detalle": null
+    },
+    {
+      "nombre": "360: ✕ vacía el input",
+      "ok": true,
+      "detalle": {
+        "valor": "",
+        "foco": "buscador-anime"
+      }
+    },
+    {
+      "nombre": "360: ✕ devuelve el foco al input",
+      "ok": true,
+      "detalle": {
+        "valor": "",
+        "foco": "buscador-anime"
+      }
+    },
+    {
+      "nombre": "360: Home visible tras limpiar",
+      "ok": true,
+      "detalle": null
+    },
+    {
+      "nombre": "360: ✕ desaparece sin texto",
+      "ok": true,
+      "detalle": null
+    },
+    {
+      "nombre": "360: Enter busca",
+      "ok": true,
+      "detalle": null
+    },
+    {
+      "nombre": "360: botón \"Buscar\" muestra \"Buscando...\"/disabled",
+      "ok": true,
+      "detalle": true
+    },
+    {
+      "nombre": "360: botón \"Buscar\" vuelve a su estado",
+      "ok": true,
+      "detalle": {
+        "texto": "Buscar",
+        "disabled": false
+      }
+    },
+    {
+      "nombre": "360: \"Buscar\" ≥ 44 de alto",
+      "ok": true,
+      "detalle": {
+        "w": 85.2,
+        "h": 66
+      }
+    },
+    {
+      "nombre": "360: \"Actualizar\" ≥ 44 de alto",
+      "ok": true,
+      "detalle": {
+        "w": 98.44,
+        "h": 44
+      }
+    },
+    {
+      "nombre": "360: ✕ ≥ 44×44",
+      "ok": true,
+      "detalle": {
+        "w": 44,
+        "h": 44
+      }
+    },
+    {
+      "nombre": "800: sin [role=tablist]",
+      "ok": true,
+      "detalle": null
+    },
+    {
+      "nombre": "1000: [role=tablist] presente",
+      "ok": true,
+      "detalle": null
+    },
+    {
+      "nombre": "1000: conserva Descubrir activo",
+      "ok": true,
+      "detalle": null
+    },
+    {
+      "nombre": "800 → 1000: conserva el scroll de las filas",
+      "ok": true,
+      "detalle": {
+        "s0": 152,
+        "s1": 152
+      }
+    },
+    {
+      "nombre": "800 de vuelta: sin [role=tablist]",
+      "ok": true,
+      "detalle": null
+    },
+    {
+      "nombre": "800 de vuelta: conserva Descubrir activo",
+      "ok": true,
+      "detalle": null
+    },
+    {
+      "nombre": "360: barra Buscar enfoca el input",
+      "ok": true,
+      "detalle": null
+    },
+    {
+      "nombre": "360: T66/T67 scroll del detalle restaurado",
+      "ok": true,
+      "detalle": {
+        "yAntes": 69492,
+        "yDespues": 69493
+      }
+    },
+    {
+      "nombre": "reduced-motion: sin transición en el limpiar",
+      "ok": true,
+      "detalle": "0s"
+    }
+  ],
+  "tactiles": [
+    {
+      "texto": "Desplazar a la izquierda",
+      "w": 32,
+      "h": 32,
+      "enBarra": false,
+      "enCajon": false,
+      "estado": "home_360"
+    },
+    {
+      "texto": "Desplazar a la derecha",
+      "w": 32,
+      "h": 32,
+      "enBarra": false,
+      "enCajon": false,
+      "estado": "home_360"
+    },
+    {
+      "texto": "Desplazar a la izquierda",
+      "w": 32,
+      "h": 32,
+      "enBarra": false,
+      "enCajon": false,
+      "estado": "home_360"
+    },
+    {
+      "texto": "Desplazar a la derecha",
+      "w": 32,
+      "h": 32,
+      "enBarra": false,
+      "enCajon": false,
+      "estado": "home_360"
+    },
+    {
+      "texto": "Desplazar a la izquierda",
+      "w": 32,
+      "h": 32,
+      "enBarra": false,
+      "enCajon": false,
+      "estado": "home_360"
+    },
+    {
+      "texto": "Desplazar a la derecha",
+      "w": 32,
+      "h": 32,
+      "enBarra": false,
+      "enCajon": false,
+      "estado": "home_360"
+    },
+    {
+      "texto": "Desplazar a la izquierda",
+      "w": 32,
+      "h": 32,
+      "enBarra": false,
+      "enCajon": false,
+      "estado": "home_360"
+    },
+    {
+      "texto": "Desplazar a la derecha",
+      "w": 32,
+      "h": 32,
+      "enBarra": false,
+      "enCajon": false,
+      "estado": "home_360"
+    }
+  ],
+  "capturas": [
+    "home_360.png",
+    "home_1280.png",
+    "favoritos_360.png",
+    "busqueda_texto_360.png",
+    "busqueda_resultados_360.png"
+  ],
+  "errores": []
+}

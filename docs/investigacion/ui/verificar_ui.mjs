@@ -323,6 +323,45 @@ const MEDIR_CABECERA = () => {
   };
 };
 
+// T75: medición del buscador y de las pestañas del Home en modo estrecho.
+const MEDIR_BUSCADOR = () => {
+  const d = document.documentElement;
+  const round = (n) => Math.round(n * 100) / 100;
+  const rect = (el) => {
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return { w: round(r.width), h: round(r.height) };
+  };
+  const panel = document.getElementById('panel-descubrir');
+  const panelFav = document.getElementById('panel-favoritos');
+  const h2Fav = panelFav ? panelFav.querySelector('h2') : null;
+  const panelActivo = (p) => !!p && !p.classList.contains('inactivo');
+  return {
+    overflowH: d.scrollWidth - d.clientWidth,
+    tablist: !!document.querySelector('[role="tablist"]'),
+    roleDescubrir: panel ? panel.getAttribute('role') : null,
+    roleFavoritos: panelFav ? panelFav.getAttribute('role') : null,
+    ariaDescubrir: panel ? panel.getAttribute('aria-labelledby') : null,
+    ariaFavoritos: panelFav ? panelFav.getAttribute('aria-labelledby') : null,
+    lupa: !!document.querySelector('.buscador .lupa'),
+    limpiar: !!document.querySelector('.buscador .limpiar'),
+    rects: {
+      input: rect(document.querySelector('.buscador input')),
+      campo: rect(document.querySelector('.buscador .campo')),
+      buscar: rect(document.querySelector('.buscador > button')),
+      lupa: rect(document.querySelector('.buscador .lupa')),
+      limpiar: rect(document.querySelector('.buscador .limpiar')),
+      actualizar: rect(document.querySelector('.actualizar')),
+      reintentar: rect(document.querySelector('.reintentar')),
+      pestana: rect(document.querySelector('.pestana')),
+      tarjetaHome: rect(document.querySelector('.fila .carrusel .tarjeta')),
+    },
+    panelDescubrirActivo: panelActivo(panel),
+    panelFavoritosActivo: panelActivo(panelFav),
+    h2Favoritos: h2Fav ? (h2Fav.textContent || '').trim() : null,
+  };
+};
+
 async function gotoApp(page) {
   await page.goto(BASE, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('.buscador input', { timeout: 20000 });
@@ -899,6 +938,272 @@ async function cabecera() {
 }
 
 // ---------------------------------------------------------------------------
+// Modo buscador (T75): pestañas del Home y buscador en modo estrecho
+// ---------------------------------------------------------------------------
+
+const ANCHOS_BUSCADOR = [
+  { w: 360, h: 740, nombre: '360' },
+  { w: 390, h: 844, nombre: '390' },
+  { w: 768, h: 1024, nombre: '768' },
+  { w: 1024, h: 768, nombre: '1024' },
+  { w: 1280, h: 800, nombre: '1280' },
+];
+
+async function buscador() {
+  const dirOut = process.argv[3] ?? 'docs/img/v1.4/buscador';
+  mkdirSync(dirOut, { recursive: true });
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  const rep = { anchos: [], funciones: [], tactiles: [], capturas: [], errores: [] };
+  const check = (nombre, ok, detalle) =>
+    rep.funciones.push({ nombre, ok: !!ok, detalle: detalle === undefined ? null : detalle });
+  const captura = async (nombre, fullPage = false) => {
+    try {
+      await page.screenshot({ path: join(dirOut, `${nombre}.png`), fullPage });
+      rep.capturas.push(`${nombre}.png`);
+    } catch (e) {
+      rep.errores.push(`${nombre}: ${e.message}`);
+    }
+  };
+  const paso = async (nombre, fn) => {
+    try {
+      await fn();
+    } catch (e) {
+      rep.errores.push(`${nombre}: ${e.message}`);
+    }
+  };
+  const destino = (texto) => page.locator('.barra-inferior .destino', { hasText: texto });
+  const panelActivo = (id) =>
+    page.evaluate((i) => !document.getElementById(i).classList.contains('inactivo'), id);
+
+  // --- A. Geometría y estado por ancho ---
+  await paso('A', async () => {
+    for (const a of ANCHOS_BUSCADOR) {
+      await page.setViewportSize({ width: a.w, height: a.h });
+      await gotoApp(page);
+      await page.waitForSelector('.fila .carrusel .tarjeta', { timeout: 60000 }).catch(() => {});
+      await page.waitForTimeout(400);
+      const m = await page.evaluate(MEDIR_BUSCADOR);
+      rep.anchos.push({ ancho: a.nombre, ...m });
+      if (a.nombre === '360') await captura('home_360', true);
+      if (a.nombre === '1280') await captura('home_1280');
+      if (a.w < 900) {
+        check(`${a.nombre}: sin [role=tablist]`, !m.tablist, m.tablist);
+        check(`${a.nombre}: paneles sin role`, m.roleDescubrir === null && m.roleFavoritos === null, {
+          descubrir: m.roleDescubrir,
+          favoritos: m.roleFavoritos,
+        });
+        check(
+          `${a.nombre}: paneles sin aria-labelledby`,
+          m.ariaDescubrir === null && m.ariaFavoritos === null,
+          { descubrir: m.ariaDescubrir, favoritos: m.ariaFavoritos }
+        );
+        check(`${a.nombre}: lupa dentro del campo`, m.lupa, m.lupa);
+        check(`${a.nombre}: sin ✕ sin texto`, !m.limpiar, m.limpiar);
+        check(`${a.nombre}: overflowH = 0`, m.overflowH === 0, m.overflowH);
+      } else {
+        check(`${a.nombre}: [role=tablist] presente`, m.tablist, m.tablist);
+        check(
+          `${a.nombre}: paneles con role=tabpanel`,
+          m.roleDescubrir === 'tabpanel' && m.roleFavoritos === 'tabpanel',
+          { descubrir: m.roleDescubrir, favoritos: m.roleFavoritos }
+        );
+        check(`${a.nombre}: sin lupa`, !m.lupa, m.lupa);
+        check(`${a.nombre}: sin ✕`, !m.limpiar, m.limpiar);
+        check(`${a.nombre}: overflowH = 0`, m.overflowH === 0, m.overflowH);
+      }
+      log('buscador ancho', a.nombre, 'tablist=', m.tablist, 'lupa=', m.lupa);
+    }
+  });
+
+  // --- B. Pestañas y encabezado de Favoritos desde la barra (360) ---
+  await paso('B', async () => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await gotoApp(page);
+    await page.waitForSelector('.fila .carrusel .tarjeta', { timeout: 60000 }).catch(() => {});
+    await page.waitForTimeout(400);
+    check('360: Descubrir activo al arrancar', await panelActivo('panel-descubrir'));
+    check(
+      '360: encabezado Favoritos no visible en Descubrir',
+      !(await page.locator('#panel-favoritos h2').isVisible().catch(() => false))
+    );
+    await destino('Favoritos').click();
+    await page.waitForTimeout(350);
+    check('360: barra → panel Favoritos', await panelActivo('panel-favoritos'));
+    const hFav = await page.evaluate(() => {
+      const h = document.querySelector('#panel-favoritos h2');
+      return h ? (h.textContent || '').trim() : null;
+    });
+    check('360: encabezado "Favoritos (N)"', /^Favoritos \(\d+\)$/.test(hFav ?? ''), hFav);
+    check(
+      '360: encabezado Favoritos visible en su panel',
+      await page.locator('#panel-favoritos h2').isVisible().catch(() => false)
+    );
+    await captura('favoritos_360', true);
+    await destino('Descubrir').click();
+    await page.waitForTimeout(350);
+    check('360: barra → panel Descubrir', await panelActivo('panel-descubrir'));
+  });
+
+  // --- C. Buscador: lupa, ✕, Enter y botón (360) ---
+  await paso('C', async () => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await gotoApp(page);
+    await page.waitForSelector('.fila .carrusel .tarjeta', { timeout: 60000 }).catch(() => {});
+    await page.waitForTimeout(300);
+    const input = page.locator('#buscador-anime');
+    await input.fill('bleach');
+    await page.waitForTimeout(600);
+    await captura('busqueda_texto_360', true);
+    const conTexto = await page.evaluate(MEDIR_BUSCADOR);
+    check('360: ✕ aparece con texto', conTexto.limpiar, conTexto.limpiar);
+    check(
+      '360: ✕ ≥ 44×44',
+      conTexto.rects.limpiar && conTexto.rects.limpiar.w >= 44 && conTexto.rects.limpiar.h >= 44,
+      conTexto.rects.limpiar
+    );
+    await page.waitForSelector('main .rejilla .tarjeta', { timeout: 45000 }).catch(() => {});
+    await page.waitForTimeout(500);
+    await captura('busqueda_resultados_360', true);
+    check('360: hay resultados de "bleach"', (await page.locator('main .rejilla .tarjeta').count()) > 0);
+    await page.locator('.buscador .limpiar').click();
+    await page.waitForTimeout(700);
+    const tras = await page.evaluate(() => ({
+      valor: document.getElementById('buscador-anime').value,
+      foco: document.activeElement?.id,
+    }));
+    check('360: ✕ vacía el input', tras.valor === '', tras);
+    check('360: ✕ devuelve el foco al input', tras.foco === 'buscador-anime', tras);
+    check('360: Home visible tras limpiar', await panelActivo('panel-descubrir'));
+    check('360: ✕ desaparece sin texto', (await page.locator('.buscador .limpiar').count()) === 0);
+    await input.fill('bleach');
+    await page.waitForTimeout(300);
+    await input.press('Enter');
+    await page.waitForSelector('main .rejilla .tarjeta', { timeout: 45000 }).catch(() => {});
+    check('360: Enter busca', (await page.locator('main .rejilla .tarjeta').count()) > 0);
+    await input.fill('naruto');
+    await page.locator('.buscador > button').click();
+    const vioCarga = await page.evaluate(async () => {
+      const b = document.querySelector('.buscador > button');
+      const t0 = performance.now();
+      while (performance.now() - t0 < 1000) {
+        if (b.disabled && (b.textContent || '').trim() === 'Buscando...') return true;
+        await new Promise((r) => setTimeout(r, 10));
+      }
+      return false;
+    });
+    check('360: botón "Buscar" muestra "Buscando..."/disabled', vioCarga, vioCarga);
+    await page.waitForSelector('main .rejilla .tarjeta', { timeout: 45000 }).catch(() => {});
+    const enReposo = await page.evaluate(() => {
+      const b = document.querySelector('.buscador > button');
+      return { texto: (b.textContent || '').trim(), disabled: b.disabled };
+    });
+    check('360: botón "Buscar" vuelve a su estado', enReposo.texto === 'Buscar' && !enReposo.disabled, enReposo);
+  });
+
+  // --- D. Objetivos táctiles en modo estrecho (360) ---
+  await paso('D', async () => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await gotoApp(page);
+    await page.waitForSelector('.fila .carrusel .tarjeta', { timeout: 60000 }).catch(() => {});
+    await page.waitForTimeout(400);
+    const m = await page.evaluate(MEDIR_BUSCADOR);
+    const alto = (r) => r && r.h >= 44;
+    check('360: "Buscar" ≥ 44 de alto', alto(m.rects.buscar), m.rects.buscar);
+    check('360: "Actualizar" ≥ 44 de alto', alto(m.rects.actualizar), m.rects.actualizar);
+    if (m.rects.reintentar) check('360: "Reintentar" ≥ 44 de alto', alto(m.rects.reintentar), m.rects.reintentar);
+    rep.tactiles = (await page.evaluate(TACTILES_CHICOS)).map((t) => ({ ...t, estado: 'home_360' }));
+    await page.locator('#buscador-anime').fill('bleach');
+    await page.waitForTimeout(500);
+    const conTexto = await page.evaluate(MEDIR_BUSCADOR);
+    check(
+      '360: ✕ ≥ 44×44',
+      conTexto.rects.limpiar && conTexto.rects.limpiar.w >= 44 && conTexto.rects.limpiar.h >= 44,
+      conTexto.rects.limpiar
+    );
+  });
+
+  // --- E. Resize 800 → 1000 → 800 ---
+  await paso('E', async () => {
+    await page.setViewportSize({ width: 800, height: 900 });
+    await gotoApp(page);
+    await page.waitForSelector('.fila .carrusel .tarjeta', { timeout: 60000 }).catch(() => {});
+    await page.waitForTimeout(500);
+    check('800: sin [role=tablist]', (await page.locator('[role="tablist"]').count()) === 0);
+    const s0 = await page.evaluate(() => {
+      const c = document.querySelector('.fila .carrusel');
+      if (!c) return null;
+      c.scrollLeft = 120;
+      return c.scrollLeft;
+    });
+    await page.setViewportSize({ width: 1000, height: 900 });
+    await page.waitForTimeout(600);
+    check('1000: [role=tablist] presente', (await page.locator('[role="tablist"]').count()) > 0);
+    check('1000: conserva Descubrir activo', await panelActivo('panel-descubrir'));
+    const s1 = await page.evaluate(() => {
+      const c = document.querySelector('.fila .carrusel');
+      return c ? c.scrollLeft : null;
+    });
+    check('800 → 1000: conserva el scroll de las filas', s0 !== null && s1 === s0, { s0, s1 });
+    await page.setViewportSize({ width: 800, height: 900 });
+    await page.waitForTimeout(600);
+    check('800 de vuelta: sin [role=tablist]', (await page.locator('[role="tablist"]').count()) === 0);
+    check('800 de vuelta: conserva Descubrir activo', await panelActivo('panel-descubrir'));
+  });
+
+  // --- F. Destino "Buscar" de la barra y T66/T67 (360) ---
+  await paso('F', async () => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await gotoApp(page);
+    await page.waitForSelector('.fila .carrusel .tarjeta', { timeout: 60000 }).catch(() => {});
+    await page.waitForTimeout(400);
+    await destino('Buscar').click();
+    await page.waitForTimeout(250);
+    check(
+      '360: barra Buscar enfoca el input',
+      await page.evaluate(() => document.activeElement?.id === 'buscador-anime')
+    );
+    await buscar(page, 'bleach');
+    await abrirDetalle(page, 'animeav1');
+    await page.waitForTimeout(900);
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await page.waitForTimeout(500);
+    const yAntes = await page.evaluate(() => Math.round(window.scrollY));
+    const ultima = page.locator('.rejilla .celda .tarjeta').last();
+    if (yAntes > 0 && (await ultima.count())) {
+      await ultima.click();
+      await page.waitForTimeout(1800);
+      await page.locator('.cabecera .atras').first().click();
+      await page.waitForTimeout(1200);
+      const yDespues = await page.evaluate(() => Math.round(window.scrollY));
+      check('360: T66/T67 scroll del detalle restaurado', Math.abs(yDespues - yAntes) <= 5, { yAntes, yDespues });
+    } else {
+      check('360: T66/T67 scroll del detalle restaurado', false, { yAntes });
+    }
+  });
+
+  // --- G. prefers-reduced-motion: sin transición en el botón limpiar ---
+  await paso('G', async () => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await gotoApp(page);
+    await page.waitForSelector('.fila .carrusel .tarjeta', { timeout: 60000 }).catch(() => {});
+    await page.locator('#buscador-anime').fill('bleach');
+    await page.waitForTimeout(300);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const td = await page.evaluate(() => {
+      const el = document.querySelector('.buscador .limpiar');
+      return el ? getComputedStyle(el).transitionDuration : null;
+    });
+    check('reduced-motion: sin transición en el limpiar', td === '0s', td);
+    await page.emulateMedia({ reducedMotion: null });
+  });
+
+  writeFileSync(join(dirOut, 'buscador.json'), JSON.stringify(rep, null, 2));
+  await browser.close();
+  return rep;
+}
+
+// ---------------------------------------------------------------------------
 // CLI
 // ---------------------------------------------------------------------------
 
@@ -1021,6 +1326,27 @@ if (modo === 'comparar') {
   }
   if (rep.errores.length) console.log('\nErrores:', rep.errores);
   console.log(`\nCapturas (docs/img/v1.4/cabecera/): ${rep.capturas.join(', ') || 'ninguna'}`);
+} else if (modo === 'buscador') {
+  const rep = await buscador();
+  console.log('## Modo buscador (T75) — pestañas y buscador en modo estrecho\n');
+  console.log('| ancho | tablist | role paneles | lupa | ✕ | input w×h | Buscar w×h | pestaña h | tarj.Home h | overflowH |');
+  console.log('|---|:--:|---|:--:|:--:|---:|---:|---:|---:|---:|');
+  for (const m of rep.anchos) {
+    const fmt = (r) => (r ? `${r.w}×${r.h}` : '—');
+    console.log(
+      `| ${m.ancho} | ${m.tablist ? 'sí' : 'no'} | ${m.roleDescubrir ?? '—'} | ${m.lupa ? 'sí' : 'no'} | ${m.limpiar ? 'sí' : 'no'} | ` +
+        `${fmt(m.rects.input)} | ${fmt(m.rects.buscar)} | ${fmt(m.rects.pestana)} | ${fmt(m.rects.tarjetaHome)} | ${m.overflowH} |`
+    );
+  }
+  console.log('\n| comprobación | ok | detalle |');
+  console.log('|---|:--:|---|');
+  for (const f of rep.funciones) {
+    console.log(`| ${f.nombre} | ${f.ok ? 'sí' : 'NO'} | ${f.detalle === null ? '' : JSON.stringify(f.detalle)} |`);
+  }
+  console.log(`\nTáctiles <44 px visibles en el Home (${rep.tactiles.length}):`);
+  for (const t of rep.tactiles) console.log(`- ${t.texto} ${t.w}×${t.h}`);
+  if (rep.errores.length) console.log('\nErrores:', rep.errores);
+  console.log(`\nCapturas (docs/img/v1.4/buscador/): ${rep.capturas.join(', ') || 'ninguna'}`);
 } else {
   const dirOut = process.argv[3] ?? DIR_DEF;
   const res = await capturar(dirOut);

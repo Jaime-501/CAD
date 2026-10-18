@@ -27,7 +27,7 @@
   import GridFavoritos from './GridFavoritos.svelte';
   import { favoritos, cargarFavoritos } from './favoritos';
   import { cargarProveedor, cargarTodo, home, PROVEEDORES_HOME } from './home';
-  import { pestanaHome } from './ui';
+  import { isNarrow, pestanaHome } from './ui';
 
   export let onAbrir: (a: models.Anime) => void;
 
@@ -79,41 +79,43 @@
 </script>
 
 <section class="inicio">
-  <div class="pestanas" role="tablist" aria-label="Secciones del Home">
-    <button
-      type="button"
-      class="pestana"
-      role="tab"
-      id="pestana-descubrir"
-      aria-controls="panel-descubrir"
-      aria-selected={pestana === 'descubrir' ? 'true' : 'false'}
-      tabindex={pestana === 'descubrir' ? 0 : -1}
-      bind:this={tabDescubrir}
-      on:click={() => seleccionar('descubrir')}
-      on:keydown={(e) => alTeclar(e, 'descubrir')}
-    >
-      Descubrir
-    </button>
-    <button
-      type="button"
-      class="pestana"
-      role="tab"
-      id="pestana-favoritos"
-      aria-controls="panel-favoritos"
-      aria-selected={pestana === 'favoritos' ? 'true' : 'false'}
-      tabindex={pestana === 'favoritos' ? 0 : -1}
-      bind:this={tabFavoritos}
-      on:click={() => seleccionar('favoritos')}
-      on:keydown={(e) => alTeclar(e, 'favoritos')}
-    >
-      <span aria-hidden="true">★</span> Favoritos ({$favoritos.length})
-    </button>
-  </div>
+  {#if !$isNarrow}
+    <div class="pestanas" role="tablist" aria-label="Secciones del Home">
+      <button
+        type="button"
+        class="pestana"
+        role="tab"
+        id="pestana-descubrir"
+        aria-controls="panel-descubrir"
+        aria-selected={pestana === 'descubrir' ? 'true' : 'false'}
+        tabindex={pestana === 'descubrir' ? 0 : -1}
+        bind:this={tabDescubrir}
+        on:click={() => seleccionar('descubrir')}
+        on:keydown={(e) => alTeclar(e, 'descubrir')}
+      >
+        Descubrir
+      </button>
+      <button
+        type="button"
+        class="pestana"
+        role="tab"
+        id="pestana-favoritos"
+        aria-controls="panel-favoritos"
+        aria-selected={pestana === 'favoritos' ? 'true' : 'false'}
+        tabindex={pestana === 'favoritos' ? 0 : -1}
+        bind:this={tabFavoritos}
+        on:click={() => seleccionar('favoritos')}
+        on:keydown={(e) => alTeclar(e, 'favoritos')}
+      >
+        <span aria-hidden="true">★</span> Favoritos ({$favoritos.length})
+      </button>
+    </div>
+  {/if}
 
   <div
     id="panel-descubrir"
-    role="tabpanel"
-    aria-labelledby="pestana-descubrir"
+    role={$isNarrow ? undefined : 'tabpanel'}
+    aria-labelledby={$isNarrow ? undefined : 'pestana-descubrir'}
     class="panel"
     class:inactivo={pestana !== 'descubrir'}
   >
@@ -168,11 +170,14 @@
 
   <div
     id="panel-favoritos"
-    role="tabpanel"
-    aria-labelledby="pestana-favoritos"
+    role={$isNarrow ? undefined : 'tabpanel'}
+    aria-labelledby={$isNarrow ? undefined : 'pestana-favoritos'}
     class="panel"
     class:inactivo={pestana !== 'favoritos'}
   >
+    {#if $isNarrow}
+      <h2>Favoritos ({$favoritos.length})</h2>
+    {/if}
     <GridFavoritos {onAbrir} />
   </div>
 </section>
@@ -333,6 +338,13 @@
     }
     to {
       background-position: -30% 0;
+    }
+  }
+  /* T75: en modo estrecho los botones del Home alcanzan el objetivo táctil. */
+  @media (max-width: 899px) {
+    .actualizar,
+    .reintentar {
+      min-height: var(--tap);
     }
   }
 </style>

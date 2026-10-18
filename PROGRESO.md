@@ -1,4 +1,4 @@
-    # PROGRESO — Comfort Anime Desktop (T01–T73b hechas)
+    # PROGRESO — Comfort Anime Desktop (T01–T75 hechas)
 
 > Este archivo es la **memoria entre sesiones**. Cada sesión lo lee al inicio y lo actualiza al final.
 > Reglas y layout: `tareas/00_REGLAS.md`. Detalle de cada tarea: `tareas/Txx.md`.
@@ -143,6 +143,8 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha y verificada
 | [x] | T72b | Puente de color: literales a tokens (v1.4.0) | T70, T71, T72 |
 | [x] | T73 | Barra inferior móvil y cajón de historial (v1.4.0) | T70–T72b |
 | [x] | T73b | Cajón opaco (v1.4.0) | T73 |
+| [x] | T74 | Cabecera compacta de detalle y reproductor (v1.4.0) | T73b |
+| [x] | T75 | Buscador y pestañas del Home (v1.4.0) | T74 |
 
 T01–T29 = v1.0 (`docs/PROGRESO_v1.0.md`) · T30–T35 = v1.1.0 AnimeAV1 (`docs/PROGRESO_v1.1.md`) · T36 = cierre de la v1.1.0 · T37 = portabilidad Android · T38 = cierre documental de T37.
 T39–T57 = v1.2.0 (Home, historial lateral, favoritos, "Siguiente" y su estado discreto; **incluye T53b y T57**); plan en `tareas/v1.2_PLAN.md`, detalle **T39–T58 + cierres T56/T59** archivado en `docs/PROGRESO_v1.2.md`, con resúmenes al final de este archivo.
@@ -1042,3 +1044,53 @@ Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**
 **Capturas** en `docs/img/v1.4/cabecera/`: `detalle_{360,768,1280}.png`, `detalle_largo_360.png`, `detalle_scroll_360.png`, `detalle_jkanime_360.png`, `reproductor_{360,768}.png` (+ `cabecera.json`).
 
 **Archivos tocados:** `frontend/src/CabeceraVista.svelte` (nuevo), `frontend/src/{VistaDetalle,VistaReproductor,BotonFavorito}.svelte` (markup/`<style>`/padding de `.contenedor`; en el reproductor, además, el import y una sentencia reactiva), `docs/investigacion/ui/verificar_ui.mjs` (modo `cabecera`), `docs/img/v1.4/cabecera/**` y `PROGRESO.md`. **Nada fuera de "Puedes tocar"** (regla 7 no se activó): `*.go`, `frontend/wailsjs/**`, `api.ts`, `stores.ts`, `views.ts`, `ui.ts`, `BarraInferior`, `BotonSiguiente.svelte`, el selector de fuentes, las tarjetas, `revelar.ts`, `ventana.ts`, la lógica de scroll (T66/T67) e `index.html` intactos. **Sin tag ni release** (los hace el humano).
+
+## T75 — Buscador y pestañas del Home (v1.4.0) — bloque de esta sesión
+
+Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**. Fecha **2026-10-17**. Lleva al **modo estrecho** (`< 900 px`, mismo corte que `isNarrow`) dos piezas que aún tenían forma de escritorio: las **pestañas del Home** y el **buscador**. En modo estrecho las pestañas `.pestanas` (y el `role="tablist"` con sus `tabpanel`) **desaparecen** —la pestaña activa la manda la barra inferior de T73— y el buscador gana **lupa** dentro del campo, botón **✕ "Borrar búsqueda"** (solo con texto), `h2` alineado a la izquierda y objetivos táctiles de 44 px. En **≥ 900 px** todo queda **igual que en T74** (la barra de pestañas y el buscador de escritorio no cambian ni un píxel). **Sin cambios de comportamiento**: el debounce de 400 ms, el Enter, el vacío→Home, el foco desde el destino "Buscar" de la barra y el contador `limpiarBusqueda` de T73 actúan igual.
+
+**Resultados de la verificación** (modo `buscador` nuevo en `verificar_ui.mjs`, localhost:34115, red real):
+
+| ancho | tablist | role paneles | lupa | ✕ | input (w×h) | "Buscar" (w×h) | pestaña (h) | tarj. Home (h) | `overflowH` |
+|---|:--:|:--:|:--:|:--:|---|---|---|---|---|
+| 360 | no | — | sí | no | 230,8×64 | 85,2×66 | — | 263,8 | 0 |
+| 390 | no | — | sí | no | 260,8×64 | 85,2×66 | — | 263,8 | 0 |
+| 768 | no | — | sí | no | 622,8×64 | 85,2×66 | — | 263,8 | 0 |
+| 1024 | **sí** | `tabpanel` | no | no | 564,8×38 | 85,2×38 | 100,14×38 | 263,8 | 0 |
+| 1280 | **sí** | `tabpanel` | no | no | 820,8×38 | 85,2×38 | 100,14×38 | 263,8 | 0 |
+
+| comprobación (55 en total) | resultado |
+|---|---|
+| 360/390/768: sin `[role=tablist]`, paneles sin `role` ni `aria-labelledby`, lupa presente, sin ✕ sin texto, `overflowH = 0` | **sí** (18/18) |
+| 1024/1280: `[role=tablist]` presente, paneles `role="tabpanel"`, sin lupa ni ✕, `overflowH = 0` | **sí** (10/10) |
+| 360: Descubrir activo al arrancar; barra → Favoritos → Descubrir | **sí** |
+| 360: encabezado `Favoritos (N)` visible solo en su panel (detectado `Favoritos (1)`) | **sí** |
+| 360: ✕ aparece con texto y desaparece sin él; **✕ ≥ 44×44** | **sí** (44×44) |
+| 360: ✕ vacía el input y **devuelve el foco** a `#buscador-anime`; Home visible tras limpiar | **sí** (`{valor:"", foco:"buscador-anime"}`) |
+| 360: Enter → resultados de "bleach"; botón "Buscar" muestra **"Buscando…"/disabled** y luego vuelve a "Buscar" | **sí** |
+| 360: "Buscar" ≥ 44 de alto (85,2×66) · "Actualizar" ≥ 44 (98,44×44) | **sí** |
+| 800 → 1000 → 800: pestañas reaparecen/desaparecen, **conserva Descubrir activo** y el **scroll de las filas** (`s0 = s1 = 152`) | **sí** |
+| 360: destino "Buscar" de la barra **enfoca** el input | **sí** |
+| 360: T66/T67 — scroll del detalle **restaurado** al reabrir (69 492 → 69 493, Δ1 px) | **sí** |
+| `prefers-reduced-motion: reduce`: `transition-duration` del ✕ | **`0s`** |
+| táctiles < 44 px que siguen en modo estrecho (Home) | **solo las flechas de carrusel** (32×32 ×8) — esperado, se tratan en T76; las estrellas de `TarjetaAnime` no se muestran sin hover |
+| **Capturas 1280 antes (HEAD) / después (T75), tol ≤ 2** | **25 px distintos**, caja `x=333..471, y=639..648` (138×9), `máx Δ7` — **idéntico al ruido run-to-run** del mismo código (mismos 25 px y misma caja) ⇒ **sin cambio visual** |
+| geometría ≥ 900 px | tarjeta de Home **263,8**, pestaña **38**, "Buscar" **85,2×38**, input de escritorio **38** de alto (sin cambios) |
+| `npm run check` | **0 errores / 0 avisos** |
+| `npm run build` | **OK** |
+| tests `.ts` | **13 / 48 / 32** comprobaciones OK (`views`, `ventana`, `etiquetas`) |
+| `grep -rn wailsjs frontend/src` | **solo `api.ts`** |
+| Go (`go test -race ./...`) | **435 `--- PASS` de nivel superior**, 0 FAIL (12 paquetes `ok`, `*.go` intactos) |
+
+**Desviaciones (documentadas):**
+- **`.campo { display: contents }` en la base (escritorio):** el campo de búsqueda se envuelve en un `<div class="campo">` que aloja la lupa y el ✕; con `display: contents` el wrapper **no genera caja** en escritorio y el input + botón "Buscar" siguen siendo los mismos hijos flex de `.buscador` (geometría byte-idéntica a T74). Sin ese `display: contents` el input pasaría a ser nieto flex y cambiaría de ancho.
+- **`min-height: var(--tap)` en `.campo input` (solo estrecho):** la ficha no lo listaba para el input, pero sin él la caja táctil del campo quedaba por debajo de 44 px; con `min-height: var(--tap)` el campo mide 64 de alto en 360/390/768.
+- **Regla `@media (prefers-reduced-motion: reduce)` para `.limpiar` colocada al final del `<style>`:** el ✕ define `transition` dentro del bloque de modo estrecho; la anulación va al final para ganar por orden (verificado: `0s`).
+- **Lupa decorativa:** `Icono` `buscar` (`tam=20`, `--text-3`) va en un `<span class="lupa" aria-hidden>` posicionado dentro del campo (sin etiqueta accesible: el campo ya lleva `aria-label="Buscar anime"`).
+- **`limpiar()` en `VistaBusqueda.svelte` (≤ 15 líneas, como pedía la ficha):** vacía `texto`, cancela el temporizador, reprograma la búsqueda y devuelve el foco a `#buscador-anime`. No toca `stores.ts`/`views.ts`/`ui.ts`.
+- **Import añadido en el `<script>`:** solo `Icono` e `isNarrow` (además de la función `limpiar()`), en `VistaBusqueda`; solo `isNarrow` en `VistaInicio`. Nada más.
+- **Comparación a 1280 contra HEAD (no contra `docs/img/v1.4/shell/`)**: la base `shell/home_1280.png` (T73, **pre-T73b**) ya difiere en el fondo del lateral (T73b lo hizo opaco) y el Home/historial son **contenido dinámico** (con `shell/home_1280.png` el diff era de 228 796 px por el lateral + filas). Por eso la comprobación honesta es **HEAD (stash) vs T75 capturadas seguidas**: 25 px en una banda de 138×9, **exactamente igual** al ruido entre dos capturas del mismo código ⇒ **0 cambio real a ≥ 900 px**.
+
+**Capturas** en `docs/img/v1.4/buscador/`: `home_360.png` (página completa), `favoritos_360.png`, `busqueda_texto_360.png` (con ✕ visible), `busqueda_resultados_360.png`, `home_1280.png` (viewport, para la comparación a 1280) (+ `buscador.json`).
+
+**Archivos tocados:** `frontend/src/VistaBusqueda.svelte` (markup del buscador, su `<style>` y el padding de `.contenedor`; en el `<script>`, solo `Icono`+`isNarrow` y `limpiar()`), `frontend/src/VistaInicio.svelte` (markup de pestañas/paneles y `h2` de "Favoritos", su `<style>`; en el `<script>`, solo `isNarrow`), `docs/investigacion/ui/verificar_ui.mjs` (modo `buscador`), `docs/img/v1.4/buscador/**` y `PROGRESO.md`. **Nada fuera de "Puedes tocar"** (regla 7 no se activó): `*.go`, `frontend/wailsjs/**`, `api.ts`, `stores.ts`, `views.ts`, `ui.ts`, `BarraInferior`, `FilaAnimes`, `GridFavoritos`, `TarjetaAnime`, la rejilla de resultados de búsqueda (T78) e `index.html` intactos. **Sin tag ni release** (los hace el humano); **T76 no iniciada**.
