@@ -24,6 +24,7 @@
   import { get } from 'svelte/store';
   import type { models } from './api';
   import FilaAnimes from './FilaAnimes.svelte';
+  import FilaContinuar from './FilaContinuar.svelte';
   import GridFavoritos from './GridFavoritos.svelte';
   import { favoritos, cargarFavoritos } from './favoritos';
   import { cargarProveedor, cargarTodo, home, PROVEEDORES_HOME } from './home';
@@ -119,6 +120,7 @@
     class="panel"
     class:inactivo={pestana !== 'descubrir'}
   >
+    <FilaContinuar />
     <div class="cabecera">
       <h2>Novedades</h2>
       <button

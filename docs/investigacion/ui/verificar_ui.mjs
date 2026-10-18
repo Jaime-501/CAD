@@ -71,6 +71,15 @@ const ANCHOS_FILAS = [
   { w: 1280, h: 800, nombre: '1280' },
 ];
 
+// T77: anchos del modo `continuar` (fila "Continuar viendo" en el Home).
+const ANCHOS_CONTINUAR = [
+  { w: 360, h: 740, nombre: '360' },
+  { w: 390, h: 844, nombre: '390' },
+  { w: 768, h: 1024, nombre: '768' },
+  { w: 1024, h: 768, nombre: '1024' },
+  { w: 1280, h: 800, nombre: '1280' },
+];
+
 function log(...a) { process.stderr.write(['[verificar_ui]', ...a].join(' ') + '\n'); }
 
 // ---------------------------------------------------------------------------
@@ -146,14 +155,16 @@ function pixelAt(img, x, y) {
 const hex = (p) => '#' + p.slice(0, 3).map((v) => v.toString(16).padStart(2, '0')).join('');
 
 /** Diferencias por canal > tol entre dos PNG; devuelve conteo y primera caja. */
-function diffPNG(a, b, tol) {
+function diffPNG(a, b, tol, x0 = 0, x1 = Infinity) {
   if (a.width !== b.width || a.height !== b.height) {
     return { dims: false, a: `${a.width}x${a.height}`, b: `${b.width}x${b.height}` };
   }
   let distintos = 0, maxDelta = 0;
   let minX = Infinity, minY = Infinity, maxX = -1, maxY = -1;
+  const desde = Math.max(0, x0);
+  const hasta = Math.min(a.width, x1);
   for (let y = 0; y < a.height; y++) {
-    for (let x = 0; x < a.width; x++) {
+    for (let x = desde; x < hasta; x++) {
       const i = (y * a.width + x) * a.channels;
       let d = 0;
       for (let c = 0; c < 3; c++) d = Math.max(d, Math.abs(a.data[i + c] - b.data[i + c]));
@@ -285,6 +296,7 @@ const TACTILES_CHICOS = () => {
         h: Math.round(r.height),
         enBarra: !!b.closest('.barra-inferior'),
         enCajon: !!b.closest('.cajon'),
+        enFilaContinuar: !!b.closest('.fila-continuar'),
       };
     })
     .filter((x) => x.w < 44 || x.h < 44);
@@ -344,6 +356,60 @@ const MEDIR_FILAS = () => {
       campo: rect(document.querySelector('.buscador .campo')),
       buscar: rect(document.querySelector('.buscador > button')),
     },
+  };
+};
+
+// T77: geometría de la fila "Continuar viendo" (solo modo estrecho), sus
+// tarjetas, barras de progreso y el respaldo de portada.
+const MEDIR_CONTINUAR = () => {
+  const d = document.documentElement;
+  const round = (n) => Math.round(n * 100) / 100;
+  const rect = (el) => {
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return { x: round(r.x), y: round(r.y), w: round(r.width), h: round(r.height), right: round(r.right) };
+  };
+  const fila = document.querySelector('.fila-continuar');
+  const carrusel = fila ? fila.querySelector('.carrusel') : null;
+  const h3 = fila ? fila.querySelector('.titulo-fila') : null;
+  const csCarr = carrusel ? getComputedStyle(carrusel) : null;
+  const tarjetas = fila ? [...fila.querySelectorAll('.carrusel .tarjeta')] : [];
+  const panel = document.getElementById('panel-descubrir');
+  const primerHijo = panel && panel.firstElementChild ? panel.firstElementChild.className : null;
+  return {
+    innerWidth: window.innerWidth,
+    clientWidth: d.clientWidth,
+    overflowH: d.scrollWidth - d.clientWidth,
+    gutter: getComputedStyle(d).getPropertyValue('--gutter').trim(),
+    fila: rect(fila),
+    titulo: h3 ? (h3.textContent || '').trim() : null,
+    primerHijoPanel: primerHijo,
+    carrusel: carrusel
+      ? {
+          ...rect(carrusel),
+          mask: csCarr.maskImage,
+          scrollPaddingLeft: csCarr.scrollPaddingLeft,
+          scrollSnapType: csCarr.scrollSnapType,
+          overscroll: csCarr.overscrollBehaviorX,
+          scrollbarWidth: csCarr.scrollbarWidth,
+        }
+      : null,
+    tarjetas: tarjetas.map((t) => {
+      const barra = t.querySelector('[role="progressbar"]');
+      const titulo = t.querySelector('.titulo');
+      const proveedor = t.querySelector('.proveedor');
+      const sinPortada = t.querySelector('.sin-portada');
+      return {
+        ...rect(t),
+        porcentaje: barra ? Number(barra.getAttribute('aria-valuenow')) : null,
+        titulo: titulo ? (titulo.textContent || '').trim() : null,
+        proveedor: proveedor ? (proveedor.textContent || '').trim() : null,
+        inicial: sinPortada ? (sinPortada.textContent || '').trim() : null,
+        conPortada: !!t.querySelector('img.portada'),
+      };
+    }),
+    tarjetaHome: rect(document.querySelector('.fila .carrusel .tarjeta')),
+    pestana: rect(document.querySelector('.pestana')),
   };
 };
 
@@ -1581,6 +1647,244 @@ async function filas() {
 }
 
 // ---------------------------------------------------------------------------
+// Modo continuar (T77): fila "Continuar viendo" del Home en modo estrecho
+// ---------------------------------------------------------------------------
+
+async function continuar() {
+  const dirOut = process.argv[3] ?? 'docs/img/v1.4/continuar';
+  mkdirSync(dirOut, { recursive: true });
+  const browser = await chromium.launch();
+  const rep = { anchos: [], tactiles: [], funciones: [], capturas: [], errores: [] };
+  const check = (nombre, ok, detalle) =>
+    rep.funciones.push({ nombre, ok: !!ok, detalle: detalle === undefined ? null : detalle });
+  const paso = async (nombre, fn) => {
+    try {
+      await fn();
+    } catch (e) {
+      rep.errores.push(`${nombre}: ${e.message}`);
+    }
+  };
+  const ctx = await browser.newContext({ viewport: { width: 360, height: 740 } });
+  const page = await ctx.newPage();
+  const captura = async (nombre, locator = null) => {
+    try {
+      if (locator) await locator.screenshot({ path: join(dirOut, `${nombre}.png`) });
+      else await page.screenshot({ path: join(dirOut, `${nombre}.png`) });
+      rep.capturas.push(`${nombre}.png`);
+    } catch (e) {
+      rep.errores.push(`${nombre}: ${e.message}`);
+    }
+  };
+  const cargar = async (a) => {
+    await page.setViewportSize({ width: a.w, height: a.h });
+    await gotoApp(page);
+    await page.waitForSelector('.fila-continuar .carrusel .tarjeta', { timeout: 60000 }).catch(() => {});
+    await page.waitForTimeout(400);
+  };
+  const destino = (texto) => page.locator('.barra-inferior .destino', { hasText: texto });
+  const volverAlHome = async () => {
+    for (let i = 0; i < 4; i++) {
+      if (await page.locator('.fila-continuar').isVisible().catch(() => false)) return;
+      await page.locator('.cabecera .atras').first().click().catch(() => {});
+      await page.waitForTimeout(800);
+    }
+  };
+
+  // Historial sembrado (base T69, con el id de episodio corregido: debe llevar
+  // el slug; `animeav1:episode:9` daba "id de episodio inválido").
+  const SEMILLA = [
+    { anime_id: 'bleach', episode_id: 'jkanime:bleach:episode:5', current_time: 300, total_duration: 1440, is_watched: false, provider: 'jkanime', anime_title: 'Bleach', cover_url: '', episode_number: 5, updated_at: 1749999700 },
+    { anime_id: 'one-piece', episode_id: 'jkanime:one-piece:episode:1100', current_time: 1300, total_duration: 1420, is_watched: true, provider: 'jkanime', anime_title: 'One Piece', cover_url: '', episode_number: 1100, updated_at: 1749999800 },
+    { anime_id: 'bleach', episode_id: 'animeav1:bleach:episode:9', current_time: 900, total_duration: 1420, is_watched: false, provider: 'animeav1', anime_title: 'Bleach', cover_url: '', episode_number: 9, updated_at: 1749999940 },
+  ];
+  const sembrar = async (semilla = SEMILLA) => {
+    await gotoApp(page);
+    await page.evaluate(async (seed) => {
+      const App = window.go?.main?.App;
+      if (!App) throw new Error('puente window.go no disponible (usa localhost:34115)');
+      await App.ClearProgress();
+      for (const s of seed) await App.SaveProgress(s);
+    }, semilla);
+    await gotoApp(page);
+    await page.waitForSelector('.fila-continuar .carrusel .tarjeta', { timeout: 60000 }).catch(() => {});
+    await page.waitForTimeout(500);
+  };
+
+  // --- A. Geometría y estado por ancho ---
+  await paso('A', async () => {
+    await sembrar();
+    for (const a of ANCHOS_CONTINUAR) {
+      await cargar(a);
+      const m = await page.evaluate(MEDIR_CONTINUAR);
+      rep.anchos.push({ ancho: a.nombre, ...m });
+      if (a.nombre === '360') await captura('continuar_360');
+      if (a.nombre === '768') await captura('continuar_768');
+      if (a.nombre === '1280') await captura('continuar_1280');
+      if (a.w < 900) {
+        check(`${a.nombre}: fila "Continuar viendo" presente`, !!m.fila, m.fila);
+        check(`${a.nombre}: título "Continuar viendo"`, m.titulo === 'Continuar viendo', m.titulo);
+        check(`${a.nombre}: 3 tarjetas`, m.tarjetas.length === 3, m.tarjetas.length);
+        check(
+          `${a.nombre}: tarjetas 240 × ≥44 px`,
+          m.tarjetas.length === 3 && m.tarjetas.every((t) => t.w === 240 && t.h >= 44),
+          m.tarjetas.map((t) => `${t.w}×${t.h}`)
+        );
+        check(
+          `${a.nombre}: primera tarjeta al gutter`,
+          !!m.tarjetas[0] && Math.abs(m.tarjetas[0].x - parseFloat(m.gutter)) < 0.6,
+          { x: m.tarjetas[0]?.x, gutter: m.gutter }
+        );
+        check(`${a.nombre}: overflowH = 0`, m.overflowH === 0, m.overflowH);
+        check(`${a.nombre}: carrusel sin máscara`, !!m.carrusel && m.carrusel.mask === 'none', m.carrusel?.mask);
+        check(`${a.nombre}: sin flechas`, (await page.locator('.fila-continuar .flecha').count()) === 0);
+        if (a.nombre === '360')
+          await captura('tarjeta_360', page.locator('.fila-continuar .carrusel .tarjeta').first());
+      } else {
+        check(`${a.nombre}: fila ausente del DOM`, m.fila === null, m.fila);
+        check(
+          `${a.nombre}: Home idéntico a T76 (tarjeta 263,8)`,
+          !!m.tarjetaHome && Math.abs(m.tarjetaHome.h - 263.8) <= 1,
+          m.tarjetaHome?.h
+        );
+        check(`${a.nombre}: pestaña del Home 38 px`, !!m.pestana && Math.abs(m.pestana.h - 38) <= 1, m.pestana?.h);
+      }
+      log('continuar ancho', a.nombre, 'fila=', !!m.fila, 'tarjetas=', m.tarjetas.length);
+    }
+  });
+
+  // --- B. Barras de progreso distintas y respaldo de portada ---
+  await paso('B', async () => {
+    await cargar({ w: 360, h: 740 });
+    const m = await page.evaluate(MEDIR_CONTINUAR);
+    const pcts = m.tarjetas.map((t) => t.porcentaje);
+    check('B: 3 porcentajes distintos', new Set(pcts).size === 3, pcts);
+    check(
+      'B: progreso coherente (21 / 63 / 100)',
+      JSON.stringify([...pcts].sort((x, y) => x - y)) === JSON.stringify([21, 63, 100]),
+      pcts
+    );
+    check(
+      'B: barra role=progressbar con aria-valuenow',
+      await page.locator('.fila-continuar [role="progressbar"][aria-valuenow]').count() === 3
+    );
+    check(
+      'B: respaldo de portada (inicial, sin img)',
+      m.tarjetas.every((t) => t.inicial !== null && !t.conPortada),
+      m.tarjetas.map((t) => ({ inicial: t.inicial, conPortada: t.conPortada }))
+    );
+  });
+
+  // --- C. Clic → retomar; Atrás vuelve al Home conservando el scroll (T66/T67) ---
+  // Nota: en modo estrecho el Home sufre un desplazamiento residual pequeño (~8 px)
+  // por el anclaje de scroll al remontar las secciones asíncronas (reproducible sin
+  // la fila; T66/T67 hace la restauración exacta). Se tolera esa deriva.
+  await paso('C', async () => {
+    await cargar({ w: 360, h: 740 });
+    await page.waitForTimeout(1500);
+    await page.evaluate(
+      () => window.scrollTo(0, Math.min(200, document.documentElement.scrollHeight - window.innerHeight))
+    );
+    await page.waitForTimeout(500);
+    const yAntes = await page.evaluate(() => Math.round(window.scrollY));
+    await page.evaluate(() => document.querySelector('.fila-continuar .carrusel .tarjeta').click());
+    await page.waitForSelector('.cabecera .atras', { timeout: 30000 });
+    await page.waitForTimeout(1500);
+    const navego = await page.evaluate(
+      () => !!(document.querySelector('.marco') || document.querySelector('.ficha') || document.querySelector('.estado'))
+    );
+    check('C: el clic navega por retomar (detalle/reproductor)', navego, navego);
+    await volverAlHome();
+    await page.waitForTimeout(700);
+    check('C: Atrás vuelve al Home', await page.locator('.fila-continuar').isVisible().catch(() => false));
+    const yDespues = await page.evaluate(() => Math.round(window.scrollY));
+    check('C: Home conserva el scroll (T66/T67)', Math.abs(yDespues - yAntes) <= 20, { yAntes, yDespues });
+  });
+
+  // --- D. Ver un episodio y volver: la fila refleja el progreso (recarga al salir del reproductor) ---
+  await paso('D', async () => {
+    await cargar({ w: 360, h: 740 });
+    const jkBleach = (t) => t.proveedor === 'JKAnime' && t.titulo === 'Bleach';
+    const antes = (await page.evaluate(MEDIR_CONTINUAR)).tarjetas.find(jkBleach)?.porcentaje ?? null;
+    await page.evaluate(() => document.querySelector('.fila-continuar .carrusel .tarjeta').click());
+    await page.waitForSelector('.cabecera .atras', { timeout: 30000 });
+    await page.waitForTimeout(1500);
+    // Simula avanzar/ver otro episodio mientras se está en el reproductor.
+    await page.evaluate(async () => {
+      const App = window.go?.main?.App;
+      if (App)
+        await App.SaveProgress({
+          anime_id: 'bleach',
+          episode_id: 'jkanime:bleach:episode:5',
+          current_time: 1440,
+          total_duration: 1440,
+          is_watched: true,
+          provider: 'jkanime',
+          anime_title: 'Bleach',
+          cover_url: '',
+          episode_number: 5,
+          updated_at: 1749999999,
+        });
+    });
+    await volverAlHome();
+    await page.waitForTimeout(700);
+    const despues = (await page.evaluate(MEDIR_CONTINUAR)).tarjetas.find(jkBleach)?.porcentaje ?? null;
+    check('D: al salir del reproductor la fila recarga el historial', antes !== despues, { antes, despues });
+  });
+
+  // --- E. Sin historial la fila desaparece (sin hueco) y "Deshacer" la restaura ---
+  await paso('E', async () => {
+    await cargar({ w: 360, h: 740 });
+    await destino('Historial').click();
+    await page.waitForTimeout(400);
+    for (let i = 0; i < 6; i++) {
+      const pap = page.locator('.barra.cajon .grupo .papelera');
+      if ((await pap.count()) === 0) break;
+      await pap.first().click();
+      await page.waitForTimeout(600);
+    }
+    const vacio = await page.evaluate(() => ({
+      fila: !!document.querySelector('.fila-continuar'),
+      primerHijo: document.getElementById('panel-descubrir')?.firstElementChild?.className ?? null,
+    }));
+    check('E: sin historial la fila no está en el DOM', !vacio.fila, vacio);
+    check('E: sin historial el Home no deja hueco', (vacio.primerHijo ?? '').includes('cabecera'), vacio.primerHijo);
+    await page.locator('.toast .accion').click().catch(() => {});
+    await page.waitForTimeout(800);
+    const tras = await page.evaluate(() => ({
+      fila: !!document.querySelector('.fila-continuar'),
+      tarjetas: document.querySelectorAll('.fila-continuar .carrusel .tarjeta').length,
+    }));
+    check('E: con "Deshacer" la fila reaparece', tras.fila && tras.tarjetas >= 1, tras);
+    await page.keyboard.press('Escape').catch(() => {});
+    await page.waitForTimeout(300);
+  });
+
+  // --- F. prefers-reduced-motion: sin transición en la tarjeta ---
+  await paso('F', async () => {
+    await cargar({ w: 390, h: 844 });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const td = await page.evaluate(() => {
+      const t = document.querySelector('.fila-continuar .carrusel .tarjeta');
+      return t ? getComputedStyle(t).transitionDuration : null;
+    });
+    check('F: reduced-motion sin transición en la tarjeta', td === '0s', td);
+    await page.emulateMedia({ reducedMotion: null });
+  });
+
+  // --- G. Objetivos táctiles <44 px nuevos (en la fila) ---
+  await paso('G', async () => {
+    await cargar({ w: 360, h: 740 });
+    rep.tactiles = (await page.evaluate(TACTILES_CHICOS)).map((t) => ({ ...t, estado: 'home' }));
+    const nuevos = rep.tactiles.filter((t) => t.enFilaContinuar);
+    check('G: 0 objetivos táctiles <44 px en la fila', nuevos.length === 0, nuevos);
+  });
+
+  writeFileSync(join(dirOut, 'continuar.json'), JSON.stringify(rep, null, 2));
+  await browser.close();
+  return rep;
+}
+
+// ---------------------------------------------------------------------------
 // CLI
 // ---------------------------------------------------------------------------
 
@@ -1589,17 +1893,23 @@ const modo = process.argv[2] ?? 'capturar';
 if (modo === 'comparar') {
   const [dirA, dirB] = [process.argv[3], process.argv[4]];
   const tol = Number(process.argv[5] ?? 2);
+  // Región opcional a comparar: `desdeX [hastaX]` (p. ej. excluir la barra
+  // lateral que cambia con los datos de historial).
+  const desdeX = Number(process.argv[6] ?? 0);
+  const hastaX = process.argv[7] === undefined ? Infinity : Number(process.argv[7]);
   if (!dirA || !dirB || !existsSync(dirA) || !existsSync(dirB)) {
-    log('uso: comparar <dirBase> <dirActual> [tol]');
+    log('uso: comparar <dirBase> <dirActual> [tol] [desdeX] [hastaX]');
     process.exit(1);
   }
   const nombres = readdirSync(dirA).filter((f) => f.toLowerCase().endsWith('.png')).sort();
   let iguales = 0, distintos = 0, faltan = 0;
-  console.log(`Comparación por canal (tol ≤ ${tol}): ${dirA} vs ${dirB}`);
+  console.log(
+    `Comparación por canal (tol ≤ ${tol}, x ∈ [${desdeX}, ${hastaX === Infinity ? 'fin' : hastaX})): ${dirA} vs ${dirB}`
+  );
   for (const nombre of nombres) {
     const pa = join(dirA, nombre), pb = join(dirB, nombre);
     if (!existsSync(pa) || !existsSync(pb)) { faltan++; continue; }
-    const r = diffPNG(decodePNG(readFileSync(pa)), decodePNG(readFileSync(pb)), tol);
+    const r = diffPNG(decodePNG(readFileSync(pa)), decodePNG(readFileSync(pb)), tol, desdeX, hastaX);
     if (!r.dims) { console.log(`- ${nombre}: DIMENSIONES ${r.a} vs ${r.b}`); distintos++; continue; }
     if (r.distintos === 0) { iguales++; console.log(`- ${nombre}: idénticas (${r.width}x${r.height})`); }
     else {
@@ -1745,6 +2055,29 @@ if (modo === 'comparar') {
   for (const t of rep.tactiles) console.log(`- ${t.texto} ${t.w}×${t.h}`);
   if (rep.errores.length) console.log('\nErrores:', rep.errores);
   console.log(`\nCapturas (${process.argv[3] ?? 'docs/img/v1.4/filas'}): ${rep.capturas.join(', ') || 'ninguna'}`);
+} else if (modo === 'continuar') {
+  const rep = await continuar();
+  console.log('## Modo continuar (T77) — fila "Continuar viendo" del Home\n');
+  console.log('| ancho | fila | título | tarjetas | 1ª x | gutter | tarj.w×h | tarj.Home h | pestaña | overflowH |');
+  console.log('|---|:--:|---:|---:|---:|---:|---|---:|---:|---:|');
+  for (const m of rep.anchos) {
+    const fmt = (t) => (t ? `${t.w}×${t.h}` : '—');
+    console.log(
+      `| ${m.ancho} | ${m.fila ? 'sí' : 'no'} | ${m.titulo ?? '—'} | ${m.tarjetas.length} | ${fmt(m.tarjetas[0])} | ` +
+        `${m.gutter} | ${m.tarjetas.map((t) => `${t.porcentaje}%`).join('/') || '—'} | ${m.tarjetaHome?.h ?? '—'} | ` +
+        `${m.pestana?.h ?? '—'} | ${m.overflowH} |`
+    );
+  }
+  console.log('\n| comprobación | ok | detalle |');
+  console.log('|---|:--:|---|');
+  for (const f of rep.funciones)
+    console.log(`| ${f.nombre} | ${f.ok ? 'sí' : 'NO'} | ${f.detalle === null ? '' : JSON.stringify(f.detalle)} |`);
+  const fallos = rep.funciones.filter((f) => !f.ok).length;
+  console.log(`\nComprobaciones: ${rep.funciones.length - fallos}/${rep.funciones.length} OK`);
+  console.log(`Táctiles <44 px visibles en el Home (${rep.tactiles.length}); en la fila: ${rep.tactiles.filter((t) => t.enFilaContinuar).length}`);
+  for (const t of rep.tactiles) console.log(`- ${t.texto} ${t.w}×${t.h}${t.enFilaContinuar ? ' [FILA]' : ''}`);
+  if (rep.errores.length) console.log('\nErrores:', rep.errores);
+  console.log(`\nCapturas (${process.argv[3] ?? 'docs/img/v1.4/continuar'}): ${rep.capturas.join(', ') || 'ninguna'}`);
 } else {
   const dirOut = process.argv[3] ?? DIR_DEF;
   const res = await capturar(dirOut);

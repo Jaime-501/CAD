@@ -1,4 +1,4 @@
-    # PROGRESO — Comfort Anime Desktop (T01–T76 hechas)
+    # PROGRESO — Comfort Anime Desktop (T01–T77 hechas)
 
 > Este archivo es la **memoria entre sesiones**. Cada sesión lo lee al inicio y lo actualiza al final.
 > Reglas y layout: `tareas/00_REGLAS.md`. Detalle de cada tarea: `tareas/Txx.md`.
@@ -146,6 +146,7 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha y verificada
 | [x] | T74 | Cabecera compacta de detalle y reproductor (v1.4.0) | T73b |
 | [x] | T75 | Buscador y pestañas del Home (v1.4.0) | T74 |
 | [x] | T76 | Filas y tarjetas del Home (v1.4.0) | T75 |
+| [x] | T77 | Fila "Continuar viendo" del Home (v1.4.0) | T76 |
 
 T01–T29 = v1.0 (`docs/PROGRESO_v1.0.md`) · T30–T35 = v1.1.0 AnimeAV1 (`docs/PROGRESO_v1.1.md`) · T36 = cierre de la v1.1.0 · T37 = portabilidad Android · T38 = cierre documental de T37.
 T39–T57 = v1.2.0 (Home, historial lateral, favoritos, "Siguiente" y su estado discreto; **incluye T53b y T57**); plan en `tareas/v1.2_PLAN.md`, detalle **T39–T58 + cierres T56/T59** archivado en `docs/PROGRESO_v1.2.md`, con resúmenes al final de este archivo.
@@ -1143,3 +1144,46 @@ Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**
 **Capturas** en `docs/img/v1.4/filas/`: `home_360.png` (viewport), `home_360_coarse.png` (con `pointer: coarse`), `home_768.png`, `home_1280.png`, `tarjeta_360.png` (primer plano de una tarjeta) (+ `filas.json`).
 
 **Archivos tocados:** `frontend/src/TarjetaAnime.svelte` (SOLO `<style>`), `frontend/src/FilaAnimes.svelte` (SOLO `<style>`), `frontend/src/VistaInicio.svelte` (SOLO `<style>`), `frontend/src/VistaBusqueda.svelte` (SOLO `<style>` del buscador, paso 0), `docs/investigacion/ui/verificar_ui.mjs` (modo `filas`), `docs/img/v1.4/filas/**` y `PROGRESO.md`. **Nada fuera de "Puedes tocar"** (regla 7 no se activó): `*.go`, `frontend/wailsjs/**`, `api.ts`, `stores.ts`, `views.ts`, `ui.ts`, `GridFavoritos` (T87), la rejilla de resultados de búsqueda (T78), `BarraInferior` e `index.html` intactos; ningún `<script>` de componente cambiado. **Sin tag ni release** (los hace el humano); **T77 no iniciada**.
+
+## T77 — Fila "Continuar viendo" del Home (v1.4.0) — bloque de esta sesión
+
+Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**. Fecha **2026-10-17**. Añade al **Home móvil** (solo `$isNarrow`, `< 900 px`) una **fila de "Continuar viendo"** con las **3–10** entradas más recientes del historial, en **carrusel horizontal** sin flechas ni degradados (gesto/rueda), **primera** al `--gutter` y con el mismo **sangrado** que las filas de T76. Cada **tarjeta** (ancho fijo **240 px**, alto **86 px**) muestra **portada 48×68**, título a 2 líneas con elipsis, **episodio · tiempo** (o "Visto ✓"), **proveedor**, **barra de progreso** de 4 px (`role="progressbar"` + `aria-valuenow`) y, mientras se resuelve, "Buscando…"/mensaje de resultado. Reutiliza **sin lógica nueva** `historial.ts` (`tituloVisible`, `formatearTiempo`, `numeroDeEpisodio`, `fraccionProgreso`, `proveedorDe`, `NOMBRE_PROVEEDOR`) y `retomar.ts` (mismo mapeo que `BarraLateral.alRetomar`: `!ok`→"No se pudo retomar", `completed`→"Completado", `up_to_date`→"Al día", mensaje de 4 s, una resolución a la vez). En **≥ 900 px** la fila **no se monta** y el Home es **byte-idéntico a T76**. **Sin cambios** en `App.svelte`, `stores.ts`, `views.ts`, `historial.ts` ni `retomar.ts`.
+
+**Resultados de la verificación** (modo `continuar` nuevo en `verificar_ui.mjs`, localhost:34115, red real):
+
+| ancho | fila | tarjetas | 1.ª x | `--gutter` | tarjeta (w×h) | progreso | tarj. Home (h) | pestaña (h) | `overflowH` |
+|---|:--:|---:|---:|---:|---|---|---:|---:|---:|
+| 360 | **sí** | 3 | 16 | 16 px | **240×86** | 63 / 100 / 21 % | 263,8 | — | 0 |
+| 390 | **sí** | 3 | 16 | 16 px | **240×86** | 63 / 100 / 21 % | 263,8 | — | 0 |
+| 768 | **sí** | 3 | 24 | 24 px | **240×86** | 63 / 100 / 21 % | 263,8 | — | 0 |
+| 1024 | **no** | 0 | — | 32 px | — | — | 263,8 | 38 | 0 |
+| 1280 | **no** | 0 | — | 32 px | — | — | 263,8 | 38 | 0 |
+
+| comprobación (43 en total) | resultado |
+|---|---|
+| 360/390/768: fila presente, título "Continuar viendo", **3 tarjetas 240 × ≥44 px**, 1.ª al `--gutter`, `overflowH = 0`, carrusel **sin `mask-image`**, **sin flechas** | **sí** (24/24) |
+| 1024/1280: fila **ausente del DOM**; Home idéntico a T76 (tarj. Home **263,8**, pestaña **38**) | **sí** (6/6) |
+| 3 **porcentajes distintos** y coherentes (21 / 63 / 100 %), 3 `progressbar` con `aria-valuenow`, **respaldo de portada** (inicial, sin `img`) | **sí** (4/4) |
+| clic → **navega por `retomar`** (detalle/reproductor); "Atrás" **vuelve al Home** | **sí** (2/2) |
+| **T66/T67** — Home conserva el scroll al volver (200 → 208, **Δ8**, ≤ 20; deriva de anclaje, ver desviaciones) | **sí** |
+| **al salir del reproductor la fila recarga el historial** (JKAnime Bleach **21 → 100 %**) | **sí** |
+| **sin historial** la fila no está en el DOM y el Home **no deja hueco** (1.er hijo = `.cabecera`); "**Deshacer**" la **restaura** (1 tarjeta) | **sí** (3/3) |
+| `prefers-reduced-motion: reduce`: `transition-duration` de `.tarjeta` | **`0s`** |
+| táctiles < 44 px visibles en el Home (360) | **0** (0 en la fila) |
+| **Capturas 1280 (T76) vs (T77), tol ≤ 2, región `x ≥ 300`** | **idénticas** (1280×800) — la fila no existe en escritorio; el único diff (x < 300) es la **barra lateral** con datos de historial |
+| `npm run check` | **0 errores / 0 avisos** |
+| `npm run build` | **OK** |
+| tests `.ts` | **13 / 48 / 32** comprobaciones OK (`views`, `ventana`, `etiquetas`; sin test nuevo, no hay lógica pura nueva) |
+| `grep -rn wailsjs frontend/src` | **solo `api.ts`** |
+| Go (`go test -count=1 -v ./...`) | **435 `--- PASS` de nivel superior**, 0 FAIL (`*.go` intactos) |
+
+**Desviaciones (documentadas):**
+- **Semilla del historial de T69 corrupta (arreglada).** El historial sembrado tenía `episode_id` sin *slug* (`animeav1:episode:9`), y `models.ParseEpisodeID` lo rechazaba ("id de episodio inválido: \"9\" no es un tipo válido sin número"), de modo que **`Retomar`/`GetNextEpisode` fallaban** para esas entradas. Se re-sembró por el puente (`ClearProgress` + `SaveProgress`) con el formato correcto **`provider:slug:episode:n`** (`animeav1:bleach:episode:9`, `jkanime:bleach:episode:5`, `jkanime:one-piece:episode:1100`); el modo `continuar` **siembra** con ese formato (auto-contenido). **No es un fallo del producto** (el `episode_id` lo genera el propio backend al guardar), sino de la semilla manual.
+- **Deriva de scroll en el Home estrecho (~8 px).** Al volver al Home, `sincronizarVista` **restaura exactamente** la posición guardada (T66/T67), pero el **anclaje de scroll** del navegador la ajusta unos píxeles al **remontar las secciones asíncronas** del Home. La deriva es **previa a T77**: reproduciendo el mismo recorrido **sin la fila** (clic en una tarjeta de Novedades a 360) la desviación es **~14 px** (200 → 214). La fila no la introduce (queda por **debajo** de la zona observable). El modo `continuar` la **tolera (≤ 20 px)** y lo deja escrito; arreglarla del todo requeriría `overflow-anchor: none` en el contenedor de scroll (**CSS global / `App.svelte`**, fuera de "Puedes tocar"). Diagnóstico: con `html{overflow-anchor:none}` la restauración es exacta (200 → 200).
+- **Filtro de región en el modo `comparar`.** `verificar_ui.mjs comparar` acepta ahora `[desdeX] [hastaX]` para excluir la **barra lateral** (que cambia con los datos de historial) y comparar solo el Home (`desdeX = 300`), lo que permite afirmar "idénticas a 1280" de forma honesta.
+- **Clase `.fila-continuar` (no `.fila`).** Para no colisionar con los selectores de T76 (`filas`: `.fila .carrusel .tarjeta`) ni de T73 (`shell`: `.fila .carrusel .tarjeta`), la sección usa `class="fila-continuar"` con `aria-label="Continuar viendo"`. La ficha no fijaba la clase; se documenta.
+- **Sin `<script>` en `VistaInicio.svelte` más allá del import.** El montaje es `<FilaContinuar />` como primer hijo del panel "Descubrir"; **no** se añadió lógica al `<script>` (solo la línea `import FilaContinuar`). `git diff` del archivo = **solo** esas 2 líneas.
+
+**Capturas** en `docs/img/v1.4/continuar/`: `continuar_360.png` (viewport Home con la fila), `continuar_768.png`, `continuar_1280.png` (sin fila), `tarjeta_360.png` (primer plano) (+ `continuar.json`).
+
+**Archivos tocados:** `frontend/src/TarjetaContinuar.svelte` (**nuevo**), `frontend/src/FilaContinuar.svelte` (**nuevo**), `frontend/src/VistaInicio.svelte` (**solo** `import` + `<FilaContinuar />`), `docs/investigacion/ui/verificar_ui.mjs` (modo `continuar` + `[desdeX] [hastaX]` en `comparar`), `docs/img/v1.4/continuar/**` y `PROGRESO.md`. **Nada fuera de "Puedes tocar"** (regla 7 no se activó): `*.go`, `frontend/wailsjs/**`, `api.ts`, `stores.ts`, `views.ts`, `ui.ts`, `historial.ts`, `retomar.ts`, `App.svelte`, `BarraLateral`, `TarjetaHistorial`, `FilaAnimes`, `TarjetaAnime`, `GridFavoritos` e `index.html` intactos. **Sin tag ni release** (los hace el humano); **T78 no iniciada**.
