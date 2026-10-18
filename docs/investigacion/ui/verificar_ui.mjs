@@ -495,6 +495,79 @@ const MEDIR_BUSCADOR = () => {
   };
 };
 
+// T78: medición de la rejilla de resultados de búsqueda y sus estados.
+const MEDIR_BUSQUEDA = () => {
+  const d = document.documentElement;
+  const round = (n) => Math.round(n * 100) / 100;
+  const rect = (el) => {
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return { x: round(r.x), y: round(r.y), w: round(r.width), h: round(r.height) };
+  };
+  const rejilla = document.querySelector('main .rejilla');
+  const cs = rejilla ? getComputedStyle(rejilla) : null;
+  const columnas = cs && cs.gridTemplateColumns ? cs.gridTemplateColumns.split(' ').filter(Boolean).length : 0;
+  const tarjetas = [...document.querySelectorAll('main .rejilla > .tarjeta')];
+  const fantasmas = [...document.querySelectorAll('main .rejilla > .fantasma')];
+  const contador = document.querySelector('main .contador');
+  const error = document.querySelector('.estado-vista.variante-error');
+  const vacio = document.querySelector('.estado-vista.variante-vacio');
+  // T78: caja que abarca la zona de resultados (contador + rejilla); en 1280
+  // sirve para demostrar que el cambio visual queda contenido ahí.
+  const zonaResultados = (() => {
+    const a = contador ? contador.getBoundingClientRect() : null;
+    const b = rejilla ? rejilla.getBoundingClientRect() : null;
+    if (!a && !b) return null;
+    const x0 = Math.min(a ? a.left : Infinity, b ? b.left : Infinity);
+    const y0 = Math.min(a ? a.top : Infinity, b ? b.top : Infinity);
+    const x1 = Math.max(a ? a.right : -Infinity, b ? b.right : -Infinity);
+    const y1 = Math.max(a ? a.bottom : -Infinity, b ? b.bottom : -Infinity);
+    return { x: Math.round(x0), y: Math.round(y0), w: Math.round(x1 - x0), h: Math.round(y1 - y0) };
+  })();
+  return {
+    overflowH: d.scrollWidth - d.clientWidth,
+    columnas,
+    gap: cs ? cs.gap : null,
+    tarjetas: tarjetas.length,
+    fantasmas: fantasmas.length,
+    ariaBusy: rejilla ? rejilla.getAttribute('aria-busy') : null,
+    primera: rect(tarjetas[0]),
+    portada: rect(tarjetas[0] ? tarjetas[0].querySelector('img') : null),
+    zonaResultados,
+    todasTactil:
+      tarjetas.length > 0 &&
+      tarjetas.every((t) => {
+        const r = t.getBoundingClientRect();
+        return r.width >= 44 && r.height >= 44;
+      }),
+    contadorTexto: contador ? (contador.textContent || '').trim() : null,
+    contadorLive: contador ? contador.getAttribute('aria-live') : null,
+    etiquetas: tarjetas.map((t) => ((t.querySelector('.etiqueta') || {}).textContent || '').trim()),
+    error: error
+      ? {
+          titulo: ((error.querySelector('.titulo') || {}).textContent || '').trim(),
+          texto: ((error.querySelector('.texto') || {}).textContent || '').trim(),
+          boton: ((error.querySelector('.btn') || {}).textContent || '').trim(),
+        }
+      : null,
+    vacio: vacio
+      ? {
+          titulo: ((vacio.querySelector('.titulo') || {}).textContent || '').trim(),
+          texto: ((vacio.querySelector('.texto') || {}).textContent || '').trim(),
+          boton: !!vacio.querySelector('.btn'),
+        }
+      : null,
+  };
+};
+
+// T78: portadas cargadas de la rejilla de resultados (lazy-loading real).
+const CONTAR_IMAGENES = () => {
+  const imgs = [...document.querySelectorAll('main .rejilla > .tarjeta img')];
+  let cargadas = 0;
+  for (const im of imgs) if (im.complete && im.naturalWidth > 0) cargadas++;
+  return { total: imgs.length, cargadas };
+};
+
 async function gotoApp(page) {
   await page.goto(BASE, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('.buscador input', { timeout: 20000 });
@@ -517,13 +590,15 @@ async function buscar(page, texto) {
   await page.waitForTimeout(500);
 }
 
+// T78: los resultados usan `TarjetaAnime`, cuya insignia de proveedor es
+// `.etiqueta` (nombre legible: "JKAnime"/"AnimeAV1") en lugar de `.proveedor`.
 async function abrirDetalle(page, proveedor) {
-  const tarjetas = page.locator('main .rejilla .tarjeta');
+  const tarjetas = page.locator('main .rejilla > .tarjeta');
   const n = await tarjetas.count();
   for (let i = 0; i < n; i++) {
     const t = tarjetas.nth(i);
-    const prov = ((await t.locator('.proveedor').first().textContent()) ?? '').trim();
-    if (prov === proveedor) { await t.click(); break; }
+    const prov = ((await t.locator('.etiqueta').first().textContent().catch(() => '')) ?? '').trim();
+    if (prov.toLowerCase() === proveedor.toLowerCase()) { await t.click(); break; }
   }
   await page.waitForSelector('.ficha, .estado', { timeout: 45000 });
   await page.waitForSelector('.rejilla .celda .tarjeta', { timeout: 60000 }).catch(() => {});
@@ -822,14 +897,14 @@ const ANCHOS_CABECERA = [
 
 /** Abre el detalle del proveedor cuya tarjeta tenga el título más largo. */
 async function abrirDetalleLargo(page, proveedor) {
-  const tarjetas = page.locator('main .rejilla .tarjeta');
+  const tarjetas = page.locator('main .rejilla > .tarjeta');
   const n = await tarjetas.count();
   let elegido = -1;
   let maxLargo = -1;
   for (let i = 0; i < n; i++) {
     const t = tarjetas.nth(i);
-    const prov = ((await t.locator('.proveedor').first().textContent()) ?? '').trim();
-    if (prov !== proveedor) continue;
+    const prov = ((await t.locator('.etiqueta').first().textContent().catch(() => '')) ?? '').trim();
+    if (prov.toLowerCase() !== proveedor.toLowerCase()) continue;
     const largo = ((await t.locator('.titulo').first().textContent()) ?? '').trim().length;
     if (largo > maxLargo) {
       maxLargo = largo;
@@ -1885,6 +1960,363 @@ async function continuar() {
 }
 
 // ---------------------------------------------------------------------------
+// Modo busqueda (T78): rejilla de resultados y estados de búsqueda
+// ---------------------------------------------------------------------------
+
+const ANCHOS_BUSQUEDA = [
+  { w: 360, h: 740, nombre: '360' },
+  { w: 390, h: 844, nombre: '390' },
+  { w: 768, h: 1024, nombre: '768' },
+  { w: 1024, h: 768, nombre: '1024' },
+  { w: 1280, h: 800, nombre: '1280' },
+];
+
+async function busqueda() {
+  const dirOut = process.argv[3] ?? 'docs/img/v1.4/busqueda';
+  mkdirSync(dirOut, { recursive: true });
+  const browser = await chromium.launch();
+  const rep = {
+    anchos: [],
+    funciones: [],
+    capturas: [],
+    imagenes: null,
+    esqueleto: null,
+    vacio: null,
+    zona1280: null,
+    tactiles: [],
+    errores: [],
+  };
+  const check = (nombre, ok, detalle) =>
+    rep.funciones.push({ nombre, ok: !!ok, detalle: detalle === undefined ? null : detalle });
+  const paso = async (nombre, fn) => {
+    try {
+      await fn();
+    } catch (e) {
+      rep.errores.push(`${nombre}: ${e.message}`);
+    }
+  };
+  const page = await browser.newPage();
+  const captura = async (nombre, p = page) => {
+    try {
+      await p.screenshot({ path: join(dirOut, `${nombre}.png`) });
+      rep.capturas.push(`${nombre}.png`);
+    } catch (e) {
+      rep.errores.push(`${nombre}: ${e.message}`);
+    }
+  };
+  const escribir = async (texto) => {
+    const input = page.locator('#buscador-anime');
+    await input.fill('');
+    await input.fill(texto);
+  };
+  const medirHome = () =>
+    page.evaluate(() => {
+      const t = document.querySelector('.fila .carrusel .tarjeta');
+      if (!t) return null;
+      const r = t.getBoundingClientRect();
+      const i = t.querySelector('img');
+      const ir = i ? i.getBoundingClientRect() : null;
+      const rd = (n) => Math.round(n * 100) / 100;
+      return { w: rd(r.width), h: rd(r.height), imgW: ir ? rd(ir.width) : null, imgH: ir ? rd(ir.height) : null };
+    });
+
+  // --- A. Geometría, columnas y contador por ancho ---
+  await paso('A', async () => {
+    for (const a of ANCHOS_BUSQUEDA) {
+      await page.setViewportSize({ width: a.w, height: a.h });
+      await gotoApp(page);
+      await page.waitForSelector('.fila .carrusel .tarjeta', { timeout: 60000 }).catch(() => {});
+      await page.waitForTimeout(300);
+      const home = await medirHome();
+      check(
+        `${a.nombre}: tarjeta del Home 263,8×140`,
+        !!home && Math.abs(home.h - 263.8) <= 1 && home.w === 140,
+        home
+      );
+      await buscar(page, 'bleach');
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await page.waitForTimeout(300);
+      const m = await page.evaluate(MEDIR_BUSQUEDA);
+      rep.anchos.push({ ancho: a.nombre, ...m });
+      if (a.w === 1280) {
+        rep.zona1280 = m.zonaResultados;
+        check(
+          '1280: zona de resultados contenida (x≥0, w≤ancho)',
+          !!m.zonaResultados && m.zonaResultados.x >= 0 && m.zonaResultados.w <= a.w,
+          m.zonaResultados
+        );
+      }
+      check(`${a.nombre}: overflowH = 0`, m.overflowH === 0, m.overflowH);
+      check(`${a.nombre}: gap de rejilla 12px (--sp-3)`, m.gap === '12px', m.gap);
+      check(`${a.nombre}: cada tarjeta ≥44×44`, m.todasTactil, m.primera);
+      if (a.w < 480) check(`${a.nombre}: 2 columnas`, m.columnas === 2, m.columnas);
+      else if (a.w < 900) check(`${a.nombre}: 3 columnas`, m.columnas === 3, m.columnas);
+      else check(`${a.nombre}: auto-fill (≥4 columnas)`, m.columnas >= 4, m.columnas);
+      check(
+        `${a.nombre}: contador "{n} resultados" con aria-live`,
+        m.contadorLive === 'polite' && /^\d+ resultados$/.test(m.contadorTexto ?? ''),
+        m.contadorTexto
+      );
+      check(
+        `${a.nombre}: etiqueta legible del proveedor`,
+        m.etiquetas.length > 0 && m.etiquetas.every((e) => e === 'JKAnime' || e === 'AnimeAV1'),
+        m.etiquetas.slice(0, 4)
+      );
+      // La tarjeta tiene la forma de `TarjetaAnime`: alto = 1,5·ancho + 53,8.
+      check(
+        `${a.nombre}: alto = 1,5·ancho + 53,8`,
+        !!m.primera && Math.abs(m.primera.h - (1.5 * m.primera.w + 53.8)) <= 1.5,
+        m.primera
+      );
+      if (a.nombre === '360') await captura('resultados_360_arriba');
+      if (a.nombre === '768') await captura('resultados_768');
+      if (a.nombre === '1280') await captura('resultados_1280');
+      log('busqueda ancho', a.nombre, 'columnas=', m.columnas, 'tarjeta=', m.primera && `${m.primera.w}x${m.primera.h}`);
+    }
+  });
+
+  // --- B. Portadas con scroll real (lazy-loading) a 360 ---
+  await paso('B', async () => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await gotoApp(page);
+    await page.waitForSelector('.fila .carrusel .tarjeta', { timeout: 60000 }).catch(() => {});
+    await buscar(page, 'bleach');
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.waitForTimeout(400);
+    const arriba = await page.evaluate(CONTAR_IMAGENES);
+    await page.evaluate(async () => {
+      const paso = Math.max(200, window.innerHeight * 0.8);
+      for (let y = 0; y <= document.documentElement.scrollHeight; y += paso) {
+        window.scrollTo(0, y);
+        await new Promise((r) => setTimeout(r, 200));
+      }
+      window.scrollTo(0, document.documentElement.scrollHeight);
+    });
+    await page.waitForTimeout(1000);
+    const abajo = await page.evaluate(CONTAR_IMAGENES);
+    rep.imagenes = { arriba, abajo };
+    await captura('resultados_360_scroll');
+    check(
+      'B: todas las portadas cargan tras el scroll',
+      abajo.total > 0 && abajo.cargadas >= abajo.total,
+      rep.imagenes
+    );
+    check('B: el scroll real carga más que el primer pantallazo', abajo.cargadas >= arriba.cargadas, rep.imagenes);
+  });
+
+  // --- C. Esqueleto → resultados: sin salto de layout (búsqueda lenta) ---
+  await paso('C', async () => {
+    const ctx2 = await browser.newContext({ viewport: { width: 360, height: 740 } });
+    const p2 = await ctx2.newPage();
+    await p2.addInitScript(() => {
+      const wrap = () => {
+        const App = window.go && window.go.main && window.go.main.App;
+        if (!App || App.__slow78 || typeof App.SearchAnime !== 'function') return false;
+        const orig = App.SearchAnime;
+        App.SearchAnime = (...a) => new Promise((res) => setTimeout(() => res(orig.apply(App, a)), 1500));
+        App.__slow78 = true;
+        return true;
+      };
+      if (!wrap()) {
+        const id = setInterval(() => {
+          if (wrap()) clearInterval(id);
+        }, 2);
+        setTimeout(() => clearInterval(id), 10000);
+      }
+    });
+    await p2.goto(BASE, { waitUntil: 'domcontentloaded' });
+    await p2.waitForSelector('.fila .carrusel .tarjeta', { timeout: 60000 }).catch(() => {});
+    await p2.locator('#buscador-anime').fill('bleach');
+    const topFantasma = await p2
+      .waitForFunction(
+        () => {
+          const f = document.querySelector('main .rejilla > .fantasma');
+          return f ? Math.round(f.getBoundingClientRect().top * 100) / 100 : false;
+        },
+        null,
+        { polling: 10, timeout: 15000 }
+      )
+      .then((h) => h.jsonValue())
+      .catch(() => null);
+    const fantasmas = await p2.locator('main .rejilla > .fantasma').count();
+    const ariaBusy = await p2.evaluate(() => {
+      const r = document.querySelector('main .rejilla');
+      return r ? r.getAttribute('aria-busy') : null;
+    });
+    await captura('esqueleto_360', p2);
+    await p2.waitForSelector('main .rejilla > .tarjeta', { timeout: 45000 });
+    await p2.waitForTimeout(300);
+    const topReal = await p2.evaluate(() => {
+      const t = document.querySelector('main .rejilla > .tarjeta');
+      return t ? Math.round(t.getBoundingClientRect().top * 100) / 100 : null;
+    });
+    rep.esqueleto = {
+      fantasmas,
+      ariaBusy,
+      topFantasma,
+      topReal,
+      delta: topFantasma !== null && topReal !== null ? Math.round((topReal - topFantasma) * 100) / 100 : null,
+    };
+    check('C: 6 esqueletos durante la carga', fantasmas === 6, fantasmas);
+    check('C: aria-busy="true" en el contenedor', ariaBusy === 'true', ariaBusy);
+    check(
+      'C: sin salto de layout (≤4 px)',
+      topFantasma !== null && topReal !== null && Math.abs(topReal - topFantasma) <= 4,
+      rep.esqueleto
+    );
+    await ctx2.close();
+  });
+
+  // --- D. Estado de error + "Reintentar" ---
+  await paso('D', async () => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await gotoApp(page);
+    await page.waitForSelector('.fila .carrusel .tarjeta', { timeout: 60000 }).catch(() => {});
+    const forzado = await page.evaluate(() => {
+      const App = window.go && window.go.main && window.go.main.App;
+      if (!App || typeof App.SearchAnime !== 'function') return false;
+      window.__origSearch = App.SearchAnime;
+      window.__searchCalls = [];
+      App.SearchAnime = (q) => {
+        window.__searchCalls.push(q);
+        return Promise.reject(new Error('fallo forzado'));
+      };
+      return true;
+    });
+    if (!forzado) {
+      check('D: puente window.go disponible', false, 'sin puente (usa localhost:34115)');
+      return;
+    }
+    await escribir('bleach');
+    await page.waitForSelector('.estado-vista.variante-error', { timeout: 15000 });
+    const m = await page.evaluate(MEDIR_BUSQUEDA);
+    rep.anchos.push({ ancho: '360', estado: 'error', ...m });
+    check('D: título "No se pudo buscar"', m.error?.titulo === 'No se pudo buscar', m.error);
+    check('D: muestra el mensaje del error', !!m.error?.texto && m.error.texto.includes('fallo forzado'), m.error?.texto);
+    check('D: acción "Reintentar"', m.error?.boton === 'Reintentar', m.error?.boton);
+    check(
+      'D: role="alert" en el estado',
+      (await page.locator('.estado-vista.variante-error[role="alert"]').count()) === 1
+    );
+    check('D: el estado sustituye al párrafo `.error`', (await page.locator('main p.error').count()) === 0);
+    await captura('error_360');
+    await page.locator('.estado-vista.variante-error .btn').click();
+    await page.waitForTimeout(700);
+    const calls = await page.evaluate(() => window.__searchCalls ?? []);
+    check(
+      'D: "Reintentar" repite la consulta',
+      calls.length >= 2 && calls[calls.length - 1] === 'bleach',
+      calls
+    );
+    await page.evaluate(() => {
+      const App = window.go?.main?.App;
+      if (App && window.__origSearch) App.SearchAnime = window.__origSearch;
+    });
+  });
+
+  // --- E. Estado vacío ---
+  await paso('E', async () => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await gotoApp(page);
+    await page.waitForSelector('.fila .carrusel .tarjeta', { timeout: 60000 }).catch(() => {});
+    // La ficha pide "zzzzqqqq", pero el backend real devuelve 1 resultado
+    // (JKAnime responde con un *fallback*: "Suzuka"). Si no hay estado vacío
+    // se prueba con una cadena larga que sí devuelve 0 resultados.
+    let consultaVacio = 'zzzzqqqq';
+    await escribir(consultaVacio);
+    let vacioReal = true;
+    try {
+      await page.waitForSelector('.estado-vista.variante-vacio', { timeout: 12000 });
+    } catch {
+      vacioReal = false;
+    }
+    if (!vacioReal) {
+      consultaVacio = 'zzzzzzzzzzzzzzzzzzzzzzzzzzzzzz';
+      await escribir(consultaVacio);
+      await page.waitForSelector('.estado-vista.variante-vacio', { timeout: 45000 });
+    }
+    rep.vacio = { consulta: consultaVacio, conZzzzqqqq: vacioReal };
+    const m = await page.evaluate(MEDIR_BUSQUEDA);
+    rep.anchos.push({ ancho: '360', estado: 'vacio', ...m });
+    check('E: título "Sin resultados"', m.vacio?.titulo === 'Sin resultados', m.vacio);
+    check('E: texto con la consulta', !!m.vacio?.texto && m.vacio.texto.includes(consultaVacio), m.vacio?.texto);
+    check('E: sin acción en el vacío', m.vacio?.boton === false, m.vacio?.boton);
+    check('E: sin rejilla residual', m.tarjetas === 0 && m.fantasmas === 0, { t: m.tarjetas, f: m.fantasmas });
+    await captura('vacio_360');
+  });
+
+  // --- F. El clic abre el detalle y Atrás vuelve a los resultados ---
+  await paso('F', async () => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await gotoApp(page);
+    await page.waitForSelector('.fila .carrusel .tarjeta', { timeout: 60000 }).catch(() => {});
+    await buscar(page, 'bleach');
+    await page.locator('main .rejilla > .tarjeta').first().click();
+    await page.waitForSelector('.ficha, main .cabecera', { timeout: 45000 });
+    const enDetalle = await page.evaluate(
+      () => !!document.querySelector('.ficha') || !!document.querySelector('main .cabecera')
+    );
+    check('F: el clic abre el detalle', enDetalle, enDetalle);
+    await page.locator('.cabecera .atras').first().click().catch(() => {});
+    await page.waitForTimeout(900);
+    const hayResultados = await page.locator('main .rejilla > .tarjeta').count();
+    check('F: Atrás vuelve a los resultados', hayResultados > 0, hayResultados);
+  });
+
+  // --- I. T66/T67: el scroll del detalle se conserva al ir a un episodio ---
+  await paso('I', async () => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await gotoApp(page);
+    await page.waitForSelector('.fila .carrusel .tarjeta', { timeout: 60000 }).catch(() => {});
+    await buscar(page, 'bleach');
+    await abrirDetalle(page, 'animeav1');
+    await page.waitForTimeout(900);
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await page.waitForTimeout(500);
+    const yAntes = await page.evaluate(() => Math.round(window.scrollY));
+    const ultima = page.locator('.rejilla .celda .tarjeta').last();
+    if (yAntes > 0 && (await ultima.count())) {
+      await ultima.click();
+      await page.waitForTimeout(1800);
+      await page.locator('.cabecera .atras').first().click();
+      await page.waitForTimeout(1200);
+      const yDespues = await page.evaluate(() => Math.round(window.scrollY));
+      check('I: T66/T67 scroll del detalle restaurado', Math.abs(yDespues - yAntes) <= 5, { yAntes, yDespues });
+    } else {
+      check('I: T66/T67 scroll del detalle restaurado', false, { yAntes });
+    }
+  });
+
+  // --- G. prefers-reduced-motion: sin transición en la tarjeta ---
+  await paso('G', async () => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await gotoApp(page);
+    await page.waitForSelector('.fila .carrusel .tarjeta', { timeout: 60000 }).catch(() => {});
+    await buscar(page, 'bleach');
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const td = await page.evaluate(() => {
+      const t = document.querySelector('main .rejilla > .tarjeta');
+      return t ? getComputedStyle(t).transitionDuration : null;
+    });
+    check('G: reduced-motion sin transición en la tarjeta', td === '0s', td);
+    await page.emulateMedia({ reducedMotion: null });
+  });
+
+  // --- H. Objetivos táctiles <44 px visibles en los resultados ---
+  await paso('H', async () => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await gotoApp(page);
+    await page.waitForSelector('.fila .carrusel .tarjeta', { timeout: 60000 }).catch(() => {});
+    await buscar(page, 'bleach');
+    rep.tactiles = await page.evaluate(TACTILES_CHICOS);
+  });
+
+  writeFileSync(join(dirOut, 'busqueda.json'), JSON.stringify(rep, null, 2));
+  await browser.close();
+  return rep;
+}
+
+// ---------------------------------------------------------------------------
 // CLI
 // ---------------------------------------------------------------------------
 
@@ -2078,6 +2510,32 @@ if (modo === 'comparar') {
   for (const t of rep.tactiles) console.log(`- ${t.texto} ${t.w}×${t.h}${t.enFilaContinuar ? ' [FILA]' : ''}`);
   if (rep.errores.length) console.log('\nErrores:', rep.errores);
   console.log(`\nCapturas (${process.argv[3] ?? 'docs/img/v1.4/continuar'}): ${rep.capturas.join(', ') || 'ninguna'}`);
+} else if (modo === 'busqueda') {
+  const rep = await busqueda();
+  console.log('## Modo busqueda (T78) — rejilla de resultados y estados\n');
+  console.log('| ancho/estado | columnas | gap | tarjetas | 1ª w×h | contador | overflowH |');
+  console.log('|---|---:|---:|---:|---|---|---:|');
+  for (const m of rep.anchos) {
+    const fmt = (r) => (r ? `${r.w}×${r.h}` : '—');
+    console.log(
+      `| ${m.estado ? `${m.ancho} ${m.estado}` : m.ancho} | ${m.columnas} | ${m.gap ?? '—'} | ${m.tarjetas} | ${fmt(m.primera)} | ` +
+        `${m.contadorTexto ?? '—'} | ${m.overflowH} |`
+    );
+  }
+  console.log('\nEsqueleto → resultados:', JSON.stringify(rep.esqueleto));
+  console.log('Portadas (scroll real):', JSON.stringify(rep.imagenes));
+  console.log('Vacío:', JSON.stringify(rep.vacio));
+  console.log('Zona de resultados @1280 (contador+rejilla):', JSON.stringify(rep.zona1280));
+  const fallos = rep.funciones.filter((f) => !f.ok);
+  console.log('\n| comprobación | ok | detalle |');
+  console.log('|---|:--:|---|');
+  for (const f of rep.funciones)
+    console.log(`| ${f.nombre} | ${f.ok ? 'sí' : 'NO'} | ${f.detalle === null ? '' : JSON.stringify(f.detalle)} |`);
+  console.log(`\nComprobaciones: ${rep.funciones.length - fallos.length}/${rep.funciones.length} OK`);
+  console.log(`Táctiles <44 px visibles en los resultados (${rep.tactiles.length}):`);
+  for (const t of rep.tactiles) console.log(`- ${t.texto} ${t.w}×${t.h}`);
+  if (rep.errores.length) console.log('\nErrores:', rep.errores);
+  console.log(`\nCapturas (${process.argv[3] ?? 'docs/img/v1.4/busqueda'}): ${rep.capturas.join(', ') || 'ninguna'}`);
 } else {
   const dirOut = process.argv[3] ?? DIR_DEF;
   const res = await capturar(dirOut);

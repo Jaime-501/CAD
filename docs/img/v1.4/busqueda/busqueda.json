@@ -1,0 +1,811 @@
+{
+  "anchos": [
+    {
+      "ancho": "360",
+      "overflowH": 0,
+      "columnas": 2,
+      "gap": "12px",
+      "tarjetas": 21,
+      "fantasmas": 0,
+      "ariaBusy": null,
+      "primera": {
+        "x": 16,
+        "y": 159,
+        "w": 158,
+        "h": 290.8
+      },
+      "portada": {
+        "x": 16,
+        "y": 160,
+        "w": 158,
+        "h": 237
+      },
+      "zonaResultados": {
+        "x": 16,
+        "y": 126,
+        "w": 328,
+        "h": 3352
+      },
+      "todasTactil": true,
+      "contadorTexto": "21 resultados",
+      "contadorLive": "polite",
+      "etiquetas": [
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1"
+      ],
+      "error": null,
+      "vacio": null
+    },
+    {
+      "ancho": "390",
+      "overflowH": 0,
+      "columnas": 2,
+      "gap": "12px",
+      "tarjetas": 21,
+      "fantasmas": 0,
+      "ariaBusy": null,
+      "primera": {
+        "x": 16,
+        "y": 159,
+        "w": 173,
+        "h": 313.3
+      },
+      "portada": {
+        "x": 16,
+        "y": 160,
+        "w": 173,
+        "h": 259.5
+      },
+      "zonaResultados": {
+        "x": 16,
+        "y": 126,
+        "w": 358,
+        "h": 3599
+      },
+      "todasTactil": true,
+      "contadorTexto": "21 resultados",
+      "contadorLive": "polite",
+      "etiquetas": [
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1"
+      ],
+      "error": null,
+      "vacio": null
+    },
+    {
+      "ancho": "768",
+      "overflowH": 0,
+      "columnas": 3,
+      "gap": "12px",
+      "tarjetas": 21,
+      "fantasmas": 0,
+      "ariaBusy": null,
+      "primera": {
+        "x": 24,
+        "y": 159,
+        "w": 232,
+        "h": 401.8
+      },
+      "portada": {
+        "x": 24,
+        "y": 160,
+        "w": 232,
+        "h": 348
+      },
+      "zonaResultados": {
+        "x": 24,
+        "y": 126,
+        "w": 720,
+        "h": 2918
+      },
+      "todasTactil": true,
+      "contadorTexto": "21 resultados",
+      "contadorLive": "polite",
+      "etiquetas": [
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1"
+      ],
+      "error": null,
+      "vacio": null
+    },
+    {
+      "ancho": "1024",
+      "overflowH": 0,
+      "columnas": 4,
+      "gap": "12px",
+      "tarjetas": 21,
+      "fantasmas": 0,
+      "ariaBusy": null,
+      "primera": {
+        "x": 332,
+        "y": 176.91,
+        "w": 156,
+        "h": 287.8
+      },
+      "portada": {
+        "x": 332,
+        "y": 177.91,
+        "w": 156,
+        "h": 234
+      },
+      "zonaResultados": {
+        "x": 332,
+        "y": 144,
+        "w": 660,
+        "h": 1820
+      },
+      "todasTactil": true,
+      "contadorTexto": "21 resultados",
+      "contadorLive": "polite",
+      "etiquetas": [
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1"
+      ],
+      "error": null,
+      "vacio": null
+    },
+    {
+      "ancho": "1280",
+      "overflowH": 0,
+      "columnas": 5,
+      "gap": "12px",
+      "tarjetas": 21,
+      "fantasmas": 0,
+      "ariaBusy": null,
+      "primera": {
+        "x": 332,
+        "y": 176.91,
+        "w": 173.59,
+        "h": 314.2
+      },
+      "portada": {
+        "x": 332,
+        "y": 177.91,
+        "w": 173.59,
+        "h": 260.39
+      },
+      "zonaResultados": {
+        "x": 332,
+        "y": 144,
+        "w": 916,
+        "h": 1652
+      },
+      "todasTactil": true,
+      "contadorTexto": "21 resultados",
+      "contadorLive": "polite",
+      "etiquetas": [
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1",
+        "AnimeAV1"
+      ],
+      "error": null,
+      "vacio": null
+    },
+    {
+      "ancho": "360",
+      "estado": "error",
+      "overflowH": 0,
+      "columnas": 0,
+      "gap": null,
+      "tarjetas": 0,
+      "fantasmas": 0,
+      "ariaBusy": null,
+      "primera": null,
+      "portada": null,
+      "zonaResultados": null,
+      "todasTactil": false,
+      "contadorTexto": null,
+      "contadorLive": null,
+      "etiquetas": [],
+      "error": {
+        "titulo": "No se pudo buscar",
+        "texto": "Error: fallo forzado",
+        "boton": "Reintentar"
+      },
+      "vacio": null
+    },
+    {
+      "ancho": "360",
+      "estado": "vacio",
+      "overflowH": 0,
+      "columnas": 0,
+      "gap": null,
+      "tarjetas": 0,
+      "fantasmas": 0,
+      "ariaBusy": null,
+      "primera": null,
+      "portada": null,
+      "zonaResultados": null,
+      "todasTactil": false,
+      "contadorTexto": null,
+      "contadorLive": null,
+      "etiquetas": [],
+      "error": null,
+      "vacio": {
+        "titulo": "Sin resultados",
+        "texto": "No encontramos nada para “zzzzzzzzzzzzzzzzzzzzzzzzzzzzzz”.",
+        "boton": false
+      }
+    }
+  ],
+  "funciones": [
+    {
+      "nombre": "360: tarjeta del Home 263,8×140",
+      "ok": true,
+      "detalle": {
+        "w": 140,
+        "h": 263.8,
+        "imgW": 140,
+        "imgH": 210
+      }
+    },
+    {
+      "nombre": "360: overflowH = 0",
+      "ok": true,
+      "detalle": 0
+    },
+    {
+      "nombre": "360: gap de rejilla 12px (--sp-3)",
+      "ok": true,
+      "detalle": "12px"
+    },
+    {
+      "nombre": "360: cada tarjeta ≥44×44",
+      "ok": true,
+      "detalle": {
+        "x": 16,
+        "y": 159,
+        "w": 158,
+        "h": 290.8
+      }
+    },
+    {
+      "nombre": "360: 2 columnas",
+      "ok": true,
+      "detalle": 2
+    },
+    {
+      "nombre": "360: contador \"{n} resultados\" con aria-live",
+      "ok": true,
+      "detalle": "21 resultados"
+    },
+    {
+      "nombre": "360: etiqueta legible del proveedor",
+      "ok": true,
+      "detalle": [
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime"
+      ]
+    },
+    {
+      "nombre": "360: alto = 1,5·ancho + 53,8",
+      "ok": true,
+      "detalle": {
+        "x": 16,
+        "y": 159,
+        "w": 158,
+        "h": 290.8
+      }
+    },
+    {
+      "nombre": "390: tarjeta del Home 263,8×140",
+      "ok": true,
+      "detalle": {
+        "w": 140,
+        "h": 263.8,
+        "imgW": 140,
+        "imgH": 210
+      }
+    },
+    {
+      "nombre": "390: overflowH = 0",
+      "ok": true,
+      "detalle": 0
+    },
+    {
+      "nombre": "390: gap de rejilla 12px (--sp-3)",
+      "ok": true,
+      "detalle": "12px"
+    },
+    {
+      "nombre": "390: cada tarjeta ≥44×44",
+      "ok": true,
+      "detalle": {
+        "x": 16,
+        "y": 159,
+        "w": 173,
+        "h": 313.3
+      }
+    },
+    {
+      "nombre": "390: 2 columnas",
+      "ok": true,
+      "detalle": 2
+    },
+    {
+      "nombre": "390: contador \"{n} resultados\" con aria-live",
+      "ok": true,
+      "detalle": "21 resultados"
+    },
+    {
+      "nombre": "390: etiqueta legible del proveedor",
+      "ok": true,
+      "detalle": [
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime"
+      ]
+    },
+    {
+      "nombre": "390: alto = 1,5·ancho + 53,8",
+      "ok": true,
+      "detalle": {
+        "x": 16,
+        "y": 159,
+        "w": 173,
+        "h": 313.3
+      }
+    },
+    {
+      "nombre": "768: tarjeta del Home 263,8×140",
+      "ok": true,
+      "detalle": {
+        "w": 140,
+        "h": 263.8,
+        "imgW": 140,
+        "imgH": 210
+      }
+    },
+    {
+      "nombre": "768: overflowH = 0",
+      "ok": true,
+      "detalle": 0
+    },
+    {
+      "nombre": "768: gap de rejilla 12px (--sp-3)",
+      "ok": true,
+      "detalle": "12px"
+    },
+    {
+      "nombre": "768: cada tarjeta ≥44×44",
+      "ok": true,
+      "detalle": {
+        "x": 24,
+        "y": 159,
+        "w": 232,
+        "h": 401.8
+      }
+    },
+    {
+      "nombre": "768: 3 columnas",
+      "ok": true,
+      "detalle": 3
+    },
+    {
+      "nombre": "768: contador \"{n} resultados\" con aria-live",
+      "ok": true,
+      "detalle": "21 resultados"
+    },
+    {
+      "nombre": "768: etiqueta legible del proveedor",
+      "ok": true,
+      "detalle": [
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime"
+      ]
+    },
+    {
+      "nombre": "768: alto = 1,5·ancho + 53,8",
+      "ok": true,
+      "detalle": {
+        "x": 24,
+        "y": 159,
+        "w": 232,
+        "h": 401.8
+      }
+    },
+    {
+      "nombre": "1024: tarjeta del Home 263,8×140",
+      "ok": true,
+      "detalle": {
+        "w": 140,
+        "h": 263.8,
+        "imgW": 140,
+        "imgH": 210
+      }
+    },
+    {
+      "nombre": "1024: overflowH = 0",
+      "ok": true,
+      "detalle": 0
+    },
+    {
+      "nombre": "1024: gap de rejilla 12px (--sp-3)",
+      "ok": true,
+      "detalle": "12px"
+    },
+    {
+      "nombre": "1024: cada tarjeta ≥44×44",
+      "ok": true,
+      "detalle": {
+        "x": 332,
+        "y": 176.91,
+        "w": 156,
+        "h": 287.8
+      }
+    },
+    {
+      "nombre": "1024: auto-fill (≥4 columnas)",
+      "ok": true,
+      "detalle": 4
+    },
+    {
+      "nombre": "1024: contador \"{n} resultados\" con aria-live",
+      "ok": true,
+      "detalle": "21 resultados"
+    },
+    {
+      "nombre": "1024: etiqueta legible del proveedor",
+      "ok": true,
+      "detalle": [
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime"
+      ]
+    },
+    {
+      "nombre": "1024: alto = 1,5·ancho + 53,8",
+      "ok": true,
+      "detalle": {
+        "x": 332,
+        "y": 176.91,
+        "w": 156,
+        "h": 287.8
+      }
+    },
+    {
+      "nombre": "1280: tarjeta del Home 263,8×140",
+      "ok": true,
+      "detalle": {
+        "w": 140,
+        "h": 263.8,
+        "imgW": 140,
+        "imgH": 210
+      }
+    },
+    {
+      "nombre": "1280: zona de resultados contenida (x≥0, w≤ancho)",
+      "ok": true,
+      "detalle": {
+        "x": 332,
+        "y": 144,
+        "w": 916,
+        "h": 1652
+      }
+    },
+    {
+      "nombre": "1280: overflowH = 0",
+      "ok": true,
+      "detalle": 0
+    },
+    {
+      "nombre": "1280: gap de rejilla 12px (--sp-3)",
+      "ok": true,
+      "detalle": "12px"
+    },
+    {
+      "nombre": "1280: cada tarjeta ≥44×44",
+      "ok": true,
+      "detalle": {
+        "x": 332,
+        "y": 176.91,
+        "w": 173.59,
+        "h": 314.2
+      }
+    },
+    {
+      "nombre": "1280: auto-fill (≥4 columnas)",
+      "ok": true,
+      "detalle": 5
+    },
+    {
+      "nombre": "1280: contador \"{n} resultados\" con aria-live",
+      "ok": true,
+      "detalle": "21 resultados"
+    },
+    {
+      "nombre": "1280: etiqueta legible del proveedor",
+      "ok": true,
+      "detalle": [
+        "JKAnime",
+        "JKAnime",
+        "JKAnime",
+        "JKAnime"
+      ]
+    },
+    {
+      "nombre": "1280: alto = 1,5·ancho + 53,8",
+      "ok": true,
+      "detalle": {
+        "x": 332,
+        "y": 176.91,
+        "w": 173.59,
+        "h": 314.2
+      }
+    },
+    {
+      "nombre": "B: todas las portadas cargan tras el scroll",
+      "ok": true,
+      "detalle": {
+        "arriba": {
+          "total": 21,
+          "cargadas": 21
+        },
+        "abajo": {
+          "total": 21,
+          "cargadas": 21
+        }
+      }
+    },
+    {
+      "nombre": "B: el scroll real carga más que el primer pantallazo",
+      "ok": true,
+      "detalle": {
+        "arriba": {
+          "total": 21,
+          "cargadas": 21
+        },
+        "abajo": {
+          "total": 21,
+          "cargadas": 21
+        }
+      }
+    },
+    {
+      "nombre": "C: 6 esqueletos durante la carga",
+      "ok": true,
+      "detalle": 6
+    },
+    {
+      "nombre": "C: aria-busy=\"true\" en el contenedor",
+      "ok": true,
+      "detalle": "true"
+    },
+    {
+      "nombre": "C: sin salto de layout (≤4 px)",
+      "ok": true,
+      "detalle": {
+        "fantasmas": 6,
+        "ariaBusy": "true",
+        "topFantasma": 159,
+        "topReal": 159,
+        "delta": 0
+      }
+    },
+    {
+      "nombre": "D: título \"No se pudo buscar\"",
+      "ok": true,
+      "detalle": {
+        "titulo": "No se pudo buscar",
+        "texto": "Error: fallo forzado",
+        "boton": "Reintentar"
+      }
+    },
+    {
+      "nombre": "D: muestra el mensaje del error",
+      "ok": true,
+      "detalle": "Error: fallo forzado"
+    },
+    {
+      "nombre": "D: acción \"Reintentar\"",
+      "ok": true,
+      "detalle": "Reintentar"
+    },
+    {
+      "nombre": "D: role=\"alert\" en el estado",
+      "ok": true,
+      "detalle": null
+    },
+    {
+      "nombre": "D: el estado sustituye al párrafo `.error`",
+      "ok": true,
+      "detalle": null
+    },
+    {
+      "nombre": "D: \"Reintentar\" repite la consulta",
+      "ok": true,
+      "detalle": [
+        "bleach",
+        "bleach"
+      ]
+    },
+    {
+      "nombre": "E: título \"Sin resultados\"",
+      "ok": true,
+      "detalle": {
+        "titulo": "Sin resultados",
+        "texto": "No encontramos nada para “zzzzzzzzzzzzzzzzzzzzzzzzzzzzzz”.",
+        "boton": false
+      }
+    },
+    {
+      "nombre": "E: texto con la consulta",
+      "ok": true,
+      "detalle": "No encontramos nada para “zzzzzzzzzzzzzzzzzzzzzzzzzzzzzz”."
+    },
+    {
+      "nombre": "E: sin acción en el vacío",
+      "ok": true,
+      "detalle": false
+    },
+    {
+      "nombre": "E: sin rejilla residual",
+      "ok": true,
+      "detalle": {
+        "t": 0,
+        "f": 0
+      }
+    },
+    {
+      "nombre": "F: el clic abre el detalle",
+      "ok": true,
+      "detalle": true
+    },
+    {
+      "nombre": "F: Atrás vuelve a los resultados",
+      "ok": true,
+      "detalle": 21
+    },
+    {
+      "nombre": "I: T66/T67 scroll del detalle restaurado",
+      "ok": true,
+      "detalle": {
+        "yAntes": 69492,
+        "yDespues": 69493
+      }
+    },
+    {
+      "nombre": "G: reduced-motion sin transición en la tarjeta",
+      "ok": true,
+      "detalle": "0s"
+    }
+  ],
+  "capturas": [
+    "resultados_360_arriba.png",
+    "resultados_768.png",
+    "resultados_1280.png",
+    "resultados_360_scroll.png",
+    "esqueleto_360.png",
+    "error_360.png",
+    "vacio_360.png"
+  ],
+  "imagenes": {
+    "arriba": {
+      "total": 21,
+      "cargadas": 21
+    },
+    "abajo": {
+      "total": 21,
+      "cargadas": 21
+    }
+  },
+  "esqueleto": {
+    "fantasmas": 6,
+    "ariaBusy": "true",
+    "topFantasma": 159,
+    "topReal": 159,
+    "delta": 0
+  },
+  "vacio": {
+    "consulta": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+    "conZzzzqqqq": false
+  },
+  "zona1280": {
+    "x": 332,
+    "y": 144,
+    "w": 916,
+    "h": 1652
+  },
+  "tactiles": [],
+  "errores": []
+}

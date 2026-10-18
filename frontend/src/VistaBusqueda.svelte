@@ -7,6 +7,11 @@
   import { navegarA, type SeleccionAnime } from './views';
   import VistaInicio from './VistaInicio.svelte';
   import Icono from './Icono.svelte';
+  import TarjetaAnime from './TarjetaAnime.svelte';
+  import EstadoVista from './EstadoVista.svelte';
+  import Esqueleto from './Esqueleto.svelte';
+  import Btn from './Btn.svelte';
+  import { NOMBRE_PROVEEDOR } from './historial';
 
   /** false = no hay puente `window.go` (Vite puro en :5173); lo decide App.svelte. */
   export let puente = true;
@@ -115,21 +120,42 @@
   </div>
 
   {#if $searchState.loading}
-    <p class="estado">Buscando…</p>
+    <!-- T78: fantasma con la MISMA línea de contador para que la llegada de
+         resultados no desplace la rejilla. -->
+    <p class="contador" aria-live="polite"></p>
+    <div class="rejilla" aria-busy="true" aria-label="Buscando resultados">
+      {#each [0, 1, 2, 3, 4, 5] as indice (indice)}
+        <div class="fantasma" aria-hidden="true">
+          <div class="fantasma-portada">
+            <Esqueleto alto="100%" ancho="100%" radio="0" />
+          </div>
+          <div class="fantasma-titulo">
+            <Esqueleto alto="100%" ancho="100%" radio="var(--r-sm)" />
+          </div>
+        </div>
+      {/each}
+    </div>
   {:else if $searchState.error}
-    <p class="error">Error al buscar: {$searchState.error}</p>
+    <EstadoVista variante="error" titulo="No se pudo buscar" texto={$searchState.error}>
+      <Btn variante="secundario" onClick={() => void search($searchState.query)}>Reintentar</Btn>
+    </EstadoVista>
   {:else if $searchResults.length > 0}
+    <p class="contador" aria-live="polite">{$searchResults.length} resultados</p>
     <div class="rejilla">
       {#each $searchResults as anime (anime.provider + ':' + anime.id)}
-        <button type="button" class="tarjeta" on:click={() => abrir(anime)}>
-          <img src={anime.cover_url} alt={anime.title} loading="lazy" />
-          <span class="titulo">{anime.title}</span>
-          <span class="proveedor">{anime.provider}</span>
-        </button>
+        <TarjetaAnime
+          {anime}
+          onAbrir={abrir}
+          etiqueta={NOMBRE_PROVEEDOR[anime.provider] ?? anime.provider}
+        />
       {/each}
     </div>
   {:else if $searchState.query !== ''}
-    <p class="estado">No se encontraron resultados para “{$searchState.query}”.</p>
+    <EstadoVista
+      variante="vacio"
+      titulo="Sin resultados"
+      texto={`No encontramos nada para “${$searchState.query}”.`}
+    />
   {:else}
     <!-- Home "Descubrir" (T53): consulta vacía y sin resultados → Novedades.
          Al escribir se vuelve a buscar; al vaciar, se vuelve aquí (el estado
@@ -183,53 +209,56 @@
     color: var(--text-3);
     cursor: not-allowed;
   }
-  .estado {
+  /* Línea de contador (T78): existe también en el estado de carga (vacía, con
+     `min-height`) para que la rejilla no se desplace al llegar los resultados. */
+  .contador {
+    min-height: calc(var(--fs-sm) * var(--lh));
+    margin: 0 0 var(--sp-3);
+    font-size: var(--fs-sm);
+    line-height: var(--lh);
     color: var(--text-3);
     text-align: center;
   }
-  .error {
-    color: var(--danger);
-  }
+  /* T78: rejilla de resultados. Móvil (2) → tableta (3) → escritorio
+     (auto-fill); mismas tarjetas que el Home (T76). */
   .rejilla {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--sp-3);
   }
-  .tarjeta {
-    background: var(--surface-card);
-    border: none;
-    border-radius: var(--r-md);
-    overflow: hidden;
-    text-align: center;
-    transition: transform 0.2s;
-    cursor: pointer;
-    padding: 0;
-    color: var(--text-1);
-    font-family: inherit;
+  @media (min-width: 480px) {
+    .rejilla {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 900px) {
+    .rejilla {
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
+  }
+  /* Fantasma de carga (T78): misma forma que `TarjetaAnime` (portada 2:3 +
+     bloque de título de 2 líneas) para no desplazar la rejilla al llegar los
+     datos. Las medidas replican las de la tarjeta real. */
+  .fantasma {
     display: flex;
     flex-direction: column;
+    overflow: hidden;
+    background: var(--surface-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    box-shadow: var(--sh-card);
+    font-size: 13px;
   }
-  .tarjeta:hover {
-    transform: translateY(-5px);
+  .fantasma-portada {
+    width: calc(100% + 2px);
+    margin: 0 -1px;
+    aspect-ratio: 2 / 3;
   }
-  .tarjeta img {
-    width: 100%;
-    height: 230px;
-    object-fit: cover;
-    background: var(--bg-2);
-  }
-  .titulo {
-    padding: 10px 10px 4px;
-    font-size: 14px;
-    line-height: 1.3;
-  }
-  .proveedor {
-    padding-bottom: 10px;
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--brand-400);
+  .fantasma-titulo {
+    box-sizing: content-box;
+    height: calc(1.3em * 2);
+    margin-bottom: 10px;
+    padding: 8px 8px 0;
   }
   /* T75: buscador de modo estrecho (< 900 px): lupa dentro del campo, botón
      limpiar, táctiles de `--tap` y padding con safe-area. En ≥ 900 px nada de

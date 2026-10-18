@@ -1,4 +1,4 @@
-    # PROGRESO — Comfort Anime Desktop (T01–T77 hechas)
+    # PROGRESO — Comfort Anime Desktop (T01–T78 hechas)
 
 > Este archivo es la **memoria entre sesiones**. Cada sesión lo lee al inicio y lo actualiza al final.
 > Reglas y layout: `tareas/00_REGLAS.md`. Detalle de cada tarea: `tareas/Txx.md`.
@@ -147,6 +147,7 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha y verificada
 | [x] | T75 | Buscador y pestañas del Home (v1.4.0) | T74 |
 | [x] | T76 | Filas y tarjetas del Home (v1.4.0) | T75 |
 | [x] | T77 | Fila "Continuar viendo" del Home (v1.4.0) | T76 |
+| [x] | T78 | Rejilla de resultados de búsqueda y estados (v1.4.0) | T77 |
 
 T01–T29 = v1.0 (`docs/PROGRESO_v1.0.md`) · T30–T35 = v1.1.0 AnimeAV1 (`docs/PROGRESO_v1.1.md`) · T36 = cierre de la v1.1.0 · T37 = portabilidad Android · T38 = cierre documental de T37.
 T39–T57 = v1.2.0 (Home, historial lateral, favoritos, "Siguiente" y su estado discreto; **incluye T53b y T57**); plan en `tareas/v1.2_PLAN.md`, detalle **T39–T58 + cierres T56/T59** archivado en `docs/PROGRESO_v1.2.md`, con resúmenes al final de este archivo.
@@ -1187,3 +1188,53 @@ Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**
 **Capturas** en `docs/img/v1.4/continuar/`: `continuar_360.png` (viewport Home con la fila), `continuar_768.png`, `continuar_1280.png` (sin fila), `tarjeta_360.png` (primer plano) (+ `continuar.json`).
 
 **Archivos tocados:** `frontend/src/TarjetaContinuar.svelte` (**nuevo**), `frontend/src/FilaContinuar.svelte` (**nuevo**), `frontend/src/VistaInicio.svelte` (**solo** `import` + `<FilaContinuar />`), `docs/investigacion/ui/verificar_ui.mjs` (modo `continuar` + `[desdeX] [hastaX]` en `comparar`), `docs/img/v1.4/continuar/**` y `PROGRESO.md`. **Nada fuera de "Puedes tocar"** (regla 7 no se activó): `*.go`, `frontend/wailsjs/**`, `api.ts`, `stores.ts`, `views.ts`, `ui.ts`, `historial.ts`, `retomar.ts`, `App.svelte`, `BarraLateral`, `TarjetaHistorial`, `FilaAnimes`, `TarjetaAnime`, `GridFavoritos` e `index.html` intactos. **Sin tag ni release** (los hace el humano); **T78 no iniciada**.
+
+## T78 — Rejilla de resultados de búsqueda y estados (v1.4.0) — bloque de esta sesión
+
+Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**. Fecha **2026-10-18**. Rediseña la vista de **resultados de búsqueda** (`VistaBusqueda.svelte`) y sus tres estados para móvil, reutilizando las **primitivas de T72** y la **tarjeta del Home de T76**:
+
+- **Cargando**: contador vacío (`aria-live`) + una **rejilla de 6 esqueletos** (`aria-busy="true"`) con la **misma forma** que las tarjetas (portada 2:3 + bloque de título a 2 líneas) para que **no haya salto de layout** al llegar los datos.
+- **Error**: `EstadoVista variante="error"` con título **"No se pudo buscar"**, el mensaje del backend y un `Btn` **"Reintentar"** que repite la consulta (`search($searchState.query)`).
+- **Resultados**: contador **"{n} resultados"** (`aria-live`) + rejilla de **`TarjetaAnime`** (misma tarjeta del Home) con la insignia `.etiqueta` del proveedor vía `NOMBRE_PROVEEDOR` de `historial.ts` (**"JKAnime"/"AnimeAV1"**).
+- **Vacío**: `EstadoVista variante="vacio"` con título **"Sin resultados"** y texto `No encontramos nada para "…".`.
+
+La **rejilla** pasa de `auto-fill minmax(160px)` + `gap: 20px` (valores fijos) a **2 columnas** en móvil → **3** en tableta (`≥ 480 px`) → **auto-fill `minmax(150px)`** en escritorio (`≥ 900 px`), con **`gap: var(--sp-3)`** (12 px). La **lógica de búsqueda del `<script>` no se tocó**: `git diff` solo añade los `import` de `TarjetaAnime`/`EstadoVista`/`Esqueleto`/`Btn`/`NOMBRE_PROVEEDOR` (el resto del `<script>` —debounce, `limpiar`, `programar`, `buscarAhora`, `abrir`— intacto).
+
+**Resultados de la verificación** (modo `busqueda` **nuevo** en `verificar_ui.mjs`, localhost:34115, red real; consulta "bleach"):
+
+| ancho | columnas | gap | 1.ª tarjeta (w×h) | contador | `overflowH` |
+|---|:--:|---:|---|---|---:|
+| 360 | 2 | 12 px | 158×290,8 | "21 resultados" | 0 |
+| 390 | 2 | 12 px | 173×313,3 | "21 resultados" | 0 |
+| 768 | 3 | 12 px | 232×401,8 | "21 resultados" | 0 |
+| 1024 | 4 (auto-fill) | 12 px | 156×287,8 | "21 resultados" | 0 |
+| 1280 | 5 (auto-fill) | 12 px | 173,59×314,2 | "21 resultados" | 0 |
+
+| comprobación (60 en total) | resultado |
+|---|---|
+| A: geometría por ancho (2/3/auto-fill columnas, gap 12 px, cada tarjeta ≥44×44, alto = **1,5·ancho + 53,8**, `overflowH = 0`, contador con `aria-live`, `.etiqueta` del proveedor) | **sí** (35/35) |
+| A: tarjeta del Home **intacta** (263,8×140, portada 210) en los 5 anchos | **sí** (5/5) |
+| B: **21/21 portadas** cargan tras el scroll real (lazy-loading) | **sí** |
+| C: **6 esqueletos** + `aria-busy="true"`; **sin salto de layout** (Δ = **0 px** entre el 1.er fantasma y la 1.ª tarjeta) | **sí** (3/3) |
+| D: error → título "No se pudo buscar", mensaje, botón **"Reintentar"** que **repite la consulta**, `role="alert"` y **sustituye** al viejo párrafo `.error` | **sí** (6/6) |
+| E: vacío → título "Sin resultados", texto con la consulta, **sin acción**, **sin rejilla residual** | **sí** (4/4) |
+| F: el clic abre el detalle; **Atrás** vuelve a los resultados | **sí** |
+| I: **T66/T67** — el scroll del detalle se conserva al ir a un episodio y volver (69492 → 69493, Δ1, ≤ 5) | **sí** |
+| G: `prefers-reduced-motion: reduce` → `transition-duration` de `.tarjeta` = **`0s`** | **sí** |
+| táctiles < 44 px visibles en los resultados (360) | **0** |
+| 1280: **zona de resultados contenida** (`x=332, y=144, 916×1652`) — el cambio visual queda **por debajo** de la cabecera/buscador (véase "zona de resultados @1280" en `busqueda.json`) | **sí** |
+| `npm run check` | **0 errores / 0 avisos** |
+| `npm run build` | **OK** (`index-BsRVigXN.js`, 708,69 kB) |
+| tests `.ts` | **13 / 48 / 32** comprobaciones OK (`views`, `ventana`, `etiquetas`; sin test nuevo, no hay lógica pura nueva) |
+| `gofmt -l .` / `go vet ./...` / `go test -race -count=1 ./...` | **sin salida** / **sin salida** / **435 `--- PASS` de nivel superior**, 0 FAIL (`*.go` intactos) |
+| `grep -rn wailsjs frontend/src` | **solo `api.ts`** |
+
+**Desviaciones (documentadas):**
+- **El estado vacío no se dispara con `"zzzzqqqq"`.** La ficha pedía buscar `zzzzqqqq`, pero el **backend real devuelve 1 resultado** (JKAnime responde con un *fallback*: "Suzuka"), así que `.variante-vacio` nunca aparece. El modo `busqueda` intenta primero `zzzzqqqq` (12 s) y, si no hay vacío, **cae a una cadena larga** (`"zzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"`) que sí devuelve `[]`; queda registrado en `busqueda.json` (`vacio.conZzzzqqqq = false`). **No es un fallo del producto** (el ranking del backend ya hace fallback), sino de la consulta elegida en la ficha.
+- **`TarjetaAnime.svelte` no se tocó.** El `flex: 0 0 140px` de la tarjeta **se ignora dentro de un grid**, así que la misma tarjeta del Home funciona en la rejilla sin cambios; el alto resultante (**1,5·ancho + 53,8** = portada 2:3 + bloque de título) se midió y coincide en los 5 anchos.
+- **`.etiqueta` (no `.proveedor`)** es la insignia del proveedor en `TarjetaAnime`. Los helpers `abrirDetalle`/`abrirDetalleLargo` de `verificar_ui.mjs` se ajustaron a **`main .rejilla > .tarjeta`** (hijo directo) y a `.etiqueta` para seguir localizando la tarjeta de AnimeAV1 en otros modos (T74/T75/T76/T77). Verificado por el paso **I** del modo `busqueda`, que ejerce `abrirDetalle` con `animeav1`.
+- **Fantasmas con medidas replicadas de la tarjeta.** `.fantasma-portada` usa `width: calc(100% + 2px); margin: 0 -1px` para compensar el borde de 1 px y cuadrar la portada con la de `TarjetaAnime`; el contador existe también en el estado de carga (vacío, con `min-height: calc(var(--fs-sm) * var(--lh))`) para que la rejilla no se desplace. Estrechamente acoplado a la tarjeta del Home (T76): si cambia, revisar.
+
+**Capturas** en `docs/img/v1.4/busqueda/`: `resultados_360_arriba.png`, `resultados_360_scroll.png`, `resultados_768.png`, `resultados_1280.png`, `esqueleto_360.png`, `error_360.png`, `vacio_360.png` (+ `busqueda.json`).
+
+**Archivos tocados:** `frontend/src/VistaBusqueda.svelte` (**markup + `<style>`**, lógica intacta), `docs/investigacion/ui/verificar_ui.mjs` (modo `busqueda` **nuevo** + `abrirDetalle`/`abrirDetalleLargo` a `.etiqueta`), `docs/img/v1.4/busqueda/**` y `PROGRESO.md`. **Nada fuera de "Puedes tocar"** (regla 7 no se activó): `*.go`, `frontend/wailsjs/**`, `api.ts`, `stores.ts`, `views.ts`, `ui.ts`, `historial.ts`, `GridFavoritos`, `FilaAnimes`, `TarjetaAnime`, `VistaInicio`, `BarraInferior`, `index.html` y los componentes de T72 intactos. **Sin tag ni release** (los hace el humano); **T79 no iniciada**.
