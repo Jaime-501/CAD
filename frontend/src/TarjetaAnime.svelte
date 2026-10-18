@@ -35,10 +35,11 @@
     box-sizing: border-box;
     flex: 0 0 140px;
     padding: 0;
-    border: 1px solid transparent;
-    border-radius: var(--r-md);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
     overflow: hidden;
     background: var(--surface-card);
+    box-shadow: var(--sh-card);
     color: var(--text-1);
     font-family: inherit;
     text-align: center;
@@ -47,23 +48,31 @@
     display: flex;
     flex-direction: column;
     transition:
-      transform 0.2s,
-      border-color 0.2s,
-      box-shadow 0.2s;
+      transform var(--dur-fast) var(--ease-std),
+      border-color var(--dur-fast) var(--ease-std),
+      box-shadow var(--dur-fast) var(--ease-std);
   }
-  .tarjeta:hover {
-    transform: translateY(-3px);
-    border-color: var(--brand-400);
-    box-shadow: var(--sh-card-hover);
+  /* :active (táctil) por delante de :hover: con ratón el hover eleva; al
+     pulsar, la tarjeta se hunde ligeramente. */
+  .tarjeta:active {
+    transform: scale(0.97);
   }
   .tarjeta:focus-visible {
-    outline: 2px solid var(--brand-400);
-    outline-offset: 2px;
+    outline: none;
+    box-shadow: var(--ring);
   }
+  /* Portada (T76): `aspect-ratio` 2:3 en lugar de `height` fijo. Con el ancho
+     del padding box (138 px por el borde de 1 px) el `aspect-ratio` daría
+     138×207 y la tarjeta perdería 3 px de alto (260,8 en vez de 263,8). Para
+     conservarla, la portada ocupa el ancho COMPLETO del marco (140 px) con
+     `calc(100% + 2px)` y márgenes negativos: pasa a 140×210 y la tarjeta sigue
+     en 263,8. La portada gana así 2 px de ancho (antes 138 px) y queda en 2:3
+     exacto; `overflow: hidden` recorta lo que sobresale del marco. */
   .tarjeta img {
     display: block;
-    width: 100%;
-    height: 210px;
+    width: calc(100% + 2px);
+    margin: 0 -1px;
+    aspect-ratio: 2 / 3;
     object-fit: cover;
     background: var(--bg-2);
   }
@@ -78,7 +87,7 @@
     border: 1px solid var(--border);
     border-radius: var(--r-md);
     color: var(--text-1);
-    font-size: 11px;
+    font-size: var(--fs-xs);
     line-height: 1.3;
     pointer-events: none;
   }
@@ -100,13 +109,22 @@
     font-size: 13px;
     line-height: 1.3;
   }
+  /* El realce al pasar el ratón solo donde hay puntero fino (P6): en táctil no
+     existen estilos de hover pegajosos; ahí manda `:active`. */
+  @media (hover: hover) and (pointer: fine) {
+    .tarjeta:hover {
+      transform: translateY(-3px);
+      border-color: var(--brand-400);
+      box-shadow: var(--sh-card-hover);
+    }
+  }
   @media (prefers-reduced-motion: reduce) {
     .tarjeta {
       transition: none;
     }
-    .tarjeta:hover {
+    .tarjeta:hover,
+    .tarjeta:active {
       transform: none;
-      box-shadow: none;
     }
   }
 </style>

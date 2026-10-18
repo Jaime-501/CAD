@@ -141,23 +141,27 @@
     width: 32px;
     height: 32px;
     padding: 0;
-    background: var(--surface-card);
+    background: var(--bg-1);
     border: 1px solid var(--border);
     border-radius: var(--r-full);
     color: var(--text-1);
     cursor: pointer;
-  }
-  .flecha:hover:not(:disabled) {
-    border-color: var(--brand-400);
-    color: var(--brand-400);
   }
   .flecha:disabled {
     opacity: 0.45;
     cursor: not-allowed;
   }
   .flecha:focus-visible {
-    outline: 2px solid var(--brand-400);
-    outline-offset: 2px;
+    outline: none;
+    box-shadow: var(--ring);
+  }
+  /* Solo con puntero fino (P6): en táctil las flechas no tienen hover pegajoso
+     (además se ocultan en modo estrecho, ver más abajo). */
+  @media (hover: hover) and (pointer: fine) {
+    .flecha:hover:not(:disabled) {
+      border-color: var(--brand-400);
+      color: var(--brand-400);
+    }
   }
   .carrusel {
     display: flex;
@@ -201,4 +205,40 @@
   }
   /* La tarjeta vive en `TarjetaAnime.svelte` (T54), con su ancho de fila,
      su portada 2:3 y su bloque de título de 2 líneas. */
+  /* T76: en modo estrecho (< 900 px) el carrusel llega al borde de la página
+     (sangrado con el gutter), sin degradados de borde, con desplazamiento
+     táctil contenido y título de fila que recorta con elipsis. */
+  @media (max-width: 899px) {
+    .titulo-fila {
+      min-width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .carrusel {
+      margin: -6px calc(-1 * var(--gutter)) -14px;
+      padding: 6px var(--gutter) 14px;
+      scroll-padding-left: var(--gutter);
+      scroll-padding-right: var(--gutter);
+      overscroll-behavior-x: contain;
+    }
+    /* Sin degradados (máscara) en móvil: el sangrado ya insinúa el desborde. */
+    .carrusel.degradado-izquierda,
+    .carrusel.degradado-derecha,
+    .carrusel.degradado-izquierda.degradado-derecha {
+      -webkit-mask-image: none;
+      mask-image: none;
+    }
+    /* Con ratón las flechas alcanzan el objetivo táctil (el icono sigue a 16). */
+    .flecha {
+      width: var(--tap);
+      height: var(--tap);
+    }
+  }
+  /* Con puntero grueso (táctil) el desplazamiento es el propio gesto. */
+  @media (max-width: 899px) and (pointer: coarse) {
+    .flecha {
+      display: none;
+    }
+  }
 </style>

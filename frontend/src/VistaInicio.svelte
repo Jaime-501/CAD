@@ -346,5 +346,12 @@
     .reintentar {
       min-height: var(--tap);
     }
+    /* T76: el carrusel fantasma sangra igual que el real (mismos márgenes y
+       padding con el gutter) para que, al llegar los datos, la fila no salte.
+       Las tarjetas fantasma siguen en 140×264. */
+    .carrusel-fantasma {
+      margin: -6px calc(-1 * var(--gutter)) -14px;
+      padding: 6px var(--gutter) 14px;
+    }
   }
 </style>

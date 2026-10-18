@@ -257,6 +257,7 @@
       box-shadow: var(--ring);
     }
     .campo input {
+      box-sizing: border-box;
       min-width: 0;
       min-height: var(--tap);
       background: transparent;
@@ -297,6 +298,7 @@
       box-shadow: var(--ring);
     }
     .buscador > button {
+      box-sizing: border-box;
       min-height: var(--tap);
     }
     .buscador > button:active {

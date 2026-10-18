@@ -9,6 +9,7 @@
 //     node docs/investigacion/ui/verificar_ui.mjs capturar [dirOut]
 //   NODE_PATH=... node docs/investigacion/ui/verificar_ui.mjs comparar <dirBase> <dirActual> [tol]
 //   NODE_PATH=... node docs/investigacion/ui/verificar_ui.mjs pixel <png> <x> <y>
+//   NODE_PATH=... node docs/investigacion/ui/verificar_ui.mjs filas [dirOut]
 //
 // `capturar` deja los PNG en <dirOut> (por defecto
 // `docs/investigacion/ui/verif`) y un `resumen.json` con `overflowH` por vista.
@@ -54,6 +55,15 @@ const ANCHOS = [
 
 // T73: anchos del modo `shell` (barra inferior móvil).
 const ANCHOS_SHELL = [
+  { w: 360, h: 740, nombre: '360' },
+  { w: 390, h: 844, nombre: '390' },
+  { w: 768, h: 1024, nombre: '768' },
+  { w: 1024, h: 768, nombre: '1024' },
+  { w: 1280, h: 800, nombre: '1280' },
+];
+
+// T76: anchos del modo `filas` (carruseles y tarjetas del Home con ratón).
+const ANCHOS_FILAS = [
   { w: 360, h: 740, nombre: '360' },
   { w: 390, h: 844, nombre: '390' },
   { w: 768, h: 1024, nombre: '768' },
@@ -278,6 +288,63 @@ const TACTILES_CHICOS = () => {
       };
     })
     .filter((x) => x.w < 44 || x.h < 44);
+};
+
+// T76: geometría de la primera fila del Home (carrusel, tarjeta, flechas),
+// el título de fila y el buscador (alto de campo/botón, paso 0).
+const MEDIR_FILAS = () => {
+  const d = document.documentElement;
+  const round = (n) => Math.round(n * 100) / 100;
+  const rect = (el) => {
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return { x: round(r.x), y: round(r.y), w: round(r.width), h: round(r.height), right: round(r.right) };
+  };
+  const carr = document.querySelector('.fila .carrusel');
+  const primera = document.querySelector('.fila .carrusel .tarjeta');
+  const portada = primera ? primera.querySelector('img') : null;
+  const flecha = document.querySelector('.fila .flecha');
+  const titulo = document.querySelector('.fila .titulo-fila');
+  const csCarr = carr ? getComputedStyle(carr) : null;
+  const csTit = titulo ? getComputedStyle(titulo) : null;
+  return {
+    innerWidth: window.innerWidth,
+    clientWidth: d.clientWidth,
+    overflowH: d.scrollWidth - d.clientWidth,
+    gutter: getComputedStyle(d).getPropertyValue('--gutter').trim(),
+    pointerCoarse: matchMedia('(pointer: coarse)').matches,
+    carrusel: carr
+      ? {
+          ...rect(carr),
+          mask: csCarr.maskImage,
+          scrollPaddingLeft: csCarr.scrollPaddingLeft,
+          overscroll: csCarr.overscrollBehaviorX,
+          scrollLeft: round(carr.scrollLeft),
+          scrollWidth: carr.scrollWidth,
+          clientWidth: carr.clientWidth,
+        }
+      : null,
+    primera: rect(primera),
+    portada: rect(portada),
+    tarjetaHomeH: primera ? round(primera.getBoundingClientRect().height) : null,
+    portadaAr: portada ? getComputedStyle(portada).aspectRatio : null,
+    flecha: flecha
+      ? {
+          w: round(flecha.getBoundingClientRect().width),
+          h: round(flecha.getBoundingClientRect().height),
+          display: getComputedStyle(flecha).display,
+        }
+      : null,
+    flechas: document.querySelectorAll('.fila .flecha').length,
+    titulo: titulo
+      ? { minWidth: csTit.minWidth, whiteSpace: csTit.whiteSpace, textOverflow: csTit.textOverflow }
+      : null,
+    buscador: {
+      input: rect(document.querySelector('.buscador input')),
+      campo: rect(document.querySelector('.buscador .campo')),
+      buscar: rect(document.querySelector('.buscador > button')),
+    },
+  };
 };
 
 // T74: medición de la cabecera compacta (detalle y reproductor).
@@ -1204,6 +1271,316 @@ async function buscador() {
 }
 
 // ---------------------------------------------------------------------------
+// Modo filas (T76): carruseles y tarjetas del Home
+// ---------------------------------------------------------------------------
+
+async function filas() {
+  const dirOut = process.argv[3] ?? 'docs/img/v1.4/filas';
+  mkdirSync(dirOut, { recursive: true });
+  const browser = await chromium.launch();
+  const rep = { anchos: [], tactiles: [], funciones: [], capturas: [], esqueleto: null, errores: [] };
+  const check = (nombre, ok, detalle) =>
+    rep.funciones.push({ nombre, ok: !!ok, detalle: detalle === undefined ? null : detalle });
+  const paso = async (nombre, fn) => {
+    try {
+      await fn();
+    } catch (e) {
+      rep.errores.push(`${nombre}: ${e.message}`);
+    }
+  };
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const page = await ctx.newPage();
+  const captura = async (nombre, locator = null) => {
+    try {
+      if (locator) await locator.screenshot({ path: join(dirOut, `${nombre}.png`) });
+      else await page.screenshot({ path: join(dirOut, `${nombre}.png`) });
+      rep.capturas.push(`${nombre}.png`);
+    } catch (e) {
+      rep.errores.push(`${nombre}: ${e.message}`);
+    }
+  };
+  const cargar = async (a) => {
+    await page.setViewportSize({ width: a.w, height: a.h });
+    await gotoApp(page);
+    await page.waitForSelector('.fila .carrusel .tarjeta', { timeout: 60000 }).catch(() => {});
+    await page.waitForTimeout(400);
+  };
+
+  // --- A. Geometría y estado por ancho (ratón = pointer: fine) ---
+  await paso('A', async () => {
+    for (const a of ANCHOS_FILAS) {
+      await cargar(a);
+      const m = await page.evaluate(MEDIR_FILAS);
+      rep.anchos.push({ ancho: a.nombre, ...m });
+      if (a.nombre === '360') await captura('home_360');
+      if (a.nombre === '768') await captura('home_768');
+      if (a.nombre === '1280') await captura('home_1280');
+      check(
+        `${a.nombre}: tarjeta de Home 263,8 px`,
+        m.tarjetaHomeH !== null && Math.abs(m.tarjetaHomeH - 263.8) <= 1,
+        m.tarjetaHomeH
+      );
+      check(`${a.nombre}: portada 2:3`, m.portadaAr === '2 / 3', m.portadaAr);
+      check(`${a.nombre}: overflowH = 0`, m.overflowH === 0, m.overflowH);
+      if (a.w < 900) {
+        check(
+          `${a.nombre}: campo del buscador 44–48 px`,
+          m.buscador.campo && m.buscador.campo.h >= 44 && m.buscador.campo.h <= 48,
+          m.buscador.campo
+        );
+        check(
+          `${a.nombre}: botón Buscar 44–48 px`,
+          m.buscador.buscar && m.buscador.buscar.h >= 44 && m.buscador.buscar.h <= 48,
+          m.buscador.buscar
+        );
+        check(
+          `${a.nombre}: primera tarjeta al gutter`,
+          m.primera !== null && Math.abs(m.primera.x - parseFloat(m.gutter)) < 0.6,
+          { x: m.primera?.x, gutter: m.gutter }
+        );
+        check(
+          `${a.nombre}: carrusel llega al borde derecho`,
+          m.carrusel && Math.abs(m.carrusel.right - m.clientWidth) < 1,
+          { right: m.carrusel?.right, clientWidth: m.clientWidth }
+        );
+        check(`${a.nombre}: sin máscara de degradado`, m.carrusel && m.carrusel.mask === 'none', m.carrusel?.mask);
+        check(
+          `${a.nombre}: título de fila con elipsis`,
+          m.titulo && m.titulo.whiteSpace === 'nowrap' && m.titulo.textOverflow === 'ellipsis',
+          m.titulo
+        );
+        check(
+          `${a.nombre}: flechas 44×44 visibles (ratón)`,
+          m.flecha && m.flecha.w === 44 && m.flecha.h === 44 && m.flecha.display !== 'none',
+          m.flecha
+        );
+      } else {
+        check(
+          `${a.nombre}: input de escritorio 38 px`,
+          m.buscador.input && m.buscador.input.h === 38,
+          m.buscador.input
+        );
+        check(
+          `${a.nombre}: botón Buscar de escritorio 38 px`,
+          m.buscador.buscar && m.buscador.buscar.h === 38,
+          m.buscador.buscar
+        );
+        check(`${a.nombre}: flechas 32×32`, m.flecha && m.flecha.w === 32 && m.flecha.h === 32, m.flecha);
+        check(
+          `${a.nombre}: degradados de borde presentes`,
+          m.carrusel && m.carrusel.mask !== 'none',
+          m.carrusel?.mask
+        );
+      }
+      log('filas ancho', a.nombre, 'tarjeta=', m.tarjetaHomeH, 'flecha=', m.flecha && `${m.flecha.w}x${m.flecha.h}`);
+    }
+  });
+
+  // --- B. Esqueleto → datos: la primera fila no debe saltar ---
+  await paso('B', async () => {
+    const ctx2 = await browser.newContext({ viewport: { width: 360, height: 740 } });
+    const p2 = await ctx2.newPage();
+    // La caché de detalle/Home hace que la respuesta llegue casi al instante y
+    // el esqueleto dure una sola pintura: retrasamos la llamada de Wails para
+    // poder medir el esqueleto antes de que lleguen los datos.
+    await p2.addInitScript(() => {
+      const wrap = () => {
+        const App = window.go && window.go.main && window.go.main.App;
+        if (!App || App.__slow76 || typeof App.GetHomeSection !== 'function') return false;
+        const orig = App.GetHomeSection;
+        App.GetHomeSection = (...a) =>
+          new Promise((res) => setTimeout(() => res(orig.apply(App, a)), 1200));
+        App.__slow76 = true;
+        return true;
+      };
+      if (!wrap()) {
+        const id = setInterval(() => {
+          if (wrap()) clearInterval(id);
+        }, 2);
+        setTimeout(() => clearInterval(id), 10000);
+      }
+    });
+    await p2.goto(BASE, { waitUntil: 'domcontentloaded' });
+    const topFantasma = await p2
+      .waitForFunction(
+        () => {
+          const f = document.querySelector('.fila-fantasma');
+          return f ? Math.round(f.getBoundingClientRect().top * 100) / 100 : false;
+        },
+        null,
+        { polling: 10, timeout: 15000 }
+      )
+      .then((h) => h.jsonValue())
+      .catch(() => null);
+    await p2.waitForSelector('.fila .carrusel .tarjeta', { timeout: 60000 }).catch(() => {});
+    await p2.waitForTimeout(500);
+    const topReal = await p2.evaluate(() => {
+      const f = document.querySelector('.fila');
+      return f ? Math.round(f.getBoundingClientRect().top * 100) / 100 : null;
+    });
+    rep.esqueleto = { topFantasma, topReal };
+    check(
+      'esqueleto→datos: primera fila no salta > 2 px',
+      topFantasma !== null && topReal !== null && Math.abs(topReal - topFantasma) <= 2,
+      rep.esqueleto
+    );
+    await ctx2.close();
+  });
+
+  // --- C. Pointer coarse (táctil): flechas ocultas y gesto de arrastre ---
+  await paso('C', async () => {
+    for (const a of [
+      { w: 360, h: 740, n: '360c' },
+      { w: 390, h: 844, n: '390c' },
+    ]) {
+      const ctxC = await browser.newContext({
+        viewport: { width: a.w, height: a.h },
+        hasTouch: true,
+        isMobile: true,
+        deviceScaleFactor: 1,
+      });
+      const pC = await ctxC.newPage();
+      await pC.goto(BASE, { waitUntil: 'domcontentloaded' });
+      await pC.waitForSelector('.fila .carrusel .tarjeta', { timeout: 60000 }).catch(() => {});
+      await pC.waitForTimeout(500);
+      const m = await pC.evaluate(MEDIR_FILAS);
+      rep.anchos.push({ ancho: a.n, ...m });
+      check(`${a.n}: pointer coarse detectado`, m.pointerCoarse, m.pointerCoarse);
+      check(
+        `${a.n}: flechas ocultas`,
+        m.flechas > 0 && (m.flecha === null || m.flecha.display === 'none'),
+        m.flecha
+      );
+      check(
+        `${a.n}: primera tarjeta al gutter`,
+        m.primera !== null && Math.abs(m.primera.x - parseFloat(m.gutter)) < 0.6,
+        { x: m.primera?.x, gutter: m.gutter }
+      );
+      check(`${a.n}: overflowH = 0`, m.overflowH === 0, m.overflowH);
+      if (a.n === '360c') {
+        try {
+          await pC.screenshot({ path: join(dirOut, 'home_360_coarse.png') });
+          rep.capturas.push('home_360_coarse.png');
+        } catch (e) {
+          rep.errores.push(`home_360_coarse: ${e.message}`);
+        }
+      }
+      // Arrastre táctil real (CDP) de derecha a izquierda sobre la fila.
+      const cdp = await ctxC.newCDPSession(pC);
+      const pts = await pC.evaluate(() => {
+        const c = document.querySelector('.fila .carrusel');
+        const r = c.getBoundingClientRect();
+        const y = Math.min(Math.max(r.y + r.height / 2, 20), window.innerHeight - 20);
+        return { x0: r.x + r.width - 30, x1: r.x + 40, y };
+      });
+      let prev = 0;
+      let tope = 0;
+      for (let k = 0; k < 40; k++) {
+        await cdp.send('Input.dispatchTouchEvent', {
+          type: 'touchStart',
+          touchPoints: [{ x: pts.x0, y: pts.y }],
+        });
+        for (let i = 1; i <= 10; i++) {
+          await cdp.send('Input.dispatchTouchEvent', {
+            type: 'touchMove',
+            touchPoints: [{ x: pts.x0 + ((pts.x1 - pts.x0) * i) / 10, y: pts.y }],
+          });
+          await pC.waitForTimeout(16);
+        }
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+        await pC.waitForTimeout(400);
+        const sl = await pC.evaluate(() => {
+          const c = document.querySelector('.fila .carrusel');
+          return { sl: c.scrollLeft, max: c.scrollWidth - c.clientWidth };
+        });
+        prev = sl.sl;
+        tope = sl.max;
+        if (sl.max > 0 && sl.sl >= sl.max - 1) break;
+      }
+      check(`${a.n}: la fila se desplaza con gesto táctil`, prev > 0, { scrollLeft: prev });
+      check(
+        `${a.n}: el gesto llega al final de la fila`,
+        tope > 0 && prev >= tope - 1,
+        { scrollLeft: prev, max: tope }
+      );
+      await ctxC.close();
+    }
+  });
+
+  // --- D. Clic en una tarjeta del Home abre el detalle (360) ---
+  await paso('D', async () => {
+    await cargar({ w: 360, h: 740 });
+    await page.locator('.fila .carrusel .tarjeta').first().click();
+    await page.waitForSelector('.ficha, .estado', { timeout: 45000 }).catch(() => {});
+    await page.waitForTimeout(800);
+    const enDetalle = await page.evaluate(
+      () => !!document.querySelector('.ficha') || !!document.querySelector('main .cabecera')
+    );
+    check('360: clic en tarjeta del Home abre el detalle', enDetalle, enDetalle);
+    await page.locator('.cabecera .atras').first().click().catch(() => {});
+    await page.waitForTimeout(800);
+    check(
+      '360: Atrás vuelve al Home',
+      await page.locator('.fila .carrusel').first().isVisible().catch(() => false)
+    );
+  });
+
+  // --- E. T66/T67: el scroll del detalle se conserva al ir a un episodio ---
+  await paso('E', async () => {
+    await cargar({ w: 360, h: 740 });
+    await buscar(page, 'bleach');
+    await abrirDetalle(page, 'animeav1');
+    await page.waitForTimeout(900);
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await page.waitForTimeout(500);
+    const yAntes = await page.evaluate(() => Math.round(window.scrollY));
+    const ultima = page.locator('.rejilla .celda .tarjeta').last();
+    if (yAntes > 0 && (await ultima.count())) {
+      await ultima.click();
+      await page.waitForTimeout(1800);
+      await page.locator('.cabecera .atras').first().click();
+      await page.waitForTimeout(1200);
+      const yDespues = await page.evaluate(() => Math.round(window.scrollY));
+      check('360: T66/T67 scroll del detalle restaurado', Math.abs(yDespues - yAntes) <= 5, {
+        yAntes,
+        yDespues,
+      });
+    } else {
+      check('360: T66/T67 scroll del detalle restaurado', false, { yAntes });
+    }
+  });
+
+  // --- F. prefers-reduced-motion: sin transición en la tarjeta ---
+  await paso('F', async () => {
+    await cargar({ w: 360, h: 740 });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const td = await page.evaluate(() => {
+      const t = document.querySelector('.fila .carrusel .tarjeta');
+      return t ? getComputedStyle(t).transitionDuration : null;
+    });
+    check('reduced-motion: tarjeta sin transición', td === '0s', td);
+    await page.emulateMedia({ reducedMotion: null });
+  });
+
+  // --- G. Objetivos táctiles <44 px visibles en el Home (360) ---
+  await paso('G', async () => {
+    await cargar({ w: 360, h: 740 });
+    rep.tactiles = await page.evaluate(TACTILES_CHICOS);
+  });
+
+  // --- H. Primer plano de una tarjeta a 360 ---
+  await paso('H', async () => {
+    await cargar({ w: 360, h: 740 });
+    const tarjeta = page.locator('.fila .carrusel .tarjeta').first();
+    if (await tarjeta.count()) await captura('tarjeta_360', tarjeta);
+  });
+
+  writeFileSync(join(dirOut, 'filas.json'), JSON.stringify(rep, null, 2));
+  await browser.close();
+  return rep;
+}
+
+// ---------------------------------------------------------------------------
 // CLI
 // ---------------------------------------------------------------------------
 
@@ -1347,6 +1724,27 @@ if (modo === 'comparar') {
   for (const t of rep.tactiles) console.log(`- ${t.texto} ${t.w}×${t.h}`);
   if (rep.errores.length) console.log('\nErrores:', rep.errores);
   console.log(`\nCapturas (docs/img/v1.4/buscador/): ${rep.capturas.join(', ') || 'ninguna'}`);
+} else if (modo === 'filas') {
+  const rep = await filas();
+  console.log('## Modo filas (T76) — carruseles y tarjetas del Home\n');
+  console.log('| ancho | tarj.Home h | portada w×h | 1ª tarjeta x | carrusel right | flecha w×h | mask | overflowH |');
+  console.log('|---:|---:|---:|---:|---:|---:|:--:|---:|');
+  for (const m of rep.anchos) {
+    const fmt = (r) => (r ? `${r.w}×${r.h}` : '—');
+    console.log(
+      `| ${m.ancho} | ${m.tarjetaHomeH ?? '—'} | ${fmt(m.portada)} | ${m.primera?.x ?? '—'} | ${m.carrusel?.right ?? '—'} | ` +
+        `${m.flecha ? `${fmt(m.flecha)} (${m.flecha.display})` : '—'} | ${m.carrusel?.mask === 'none' ? 'no' : 'sí'} | ${m.overflowH} |`
+    );
+  }
+  console.log('\nEsqueleto → datos:', JSON.stringify(rep.esqueleto));
+  console.log('\n| comprobación | ok | detalle |');
+  console.log('|---|:--:|---|');
+  for (const f of rep.funciones)
+    console.log(`| ${f.nombre} | ${f.ok ? 'sí' : 'NO'} | ${f.detalle === null ? '' : JSON.stringify(f.detalle)} |`);
+  console.log(`\nTáctiles <44 px visibles en el Home (${rep.tactiles.length}):`);
+  for (const t of rep.tactiles) console.log(`- ${t.texto} ${t.w}×${t.h}`);
+  if (rep.errores.length) console.log('\nErrores:', rep.errores);
+  console.log(`\nCapturas (${process.argv[3] ?? 'docs/img/v1.4/filas'}): ${rep.capturas.join(', ') || 'ninguna'}`);
 } else {
   const dirOut = process.argv[3] ?? DIR_DEF;
   const res = await capturar(dirOut);

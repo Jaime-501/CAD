@@ -1,4 +1,4 @@
-    # PROGRESO — Comfort Anime Desktop (T01–T75 hechas)
+    # PROGRESO — Comfort Anime Desktop (T01–T76 hechas)
 
 > Este archivo es la **memoria entre sesiones**. Cada sesión lo lee al inicio y lo actualiza al final.
 > Reglas y layout: `tareas/00_REGLAS.md`. Detalle de cada tarea: `tareas/Txx.md`.
@@ -145,6 +145,7 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha y verificada
 | [x] | T73b | Cajón opaco (v1.4.0) | T73 |
 | [x] | T74 | Cabecera compacta de detalle y reproductor (v1.4.0) | T73b |
 | [x] | T75 | Buscador y pestañas del Home (v1.4.0) | T74 |
+| [x] | T76 | Filas y tarjetas del Home (v1.4.0) | T75 |
 
 T01–T29 = v1.0 (`docs/PROGRESO_v1.0.md`) · T30–T35 = v1.1.0 AnimeAV1 (`docs/PROGRESO_v1.1.md`) · T36 = cierre de la v1.1.0 · T37 = portabilidad Android · T38 = cierre documental de T37.
 T39–T57 = v1.2.0 (Home, historial lateral, favoritos, "Siguiente" y su estado discreto; **incluye T53b y T57**); plan en `tareas/v1.2_PLAN.md`, detalle **T39–T58 + cierres T56/T59** archivado en `docs/PROGRESO_v1.2.md`, con resúmenes al final de este archivo.
@@ -1094,3 +1095,51 @@ Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**
 **Capturas** en `docs/img/v1.4/buscador/`: `home_360.png` (página completa), `favoritos_360.png`, `busqueda_texto_360.png` (con ✕ visible), `busqueda_resultados_360.png`, `home_1280.png` (viewport, para la comparación a 1280) (+ `buscador.json`).
 
 **Archivos tocados:** `frontend/src/VistaBusqueda.svelte` (markup del buscador, su `<style>` y el padding de `.contenedor`; en el `<script>`, solo `Icono`+`isNarrow` y `limpiar()`), `frontend/src/VistaInicio.svelte` (markup de pestañas/paneles y `h2` de "Favoritos", su `<style>`; en el `<script>`, solo `isNarrow`), `docs/investigacion/ui/verificar_ui.mjs` (modo `buscador`), `docs/img/v1.4/buscador/**` y `PROGRESO.md`. **Nada fuera de "Puedes tocar"** (regla 7 no se activó): `*.go`, `frontend/wailsjs/**`, `api.ts`, `stores.ts`, `views.ts`, `ui.ts`, `BarraInferior`, `FilaAnimes`, `GridFavoritos`, `TarjetaAnime`, la rejilla de resultados de búsqueda (T78) e `index.html` intactos. **Sin tag ni release** (los hace el humano); **T76 no iniciada**.
+
+## T76 — Filas y tarjetas del Home (v1.4.0) — bloque de esta sesión
+
+Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**. Fecha **2026-10-17**. Rediseña los **carruseles** (`FilaAnimes`) y la **tarjeta** de anime (`TarjetaAnime`) con el lenguaje visual de la serie y lleva el buscador de **modo estrecho** al objetivo táctil. En **modo estrecho** (`< 900 px`) el carrusel **sangra hasta el borde** de la página (mismos márgenes/padding con `--gutter`, sin mangas de degradado), el **título de fila** corta con elipsis sin empujar las flechas, y las **flechas** pasan a `var(--tap)` (44×44) con ratón y se **ocultan** (`display: none`) con `pointer: coarse` (el desplazamiento es el gesto). La **tarjeta** gana marco (`--border-subtle`), radio `--r-lg`, sombra `--sh-card`, portada en `aspect-ratio: 2 / 3`, `:active`/`:focus-visible` con tokens y `:hover` solo con puntero fino. En **≥ 900 px** la geometría **no cambia** (tarjeta de Home **263,8**, flechas 32×32, degradados presentes, buscador 85×38). **Sin cambios de comportamiento**: el clic abre el anime, las flechas desplazan el 80 %, los extremos se deshabilitan, snap y carga de filas intactos.
+
+**Resultados de la verificación** (modo `filas` nuevo en `verificar_ui.mjs`, localhost:34115, red real):
+
+| ancho | tarj. Home (h) | portada (w×h) | 1.ª tarjeta (x) | carrusel right | flecha (w×h) | `mask` | `overflowH` |
+|---|---:|---|---:|---:|---|:--:|---:|
+| 360 | 263,8 | 140×210 | 16 | 360 | **44×44** (flex) | no | 0 |
+| 390 | 263,8 | 140×210 | 16 | 390 | **44×44** (flex) | no | 0 |
+| 768 | 263,8 | 140×210 | 24 | 768 | **44×44** (flex) | no | 0 |
+| 1024 | 263,8 | 140×210 | 332 | 996 | 32×32 (flex) | **sí** | 0 |
+| 1280 | 263,8 | 140×210 | 332 | 1252 | 32×32 (flex) | **sí** | 0 |
+| 360 `coarse` | 263,8 | 140×210 | 16 | 360 | **0×0 (`none`)** | no | 0 |
+| 390 `coarse` | 263,8 | 140×210 | 16 | 390 | **0×0 (`none`)** | no | 0 |
+
+| comprobación (61 en total) | resultado |
+|---|---|
+| **Paso 0** — campo y botón "Buscar" en 360/390/768 ≤ 48 (y ≥ 44): **campo 46, botón 46** (input 44) — antes **64/66** | **sí** (6/6) |
+| **Paso 0** — 1024/1280: input **38** y botón **38** (escritorio, sin cambio) | **sí** (4/4) |
+| ≥ 1024: tarjeta de Home **263,8**; portada **140×210**; flechas **32×32**; **degradados presentes**; `overflowH = 0` | **sí** (10/10) |
+| 360/390/768 (ratón): 1.ª tarjeta `left` = **gutter** (16/16/24); carrusel `right` = **ancho de ventana**; flechas **44×44**; **sin `mask-image`**; **título con elipsis** (`nowrap`/`ellipsis`/`min-width:0`); `overflowH = 0` | **sí** (28/28) |
+| Tarjeta de Home = **263,8** en TODOS los anchos (tol > 1 px) | **sí** (7/7, Δ0) |
+| **Esqueleto → datos:** posición vertical de la 1.ª fila `196 → 194` (**Δ2**, ≤ 2) | **sí** (2 px, en el límite) |
+| 360/390 `coarse`: `pointer: coarse` detectado, flechas `display: none`, 1.ª tarjeta al gutter, `overflowH = 0` | **sí** (8/8) |
+| 360 `coarse`: la fila se **desplaza con gesto táctil** (arrastre CDP) `scrollLeft = 4220 = max` (**llega al final**) | **sí** |
+| 390 `coarse`: ídem `scrollLeft = 4190 = max` (**llega al final**) | **sí** |
+| 360: clic en una tarjeta del Home **abre el detalle** y "Atrás" vuelve al Home | **sí** |
+| 360: **T66/T67** — scroll del detalle **restaurado** al abrir un episodio (69 492 → 69 493, Δ1 px) | **sí** |
+| `prefers-reduced-motion: reduce`: `transition-duration` de `.tarjeta` | **`0s`** |
+| táctiles < 44 px visibles en el Home (360) | **0** (antes: 8 flechas de 32×32) |
+| **Capturas 1280 antes (HEAD) / después (T76), tol ≤ 2** | **170 401 px distintos** (máx Δ229), caja `x=328, y=262, w=924, h=538` — **solo la zona de filas** |
+| `npm run check` | **0 errores / 0 avisos** |
+| `npm run build` | **OK** |
+| tests `.ts` | **13 / 48 / 32** comprobaciones OK (`views`, `ventana`, `etiquetas`) |
+| `grep -rn wailsjs frontend/src` | **solo `api.ts`** |
+| Go (`go test -race -count=1 -v ./...`) | **435 `--- PASS` de nivel superior**, 0 FAIL (11 paquetes `ok`, `*.go` intactos) |
+
+**Desviaciones (documentadas):**
+- **Portada 138 → 140 px (consecuencia directa del ítem 1).** Con el `aspect-ratio: 2 / 3` y el ancho del *padding box* (138 px que deja el borde de 1 px) la portada mediría 138×207 y la tarjeta bajaría a **260,8** (no 263,8). Para mantener las dos cifras que exige la ficha (**portada 140×210** y **tarjeta 263,8**), la portada ocupa el ancho COMPLETO del marco con `width: calc(100% + 2px)` + `margin: 0 -1px` (y `overflow: hidden` recorta). La portada crece pues **2 px** respecto al valor previo (138) y la comparación a 1280 lo refleja: además del **borde, radio y sombra** del marco, las **portadas se reescalan** (de ahí gran parte de los 170 401 px). **Fuera de la zona de filas** (cabecera y buscador) **no hay ninguna diferencia** (la caja del diff empieza en `y=262`, la primera fila).
+- **Esqueleto → datos = 2 px** (en 360; la base HEAD daba 0). El sangrado del `.carrusel-fantasma` no cambia la posición de la fila, pero al resolver la carga el bloque de título de la tarjeta real y el fantasma difieren 2 px; la ficha tolera ≤ 2 px.
+- **Arnés (no código):** el modo `filas` **retrasa la llamada `GetHomeSection`** (`addInitScript` sobre `window.go.main.App`) para poder medir el esqueleto: la caché de Home (TTL 10 min) hace que, en una segunda carga, la respuesta llegue en una sola pintura y el esqueleto no se pueda medir.
+- **Sin cambios de markup ni `<script>`:** la ficha permitía tocar el markup de las flechas de `FilaAnimes`, pero **no hizo falta** (el estilo por media queries basta); el `<script>` de los cuatro componentes quedó **intacto**.
+
+**Capturas** en `docs/img/v1.4/filas/`: `home_360.png` (viewport), `home_360_coarse.png` (con `pointer: coarse`), `home_768.png`, `home_1280.png`, `tarjeta_360.png` (primer plano de una tarjeta) (+ `filas.json`).
+
+**Archivos tocados:** `frontend/src/TarjetaAnime.svelte` (SOLO `<style>`), `frontend/src/FilaAnimes.svelte` (SOLO `<style>`), `frontend/src/VistaInicio.svelte` (SOLO `<style>`), `frontend/src/VistaBusqueda.svelte` (SOLO `<style>` del buscador, paso 0), `docs/investigacion/ui/verificar_ui.mjs` (modo `filas`), `docs/img/v1.4/filas/**` y `PROGRESO.md`. **Nada fuera de "Puedes tocar"** (regla 7 no se activó): `*.go`, `frontend/wailsjs/**`, `api.ts`, `stores.ts`, `views.ts`, `ui.ts`, `GridFavoritos` (T87), la rejilla de resultados de búsqueda (T78), `BarraInferior` e `index.html` intactos; ningún `<script>` de componente cambiado. **Sin tag ni release** (los hace el humano); **T77 no iniciada**.
