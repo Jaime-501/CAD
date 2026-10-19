@@ -604,5 +604,16 @@
       -webkit-box-orient: vertical;
       overflow: hidden;
     }
+    /* T81: la rejilla de episodios pasa a 2 columnas en estrecho. */
+    .rejilla {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--sp-3);
+    }
+  }
+  /* T81: 600–899 px usa 3 columnas. */
+  @media (min-width: 600px) and (max-width: 899px) {
+    .rejilla {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
   }
 </style>

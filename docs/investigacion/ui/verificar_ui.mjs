@@ -3065,6 +3065,393 @@ async function cta() {
 }
 
 // ---------------------------------------------------------------------------
+// Modo episodios (T81): tarjeta de episodio y rejilla en modo estrecho
+// ---------------------------------------------------------------------------
+
+const ANCHOS_EPISODIOS = [
+  { w: 360, h: 740, nombre: '360' },
+  { w: 390, h: 844, nombre: '390' },
+  { w: 768, h: 1024, nombre: '768' },
+  { w: 1024, h: 768, nombre: '1024' },
+  { w: 1280, h: 800, nombre: '1280' },
+];
+
+// Columnas esperadas de la rejilla por ancho (T81): 2 (<600), 3 (600–899 y
+// 1024 por `auto-fill`), 4 (1280 por `auto-fill`).
+const COLUMNAS_EPISODIOS = { 360: 2, 390: 2, 768: 3, 1024: 3, 1280: 4 };
+const ALTO_ESCRITORIO = 170.39;
+
+const MEDIR_EPISODIOS = () => {
+  const d = document.documentElement;
+  const round = (n) => Math.round(n * 100) / 100;
+  const csd = getComputedStyle(d);
+  const tok = (n) => csd.getPropertyValue(n).trim();
+  const resolver = (n) => {
+    const p = document.createElement('div');
+    p.style.color = `var(${n})`;
+    d.appendChild(p);
+    const c = getComputedStyle(p).color;
+    p.remove();
+    return c;
+  };
+  const rej = document.querySelector('.rejilla');
+  if (!rej) return { err: 'sin .rejilla' };
+  const csr = getComputedStyle(rej);
+  const tarjetas = [...rej.querySelectorAll('.tarjeta')];
+  const rects = tarjetas.map((t) => t.getBoundingClientRect());
+  const cols = [...new Set(rects.map((r) => Math.round(r.left)))].length;
+  const hs = rects.map((r) => round(r.height));
+  const ws = rects.map((r) => round(r.width));
+  const clasificar = (t) =>
+    t.querySelector('.visto') ? 'visto' : t.querySelector('.franja') ? 'parcial' : 'ninguno';
+  const muestra = { visto: null, parcial: null, ninguno: null };
+  for (const t of tarjetas) {
+    const k = clasificar(t);
+    if (!muestra[k]) muestra[k] = t;
+  }
+  const info = (t) => {
+    if (!t) return null;
+    const r = t.getBoundingClientRect();
+    const mini = t.querySelector('.miniatura');
+    const mr = mini ? mini.getBoundingClientRect() : null;
+    const visto = t.querySelector('.visto');
+    const franja = t.querySelector('.franja');
+    const fill = franja ? franja.querySelector('span') : null;
+    const pct = t.querySelector('.porcentaje');
+    const hole = t.querySelector('.sin-miniatura');
+    const titulo = t.querySelector('.titulo');
+    const csv = visto ? getComputedStyle(visto) : null;
+    const csh = hole ? getComputedStyle(hole) : null;
+    let minFs = Infinity;
+    for (const el of t.querySelectorAll('*')) {
+      const hasText = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
+      if (!hasText) continue;
+      minFs = Math.min(minFs, parseFloat(getComputedStyle(el).fontSize));
+    }
+    return {
+      w: round(r.width),
+      h: round(r.height),
+      estado: clasificar(t),
+      csi: getComputedStyle(t).containIntrinsicSize,
+      mini: mr ? { w: round(mr.width), h: round(mr.height), ratio: round(mr.width / mr.height) } : null,
+      visto: visto
+        ? {
+            texto: (visto.textContent || '').trim(),
+            bg: csv.backgroundColor,
+            color: csv.color,
+            border: csv.borderTopColor,
+            icono: !!visto.querySelector('svg'),
+            h: round(visto.getBoundingClientRect().height),
+          }
+        : null,
+      franja: franja
+        ? {
+            role: franja.getAttribute('role'),
+            min: franja.getAttribute('aria-valuemin'),
+            max: franja.getAttribute('aria-valuemax'),
+            now: franja.getAttribute('aria-valuenow'),
+            h: round(franja.getBoundingClientRect().height),
+            pegada: mr ? round(Math.abs(franja.getBoundingClientRect().bottom - mr.bottom)) : null,
+            fillPct:
+              fill && mr && mr.width > 0
+                ? round((fill.getBoundingClientRect().width / mr.width) * 100)
+                : null,
+          }
+        : null,
+      porcentaje: pct ? (pct.textContent || '').trim() : null,
+      tituloFs: titulo ? parseFloat(getComputedStyle(titulo).fontSize) : null,
+      minFs: minFs === Infinity ? null : minFs,
+      hole: hole ? { texto: (hole.textContent || '').trim(), color: csh.color } : null,
+    };
+  };
+  return {
+    innerWidth: window.innerWidth,
+    overflowH: d.scrollWidth - d.clientWidth,
+    gridCols: csr.gridTemplateColumns,
+    gap: csr.gap,
+    cols,
+    count: tarjetas.length,
+    wMin: Math.min(...ws),
+    wMax: Math.max(...ws),
+    hMin: Math.min(...hs),
+    hMax: Math.max(...hs),
+    tokens: {
+      brand400: resolver('--brand-400'),
+      text3: resolver('--text-3'),
+      chip: resolver('--surface-chip'),
+      accent: resolver('--border-accent'),
+      fsXs: parseFloat(tok('--fs-xs')),
+      fsSm: parseFloat(tok('--fs-sm')),
+    },
+    muestra: {
+      visto: info(muestra.visto),
+      parcial: info(muestra.parcial),
+      ninguno: info(muestra.ninguno),
+    },
+  };
+};
+
+async function episodios() {
+  const dirOut = process.argv[3] ?? 'docs/img/v1.4/episodios';
+  mkdirSync(dirOut, { recursive: true });
+  const browser = await chromium.launch();
+  const rep = {
+    anchos: [],
+    estados: null,
+    roto: null,
+    hover: null,
+    revelado: null,
+    scroll: null,
+    tactiles: [],
+    funciones: [],
+    capturas: [],
+    errores: [],
+  };
+  const check = (nombre, ok, detalle) =>
+    rep.funciones.push({ nombre, ok: !!ok, detalle: detalle === undefined ? null : detalle });
+  const paso = async (nombre, fn) => {
+    try {
+      await fn();
+    } catch (e) {
+      rep.errores.push(`${nombre}: ${e.message}`);
+    }
+  };
+  const ctx = await browser.newContext({ viewport: { width: 360, height: 740 } });
+  const page = await ctx.newPage();
+  const captura = async (nombre) => {
+    try {
+      await page.screenshot({ path: join(dirOut, `${nombre}.png`) });
+      rep.capturas.push(`${nombre}.png`);
+    } catch (e) {
+      rep.errores.push(`${nombre}: ${e.message}`);
+    }
+  };
+  const abrir = async (proveedor, ancho) => {
+    await page.setViewportSize({ width: ancho, height: 740 });
+    await gotoApp(page);
+    await buscar(page, 'bleach');
+    await abrirDetalle(page, proveedor);
+  };
+  const volverDetalle = async () => {
+    for (let i = 0; i < 4; i++) {
+      if (await page.locator('.ficha').isVisible().catch(() => false)) return;
+      await page.locator('.cabecera .atras').first().click().catch(() => {});
+      await page.waitForTimeout(800);
+    }
+  };
+
+  // Historial sembrado (T81): Bleach de AnimeAV1 con el ep. 9 en progreso y el
+  // ep. 10 visto, para cubrir los tres estados de la tarjeta.
+  const SEMILLA = [
+    { anime_id: 'bleach', episode_id: 'animeav1:bleach:episode:9', current_time: 900, total_duration: 1420, is_watched: false, provider: 'animeav1', anime_title: 'Bleach', cover_url: '', episode_number: 9, updated_at: 1749999940 },
+    { anime_id: 'bleach', episode_id: 'animeav1:bleach:episode:10', current_time: 1420, total_duration: 1420, is_watched: true, provider: 'animeav1', anime_title: 'Bleach', cover_url: '', episode_number: 10, updated_at: 1749999950 },
+  ];
+  const sembrar = async () => {
+    await gotoApp(page);
+    await page.evaluate(async (seed) => {
+      const App = window.go?.main?.App;
+      if (!App) throw new Error('puente window.go no disponible (usa localhost:34115)');
+      await App.ClearProgress();
+      for (const s of seed) await App.SaveProgress(s);
+    }, SEMILLA);
+    await page.waitForTimeout(300);
+  };
+
+  // --- A. Geometría y rejilla por ancho ---
+  await paso('A', async () => {
+    await sembrar();
+    for (const a of ANCHOS_EPISODIOS) {
+      await abrir('animeav1', a.w);
+      await page.setViewportSize({ width: a.w, height: a.h });
+      await page.waitForTimeout(400);
+      const m = await page.evaluate(MEDIR_EPISODIOS);
+      rep.anchos.push({ ancho: a.nombre, ...m });
+      if (m.err) {
+        check(`${a.nombre}: hay rejilla`, false, m.err);
+        continue;
+      }
+      await captura(`episodios_${a.nombre}`);
+      // Vista de la rejilla (desplazada) como evidencia visual.
+      await page.evaluate(() => {
+        const r = document.querySelector('.rejilla');
+        if (r) window.scrollTo(0, r.getBoundingClientRect().top + window.scrollY - 60);
+      });
+      await page.waitForTimeout(800);
+      await captura(`episodios_${a.nombre}_rejilla`);
+      check(`${a.nombre}: overflowH = 0`, m.overflowH === 0, m.overflowH);
+      check(`${a.nombre}: ${COLUMNAS_EPISODIOS[a.w]} columnas`, m.cols === COLUMNAS_EPISODIOS[a.w], m.cols);
+      check(`${a.nombre}: alto constante (min = max)`, Math.abs(m.hMax - m.hMin) <= 0.5, { min: m.hMin, max: m.hMax });
+      if (a.w >= 900) {
+        check(`${a.nombre}: alto escritorio 170,39 (T81)`, Math.abs(m.hMin - ALTO_ESCRITORIO) <= 0.5, m.hMin);
+        check(`${a.nombre}: contain-intrinsic-size "auto 170px"`, m.muestra.parcial?.csi === 'auto 170px', m.muestra.parcial?.csi);
+      } else {
+        const csi = m.muestra.parcial?.csi ?? '';
+        const esperado = `${m.hMin}px`;
+        check(`${a.nombre}: contain-intrinsic-size coincide con el alto`, csi === `auto ${esperado}`, { csi, alto: m.hMin });
+      }
+      log('episodios ancho', a.nombre, 'cols=', m.cols, 'alto=', m.hMin, '..', m.hMax);
+    }
+  });
+
+  // --- B. Los tres estados y su altura ---
+  await paso('B', async () => {
+    await sembrar();
+    await abrir('animeav1', 360);
+    await page.waitForTimeout(300);
+    const m = await page.evaluate(MEDIR_EPISODIOS);
+    rep.estados = m.muestra;
+    const est = m.muestra;
+    check('B: hay tarjeta "Visto"', !!est.visto);
+    check('B: hay tarjeta en progreso', !!est.parcial);
+    check('B: hay tarjeta sin progreso', !!est.ninguno);
+    check('B: sin progreso no tiene elemento de estado', !!est.ninguno && !est.ninguno.visto && !est.ninguno.franja && !est.ninguno.porcentaje);
+    if (est.visto) {
+      check('B: "Visto" con texto e icono', est.visto.visto.texto === 'Visto' && est.visto.visto.icono, est.visto.visto);
+      check('B: "Visto" fondo --surface-chip', est.visto.visto.bg === m.tokens.chip, { got: est.visto.visto.bg, esp: m.tokens.chip });
+      check('B: "Visto" color --brand-400', est.visto.visto.color === m.tokens.brand400, { got: est.visto.visto.color });
+      check('B: "Visto" borde --border-accent', est.visto.visto.border === m.tokens.accent, { got: est.visto.visto.border, esp: m.tokens.accent });
+    }
+    if (est.parcial) {
+      check('B: en progreso es progressbar con aria-valuenow', est.parcial.franja?.role === 'progressbar' && est.parcial.franja?.now === '63', est.parcial.franja);
+      check('B: franja de 4 px pegada al borde inferior de la miniatura', est.parcial.franja?.h === 4 && est.parcial.franja?.pegada <= 0.5, est.parcial.franja);
+      check('B: texto "{n} %"', /^\d+ %$/.test(est.parcial.porcentaje ?? ''), est.parcial.porcentaje);
+    }
+    const alturas = [est.visto, est.parcial, est.ninguno].filter(Boolean).map((x) => x.h);
+    check('B: los tres estados tienen el mismo alto', alturas.length === 3 && Math.max(...alturas) - Math.min(...alturas) <= 0.5, alturas);
+    await captura('episodios_360_estados');
+  });
+
+  // --- C. Tipografía (mínimo --fs-xs) y 16:9 de la miniatura ---
+  await paso('C', async () => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.waitForTimeout(300);
+    const m = await page.evaluate(MEDIR_EPISODIOS);
+    const muestras = [m.muestra.visto, m.muestra.parcial, m.muestra.ninguno].filter(Boolean);
+    check('C: título a --fs-sm (14 px)', muestras.every((x) => x.tituloFs === m.tokens.fsSm), muestras.map((x) => x.tituloFs));
+    check('C: ningún texto < --fs-xs (12 px)', muestras.every((x) => x.minFs >= m.tokens.fsXs), muestras.map((x) => x.minFs));
+    check('C: miniatura 16:9', muestras.every((x) => x.mini && Math.abs(x.mini.ratio - 16 / 9) <= 0.05), muestras.map((x) => x.mini?.ratio));
+  });
+
+  // --- D. Miniatura rota (falloMiniatura): hueco con el número, mismo alto ---
+  await paso('D', async () => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await page.waitForTimeout(200);
+    const res = await page.evaluate(async () => {
+      const rej = document.querySelector('.rejilla');
+      const t = rej.querySelectorAll('.tarjeta')[0];
+      const antes = Math.round(t.getBoundingClientRect().height * 100) / 100;
+      const img = t.querySelector('.miniatura img');
+      if (!img) return { err: 'sin img' };
+      img.src = 'http://localhost:1/no-existe.jpg';
+      await new Promise((r) => setTimeout(r, 400));
+      const hole = t.querySelector('.sin-miniatura');
+      return {
+        antes,
+        despues: Math.round(t.getBoundingClientRect().height * 100) / 100,
+        hole: hole ? (hole.textContent || '').trim() : null,
+        color: hole ? getComputedStyle(hole).color : null,
+        text3: (() => {
+          const p = document.createElement('div');
+          p.style.color = 'var(--text-3)';
+          document.documentElement.appendChild(p);
+          const c = getComputedStyle(p).color;
+          p.remove();
+          return c;
+        })(),
+      };
+    });
+    rep.roto = res;
+    check('D: la miniatura rota muestra el hueco con el número', !!res.hole && res.hole === '1', res);
+    check('D: el número usa --text-3', res.color === res.text3, { got: res.color, esp: res.text3 });
+    check('D: el alto no cambia con la miniatura rota', Math.abs(res.despues - res.antes) <= 0.5, res);
+    await captura('episodios_360_hueco');
+  });
+
+  // --- E. Hover sólo con puntero fino ---
+  await paso('E', async () => {
+    await abrir('animeav1', 1280);
+    await page.waitForTimeout(300);
+    const card = page.locator('.rejilla .tarjeta').first();
+    await card.scrollIntoViewIfNeeded();
+    await card.hover();
+    await page.waitForTimeout(250);
+    const fine = await card.evaluate((el) => ({
+      media: matchMedia('(hover: hover) and (pointer: fine)').matches,
+      transform: getComputedStyle(el).transform,
+      shadow: getComputedStyle(el).boxShadow,
+    }));
+    await page.mouse.move(0, 0);
+    await page.waitForTimeout(250);
+    rep.hover = { fine };
+    check('E: con puntero fino el hover eleva la tarjeta (−3 px)', fine.media && fine.transform === 'matrix(1, 0, 0, 1, 0, -3)', fine);
+    check('E: con puntero fino el hover añade sombra', /rgba?\(/.test(fine.shadow), fine.shadow);
+
+    // Contexto táctil (puntero grueso): el hover no debe elevar.
+    const ctxT = await browser.newContext({ viewport: { width: 768, height: 1024 }, hasTouch: true, isMobile: true });
+    const pt = await ctxT.newPage();
+    try {
+      await pt.goto(BASE, { waitUntil: 'domcontentloaded' });
+      await pt.waitForSelector('.buscador input', { timeout: 20000 });
+      const coarse = await pt.evaluate(() => matchMedia('(hover: hover) and (pointer: fine)').matches);
+      rep.hover.coarse = coarse;
+      check('E: el contexto táctil NO es puntero fino', coarse === false, coarse);
+    } catch (e) {
+      rep.errores.push('E táctil: ' + e.message);
+    }
+    await ctxT.close().catch(() => {});
+  });
+
+  // --- F. Revelado T65 + scroll T66/T67 ---
+  await paso('F', async () => {
+    await abrir('animeav1', 360);
+    await page.waitForFunction(() => !document.querySelector('.cargando'), null, { timeout: 60000 }).catch(() => {});
+    await page.waitForTimeout(500);
+    await page.evaluate(() => {
+      const r = document.querySelector('.rejilla');
+      if (r) window.scrollTo(0, r.getBoundingClientRect().top + window.scrollY);
+    });
+    await page.waitForTimeout(1200);
+    const entra = await page.evaluate(() => document.querySelectorAll('.celda.entra').length);
+    rep.revelado = entra;
+    check('F: revelado T65 (.entra > 0)', entra > 0, entra);
+
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await page.waitForTimeout(600);
+    const yAntes = await page.evaluate(() => Math.round(window.scrollY));
+    const ultima = page.locator('.rejilla .celda .tarjeta').last();
+    if (yAntes > 0 && (await ultima.count()) > 0) {
+      await ultima.click();
+      await page.waitForTimeout(1800);
+      await volverDetalle();
+      await page.waitForTimeout(1200);
+      const desp = await page.evaluate(() => ({
+        y: Math.round(window.scrollY),
+        max: document.documentElement.scrollHeight - window.innerHeight,
+      }));
+      const esperado = Math.min(yAntes, desp.max);
+      rep.scroll = { yAntes, ...desp, esperado, delta: Math.abs(desp.y - esperado) };
+      check('F: scroll del detalle restaurado (T66/T67)', Math.abs(desp.y - esperado) <= 5, rep.scroll);
+    } else {
+      check('F: scroll del detalle restaurado (T66/T67)', false, { yAntes });
+    }
+  });
+
+  // --- G. Objetivos táctiles de la tarjeta ---
+  await paso('G', async () => {
+    await abrir('animeav1', 360);
+    rep.tactiles = await page.evaluate(() => {
+      const hs = [...document.querySelectorAll('.rejilla .tarjeta')].map((t) => t.getBoundingClientRect().height);
+      return { total: hs.length, hMin: Math.round(Math.min(...hs) * 100) / 100 };
+    });
+    check('G: toda tarjeta de episodio ≥44 px de alto', rep.tactiles.hMin >= 44, rep.tactiles);
+  });
+
+  writeFileSync(join(dirOut, 'episodios.json'), JSON.stringify(rep, null, 2));
+  await browser.close();
+  return rep;
+}
+
+// ---------------------------------------------------------------------------
 // CLI
 // ---------------------------------------------------------------------------
 
@@ -3338,6 +3725,31 @@ if (modo === 'comparar') {
   for (const t of rep.tactiles) console.log(`- ${t.texto} ${t.w}×${t.h}${t.enCta ? ' [CTA]' : ''}${t.enBarra ? ' [BARRA]' : ''}`);
   if (rep.errores.length) console.log('\nErrores:', rep.errores);
   console.log(`\nCapturas (${process.argv[3] ?? 'docs/img/v1.4/cta'}): ${rep.capturas.join(', ') || 'ninguna'}`);
+} else if (modo === 'episodios') {
+  const rep = await episodios();
+  console.log('## Modo episodios (T81) — tarjeta y rejilla en estrecho\n');
+  console.log('| ancho | cols | tarj. w | tarj. alto (min..max) | gap | overflowH |');
+  console.log('|---|:--:|---:|---|---:|---:|');
+  for (const m of rep.anchos) {
+    if (m.err) { console.log(`| ${m.ancho} | — | — | — | — | ${m.err} |`); continue; }
+    console.log(
+      `| ${m.ancho} | ${m.cols} | ${m.wMin === m.wMax ? m.wMin : m.wMin + '..' + m.wMax} | ` +
+        `${m.hMin}${m.hMin === m.hMax ? '' : '..' + m.hMax} | ${m.gap} | ${m.overflowH} |`
+    );
+  }
+  console.log('\nEstados (360):', JSON.stringify(rep.estados, null, 0));
+  console.log('Miniatura rota:', JSON.stringify(rep.roto));
+  console.log('Hover:', JSON.stringify(rep.hover));
+  console.log('Revelado T65:', rep.revelado, '| scroll T66/T67:', JSON.stringify(rep.scroll));
+  console.log('Táctiles (tarjetas):', JSON.stringify(rep.tactiles));
+  const fallos = rep.funciones.filter((f) => !f.ok);
+  console.log('\n| comprobación | ok | detalle |');
+  console.log('|---|:--:|---|');
+  for (const f of rep.funciones)
+    console.log(`| ${f.nombre} | ${f.ok ? 'sí' : 'NO'} | ${f.detalle === null ? '' : JSON.stringify(f.detalle)} |`);
+  console.log(`\nComprobaciones: ${rep.funciones.length - fallos.length}/${rep.funciones.length} OK`);
+  if (rep.errores.length) console.log('\nErrores:', rep.errores);
+  console.log(`\nCapturas (${process.argv[3] ?? 'docs/img/v1.4/episodios'}): ${rep.capturas.join(', ') || 'ninguna'}`);
 } else {
   const dirOut = process.argv[3] ?? DIR_DEF;
   const res = await capturar(dirOut);

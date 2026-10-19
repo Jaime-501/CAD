@@ -1,4 +1,4 @@
-    # PROGRESO — Comfort Anime Desktop (T01–T80 hechas)
+    # PROGRESO — Comfort Anime Desktop (T01–T81 hechas)
 
 > Este archivo es la **memoria entre sesiones**. Cada sesión lo lee al inicio y lo actualiza al final.
 > Reglas y layout: `tareas/00_REGLAS.md`. Detalle de cada tarea: `tareas/Txx.md`.
@@ -150,6 +150,7 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha y verificada
 | [x] | T78 | Rejilla de resultados de búsqueda y estados (v1.4.0) | T77 |
 | [x] | T79 | Ficha de detalle: portada, metadatos, géneros y sinopsis (v1.4.0) | T74, T78 |
 | [x] | T80 | Barra de acción fija «Continuar / Reiniciar» del detalle en estrecho (v1.4.0) | T73b, T74, T79 |
+| [x] | T81 | Tarjeta de episodio y rejilla en modo estrecho (v1.4.0) | T72, T79, T80 |
 
 T01–T29 = v1.0 (`docs/PROGRESO_v1.0.md`) · T30–T35 = v1.1.0 AnimeAV1 (`docs/PROGRESO_v1.1.md`) · T36 = cierre de la v1.1.0 · T37 = portabilidad Android · T38 = cierre documental de T37.
 T39–T57 = v1.2.0 (Home, historial lateral, favoritos, "Siguiente" y su estado discreto; **incluye T53b y T57**); plan en `tareas/v1.2_PLAN.md`, detalle **T39–T58 + cierres T56/T59** archivado en `docs/PROGRESO_v1.2.md`, con resúmenes al final de este archivo.
@@ -1345,3 +1346,50 @@ Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**
 **Capturas** en `docs/img/v1.4/cta/`: `detalle_360_progreso.png`, `detalle_360_sin_progreso.png`, `detalle_360_fin_scroll.png`, `detalle_360_cajon.png`, `detalle_768.png`, `detalle_1280.png` (+ `cta.json`).
 
 **Archivos tocados:** `frontend/src/BarraAccion.svelte` (**nuevo**), `frontend/src/VistaDetalle.svelte` (import + **15 líneas** de `<script>`, `class:con-cta` y markup de la CTA, y reglas de `<style>`), `docs/investigacion/ui/verificar_ui.mjs` (modo `cta` **nuevo** + `enCta` en `TACTILES_CHICOS`), `docs/img/v1.4/cta/**` y `PROGRESO.md`. **Nada fuera de "Puedes tocar"** (regla 7 no se activó): `*.go`, `frontend/wailsjs/**`, `api.ts`, `stores.ts`, `views.ts`, `ui.ts`, `App.svelte`, `BarraInferior`, `CabeceraVista`, `TarjetaEpisodio`, `BotonFavorito`, `revelar.ts`, `ventana.ts`, `index.html`, la lógica de scroll (T66/T67) y el revelado (T65) intactos. **Sin tag ni release** (los hace el humano); **T81 no iniciada**.
+
+## T81 — Tarjeta de episodio y rejilla en modo estrecho (v1.4.0) — bloque de esta sesión
+
+Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**. Fecha **2026-10-18**. Rediseña la **tarjeta de episodio** (`TarjetaEpisodio.svelte`) y la **rejilla** del detalle a **2 columnas** en estrecho (**< 600 px**) y **3** entre **600–899 px**, con **altura constante por rango**. En **≥ 900 px** la rejilla sigue con `auto-fill` y la tarjeta conserva **170,39 px** (T79) — **sin cambio de comportamiento** (clic abre episodio, `abrir`, progreso, revelado T65 en `.celda`, `content-visibility: auto`).
+
+- **Miniatura 16:9** (`aspect-ratio: 16/9`, `--bg-2`) con **insignia** abajo-izquierda (`--surface-panel`, `--brand-400`, `--fs-xs`, `--r-sm`) y **franja de progreso de 4 px** (`--sp-1`) pegada al borde inferior de la miniatura (`--border-strong` con relleno `--brand-500`, `role="progressbar"` + `aria-valuenow`). La **miniatura es `flex: 0 1 auto`** y **cede altura** si el cuerpo necesita más, en vez de recortarlo.
+- **Cuerpo** (`.cuerpo`, `flex: 1 1 auto`, `justify-content: space-between`, padding `var(--sp-1) var(--sp-3)`): **título** a una línea con elipsis (`--fs-sm`, `--lh-tight`) y **estado**. **Visto** → insignia con `Icono check` (tam 16), texto «Visto», fondo `--surface-chip`, color `--brand-400` y borde `--border-accent`. **En progreso** → texto «{n} %» (`--fs-xs`, `--text-3`) **bajo el título**. **Sin progreso** → **sin** elemento de estado. Por eso el **alto no depende del estado**.
+- **Altura fija por rango** (clave para el alto estable con `aspect-ratio`): `height: 170.39px` en escritorio; **146 px** con 2 columnas y **179 px** con 3 columnas, cada una con su `contain-intrinsic-size: auto <alto>px` (escritorio mantiene `auto 170px`). Como el ancho de tarjeta cambia con la columna, un `aspect-ratio` puro no podía mantener 170,39 en ≥ 900 (daría 113–120 px de miniatura); con la altura fija el objetivo se cumple exacto.
+- **Sin literales**: eliminados `#14532d`, `#52525b`, `#2a2a35`, `#26262e`; el hueco sin miniatura usa `--bg-2` con el número en `--text-3` y `repeating-linear-gradient` de tokens (`--bg-2`/`--bg-1`). Tipografía mínima `--fs-xs` (12 px); `font: inherit`.
+- **Interacción**: `:hover` (`translateY(-3px)` + `--sh-card-hover`) **solo** en `@media (hover: hover) and (pointer: fine)`; `:active` `scale(0.97)` con `--dur-fast`; `:focus-visible` con `box-shadow: var(--ring)`; `prefers-reduced-motion: reduce` sin transiciones ni transform. Radio `var(--r-lg)`, borde `var(--border-subtle)`.
+- **Rejilla** (`VistaDetalle.svelte`, **solo `<style>`**): `@media (max-width: 899px) { .rejilla { grid-template-columns: repeat(2, minmax(0,1fr)); gap: var(--sp-3); } }` y `@media (min-width: 600px) and (max-width: 899px) { .rejilla { grid-template-columns: repeat(3, minmax(0,1fr)); } }`. En ≥ 900 no se toca el `auto-fill`.
+
+**Resultados de la verificación** (modo `episodios` **nuevo** en `verificar_ui.mjs`, localhost:34115, red real; AnimeAV1 «bleach», historial sembrado ep. 9 en progreso y ep. 10 visto — 366 episodios):
+
+| ancho | cols | tarj. w | tarj. alto (min..max) | gap | `overflowH` |
+|---|:--:|---:|---|---:|---:|
+| 360 | 2 | 158 | **146** | 12 px | 0 |
+| 390 | 2 | 173 | **146** | 12 px | 0 |
+| 768 | 3 | 232 | **179** | 12 px | 0 |
+| 1024 | 3 | 208 | **170,39** | 18 px | 0 |
+| 1280 | 4 | 215,5 | **170,39** | 18 px | 0 |
+
+| comprobación (46 en total) | resultado |
+|---|---|
+| A: 5 anchos — `overflowH = 0`, columnas esperadas (2/2/3/3/4), alto **constante** por rango, `contain-intrinsic-size` = alto (escritorio `auto 170px`) | **sí** |
+| B: los **tres estados** (visto / en progreso / sin progreso) existen; «Visto» con icono + `--surface-chip`/`--brand-400`/`--border-accent`; franja **4 px pegada** con `aria-valuenow = 63` y «63 %»; sin progreso **sin** elemento de estado; **los tres con el mismo alto** | **sí** |
+| C: título `--fs-sm` (14), ningún texto < `--fs-xs` (12), miniatura **16:9** en los tres estados | **sí** |
+| D: miniatura rota → hueco con el número en `--text-3` y **alto sin cambio** (146 → 146) | **sí** |
+| E: hover solo con puntero fino (`translateY(-3px)` + sombra); contexto táctil **no** es puntero fino | **sí** |
+| F: revelado T65 (`.entra = 10`) y scroll T66/T67 restaurado (Δ0) | **sí** |
+| G: toda tarjeta de episodio ≥ 44 px de alto (mín **146**) | **sí** |
+| modo `cta` (T80) re-ejecutado — **56/56 OK**, tarjeta de episodio **170,39** a 1024/1280 | **sí** |
+| `npm run check` | **0 errores / 0 avisos** |
+| `npm run build` | **OK** |
+| tests `.ts` | **13 / 48 / 32** comprobaciones OK (`views`, `ventana`, `etiquetas`; sin lógica pura nueva) |
+| `gofmt -l .` / `go vet ./...` / `go test -race -count=1 ./...` | **sin salida** / **OK** / **435 `--- PASS`** de nivel superior, 0 FAIL (`*.go` intactos) |
+| `grep -rn wailsjs frontend/src` | **solo `api.ts`** |
+
+**Desviaciones / notas (documentadas):**
+- **Altura fija por rango, no `aspect-ratio` puro.** Con el ancho de tarjeta de T79 (208 px a 1024; 215,5 a 1280) una miniatura puramente 16:9 daría 117–121 px de alto y la tarjeta variaría unos 4 px; en estrecho (158–232 px) la variación sería mayor. La tarjeta fija el alto por rango y deja que la miniatura **ceda** (`flex: 0 1 auto`) si hace falta, de modo que el alto es **exacto** (170,39 / 146 / 179) y **contenido** (sin recorte del cuerpo).
+- **Contenido de la tarjeta**: solo se muestra **una línea** de título (con elipsis). Es lo que garantiza «altura constante sin depender del contenido»; se aceptó el recorte de títulos largos.
+- **Rejilla 600–899**: se apila con la media del propio componente (`min-width: 600px`) y la de la vista; ambas coinciden porque la rejilla define las columnas por viewport. A **900 px** exactos la tarjeta ya es de escritorio (**170,39**) y la rejilla vuelve a `auto-fill` (2 columnas a 900 con el lateral expandido, 3 a 1024, 4 a 1280 y 1100).
+- **Sin cambios en el resto**: la rejilla de resultados de búsqueda, el `Home`, la cabecera, la ficha, la CTA y la barra inferior son **byte-idénticos**; no se tocó ningún `<script>` salvo **importar `Icono`** en `TarjetaEpisodio.svelte`. El `<script>` de `VistaDetalle.svelte` quedó **intacto** (solo su `<style>`).
+
+**Capturas** en `docs/img/v1.4/episodios/`: `episodios_{360,390,768,1024,1280}.png` (inicio), `episodios_{360,390,768,1024,1280}_rejilla.png` (rejilla desplazada), `episodios_360_estados.png`, `episodios_360_hueco.png` (+ `episodios.json`).
+
+**Archivos tocados:** `frontend/src/TarjetaEpisodio.svelte` (**markup + `<style>`**; en `<script>`, solo `import Icono`), `frontend/src/VistaDetalle.svelte` (**solo `<style>`**: `.rejilla` en estrecho), `docs/investigacion/ui/verificar_ui.mjs` (modo `episodios` **nuevo**), `docs/img/v1.4/episodios/**` y `PROGRESO.md`. **Nada fuera de "Puedes tocar"** (regla 7 no se activó): `*.go`, `frontend/wailsjs/**`, `api.ts`, `stores.ts`, `views.ts`, `ui.ts`, `revelar.ts`, `ventana.ts`, `App.svelte`, `BarraInferior`, `BarraAccion`, `CabeceraVista`, `BotonFavorito`, `index.html`, la CTA (T80), la ficha (T79) y el **`<script>` de `VistaDetalle.svelte`** intactos. **Sin tag ni release** (los hace el humano); **T82 no iniciada**.
