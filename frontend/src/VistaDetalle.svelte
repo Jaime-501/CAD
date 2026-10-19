@@ -169,6 +169,15 @@
   // desordenados o antes de resolver la llamada): aquí solo se ordenan.
   $: episodios = [...$episodes].sort((a, b) => a.number - b.number || a.id.localeCompare(b.id));
 
+  // T82: orden de presentación de la rejilla; la lista ascendente sigue siendo
+  // la fuente de la CTA, de `episodioContinuar` y de la restauración de scroll.
+  let ordenDesc = false;
+  $: episodiosVista = ordenDesc ? [...episodios].reverse() : episodios;
+  $: if ($currentAnimeID) ordenDesc = false;
+  function alternarOrden(): void {
+    ordenDesc = !ordenDesc;
+  }
+
   // T67: reintenta la restauración pendiente con cada cambio de la lista.
   $: intentarRestaurarScroll(episodios.length, $episodesComplete);
 
@@ -350,7 +359,23 @@
       </div>
     </section>
 
-    <h3 class="titular">Episodios {#if episodios.length > 0}({episodios.length}){/if}</h3>
+    <div class="fila-titular">
+      <h3 class="titular">Episodios {#if episodios.length > 0}({episodios.length}){/if}</h3>
+      {#if episodios.length > 1}
+        <button
+          type="button"
+          class="orden"
+          aria-label={ordenDesc
+            ? 'Ordenar del más antiguo al más reciente'
+            : 'Ordenar del más reciente al más antiguo'}
+          aria-pressed={ordenDesc}
+          on:click={alternarOrden}
+        >
+          <Icono nombre={ordenDesc ? 'orden-asc' : 'orden-desc'} tam={20} />
+          <span class="orden-texto">{ordenDesc ? 'Más antiguos' : 'Más recientes'}</span>
+        </button>
+      {/if}
+    </div>
 
     {#if $episodesError !== ''}
       <p class="aviso">No se pudieron cargar todos los episodios: {$episodesError}</p>
@@ -358,7 +383,7 @@
 
     {#if episodios.length > 0}
       <div class="rejilla" bind:this={rejillaEl}>
-        {#each episodios as ep, i (ep.id)}
+        {#each episodiosVista as ep, i (ep.id)}
           <div class="celda" use:revelar={{ id: ep.id, indice: i, columnas }}>
             <TarjetaEpisodio episodio={ep} progreso={$progressMap[ep.id]} abrir={abrirEpisodio} />
           </div>
@@ -494,8 +519,73 @@
     color: var(--text-3);
     cursor: not-allowed;
   }
-  .titular {
+  .fila-titular {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-3);
     margin: 0 0 1rem;
+  }
+  .titular {
+    margin: 0;
+  }
+  .orden {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-1);
+    min-width: var(--tap);
+    min-height: var(--tap);
+    padding: 0 var(--sp-3);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--surface-chip);
+    color: var(--text-2);
+    font: inherit;
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+    cursor: pointer;
+    transition:
+      background var(--dur-fast) var(--ease-std),
+      border-color var(--dur-fast) var(--ease-std),
+      transform var(--dur-fast) var(--ease-std);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .orden-texto {
+    display: none;
+  }
+  @media (min-width: 480px) {
+    .orden-texto {
+      display: inline;
+    }
+  }
+  @media (min-width: 900px) {
+    .orden {
+      height: 36px;
+      min-height: 36px;
+    }
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .orden:hover {
+      background: var(--surface-chip-hover);
+      color: var(--text-1);
+    }
+  }
+  .orden:active {
+    transform: scale(0.98);
+  }
+  .orden:focus-visible {
+    outline: none;
+    box-shadow: var(--ring);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .orden {
+      transition: none;
+    }
+    .orden:active {
+      transform: none;
+    }
   }
   .rejilla {
     display: grid;

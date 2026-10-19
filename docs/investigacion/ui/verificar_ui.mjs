@@ -3452,6 +3452,464 @@ async function episodios() {
 }
 
 // ---------------------------------------------------------------------------
+// Modo orden (T82): orden ascendente/descendente de los episodios del detalle
+// ---------------------------------------------------------------------------
+
+const ANCHOS_ORDEN = [
+  { w: 360, h: 740, nombre: '360' },
+  { w: 390, h: 844, nombre: '390' },
+  { w: 768, h: 1024, nombre: '768' },
+  { w: 1280, h: 800, nombre: '1280' },
+];
+
+const MEDIR_ORDEN = () => {
+  const d = document.documentElement;
+  const round = (n) => Math.round(n * 100) / 100;
+  const rect = (el) => {
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return { x: round(r.x), y: round(r.y), w: round(r.width), h: round(r.height), bottom: round(r.bottom) };
+  };
+  const resolver = (n) => {
+    const p = document.createElement('div');
+    p.style.color = `var(${n})`;
+    d.appendChild(p);
+    const c = getComputedStyle(p).color;
+    p.remove();
+    return c;
+  };
+  const btn = document.querySelector('.orden');
+  const texto = btn ? btn.querySelector('.orden-texto') : null;
+  const rej = document.querySelector('.rejilla');
+  const celdas = rej ? [...rej.querySelectorAll('.celda')] : [];
+  const tarjetas = celdas.map((c) => c.querySelector('.tarjeta'));
+  const insignia = (t) => {
+    const i = t ? t.querySelector('.insignia') : null;
+    return i ? (i.textContent || '').trim() : null;
+  };
+  const identidad = (t) => {
+    if (!t) return '';
+    const img = t.querySelector('.miniatura img');
+    return [
+      insignia(t),
+      (t.querySelector('.titulo')?.textContent || '').trim(),
+      img ? img.getAttribute('src') : '',
+    ].join('|');
+  };
+  const ids = tarjetas.map(identidad);
+  const cs = btn ? getComputedStyle(btn) : null;
+  const csTexto = texto ? getComputedStyle(texto) : null;
+  const csRej = rej ? getComputedStyle(rej) : null;
+  const cta = document.querySelector('.barra-accion .principal .btn') || document.querySelector('.continuar');
+  const cab = document.querySelector('main .cabecera');
+  const ctaBarra = document.querySelector('.barra-accion');
+  const csd = getComputedStyle(d);
+  const tok = (n) => csd.getPropertyValue(n).trim();
+  return {
+    overflowH: d.scrollWidth - d.clientWidth,
+    scrollY: round(window.scrollY),
+    titulo: (document.querySelector('.titular')?.textContent || '').trim(),
+    tituloEnFila: !!document.querySelector('.fila-titular .orden'),
+    boton: btn
+      ? {
+          w: round(btn.getBoundingClientRect().width),
+          h: round(btn.getBoundingClientRect().height),
+          textoVisible: !!csTexto && csTexto.display !== 'none',
+          texto: texto ? (texto.textContent || '').trim() : null,
+          ariaLabel: btn.getAttribute('aria-label'),
+          ariaPressed: btn.getAttribute('aria-pressed'),
+          bg: cs.backgroundColor,
+          border: cs.borderTopColor,
+          radius: cs.borderTopLeftRadius,
+          fontSize: cs.fontSize,
+          transicion: cs.transitionDuration,
+        }
+      : null,
+    cards: {
+      total: celdas.length,
+      primero: insignia(tarjetas[0]),
+      ultimo: insignia(tarjetas[tarjetas.length - 1]),
+      duplicados: ids.filter((v, i) => v !== '' && ids.indexOf(v) !== i).length,
+      altoMin: tarjetas.length ? Math.min(...tarjetas.map((t) => round(t.getBoundingClientRect().height))) : null,
+      altoMax: tarjetas.length ? Math.max(...tarjetas.map((t) => round(t.getBoundingClientRect().height))) : null,
+    },
+    columnas: csRej ? csRej.gridTemplateColumns.split(' ').filter(Boolean).length : 0,
+    cta: cta ? (cta.textContent || '').trim() : null,
+    revelado: {
+      entra: document.querySelectorAll('.celda.entra').length,
+      pendiente: document.querySelectorAll('.celda.pendiente').length,
+      total: celdas.length,
+      entraIds: celdas.filter((c) => c.classList.contains('entra')).map((c) => identidad(c.querySelector('.tarjeta'))),
+    },
+    cabecera: {
+      rect: rect(cab),
+      posicion: cab ? getComputedStyle(cab).position : null,
+    },
+    barra: rect(ctaBarra),
+    barraInferior: rect(document.querySelector('.barra-inferior')),
+    tokens: {
+      chip: resolver('--surface-chip'),
+      chipHover: resolver('--surface-chip-hover'),
+      border: resolver('--border'),
+      rMd: tok('--r-md'),
+      fsSm: tok('--fs-sm'),
+    },
+  };
+};
+
+async function esperarEpisodios(page) {
+  await page.waitForFunction(() => !document.querySelector('.cargando'), null, { timeout: 60000 }).catch(() => {});
+  await page.waitForTimeout(500);
+}
+
+async function orden() {
+  const dirOut = process.argv[3] ?? 'docs/img/v1.4/orden';
+  mkdirSync(dirOut, { recursive: true });
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  const rep = {
+    anchos: [],
+    funciones: [],
+    capturas: [],
+    revelado: null,
+    scroll: null,
+    retorno: null,
+    unEpisodio: null,
+    hover: null,
+    reduced: null,
+    errores: [],
+  };
+  const check = (nombre, ok, detalle) =>
+    rep.funciones.push({ nombre, ok: !!ok, detalle: detalle === undefined ? null : detalle });
+  const paso = async (nombre, fn) => {
+    try {
+      await fn();
+    } catch (e) {
+      rep.errores.push(`${nombre}: ${e.message}`);
+    }
+  };
+  const captura = async (nombre) => {
+    try {
+      await page.screenshot({ path: join(dirOut, `${nombre}.png`) });
+      rep.capturas.push(`${nombre}.png`);
+    } catch (e) {
+      rep.errores.push(`${nombre}: ${e.message}`);
+    }
+  };
+  const abrir = async (proveedor, a) => {
+    await page.setViewportSize({ width: a.w, height: a.h });
+    await gotoApp(page);
+    await buscar(page, 'bleach');
+    await abrirDetalle(page, proveedor);
+    await esperarEpisodios(page);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.waitForTimeout(300);
+  };
+  const verTitulo = async () => {
+    await page.evaluate(() => {
+      const h = document.querySelector('.fila-titular');
+      if (h) window.scrollTo(0, h.getBoundingClientRect().top + window.scrollY - 12);
+    });
+    await page.waitForTimeout(250);
+  };
+
+  // Historial sembrado: Bleach AnimeAV1 con el ep. 9 en progreso (CTA "Continuar · Ep. 9").
+  const SEMILLA = [
+    { anime_id: 'bleach', episode_id: 'animeav1:bleach:episode:9', current_time: 900, total_duration: 1420, is_watched: false, provider: 'animeav1', anime_title: 'Bleach', cover_url: '', episode_number: 9, updated_at: 1749999940 },
+  ];
+
+  // --- A. Geometría, inversión y CTA por ancho (AnimeAV1, 366 episodios) ---
+  await paso('A', async () => {
+    await gotoApp(page);
+    await page.evaluate(async (seed) => {
+      const App = window.go?.main?.App;
+      if (!App) throw new Error('puente window.go no disponible (usa localhost:34115)');
+      await App.ClearProgress();
+      for (const s of seed) await App.SaveProgress(s);
+    }, SEMILLA);
+    await page.waitForTimeout(300);
+
+    for (const a of ANCHOS_ORDEN) {
+      await abrir('animeav1', a);
+      const asc = await page.evaluate(MEDIR_ORDEN);
+      await verTitulo();
+      if (a.nombre === '360' || a.nombre === '1280') await captura(`detalle_${a.nombre}_asc`);
+
+      await page.locator('.orden').click();
+      await page.waitForTimeout(350);
+      const desc = await page.evaluate(MEDIR_ORDEN);
+      if (a.nombre === '360' || a.nombre === '1280') await captura(`detalle_${a.nombre}_desc`);
+      await page.locator('.orden').click();
+      await page.waitForTimeout(350);
+      const asc2 = await page.evaluate(MEDIR_ORDEN);
+      rep.anchos.push({ ancho: a.nombre, asc, desc, asc2 });
+
+      check(`${a.nombre}: botón de orden presente`, !!asc.boton, asc.boton);
+      check(`${a.nombre}: título "Episodios (366)" sin cambiar`, asc.titulo === 'Episodios (366)', asc.titulo);
+      check(`${a.nombre}: botón en la fila del título`, asc.tituloEnFila, asc.tituloEnFila);
+      if (a.w >= 900) {
+        check(`${a.nombre}: botón 36 px de alto`, !!asc.boton && asc.boton.h === 36, asc.boton?.h);
+      } else {
+        check(
+          `${a.nombre}: botón ≥44×44`,
+          !!asc.boton && asc.boton.w >= 44 && asc.boton.h >= 44,
+          asc.boton ? `${asc.boton.w}×${asc.boton.h}` : null
+        );
+      }
+      check(
+        `${a.nombre}: texto del botón ${a.w >= 480 ? 'visible' : 'oculto'}`,
+        !!asc.boton && asc.boton.textoVisible === a.w >= 480,
+        asc.boton?.textoVisible
+      );
+      if (a.w >= 480) {
+        check(`${a.nombre}: texto "Más recientes" en ascendente`, asc.boton?.texto === 'Más recientes', asc.boton?.texto);
+        check(`${a.nombre}: texto "Más antiguos" en descendente`, desc.boton?.texto === 'Más antiguos', desc.boton?.texto);
+      }
+      check(
+        `${a.nombre}: aria-pressed false → true → false`,
+        asc.boton?.ariaPressed === 'false' && desc.boton?.ariaPressed === 'true' && asc2.boton?.ariaPressed === 'false',
+        [asc.boton?.ariaPressed, desc.boton?.ariaPressed, asc2.boton?.ariaPressed]
+      );
+      check(
+        `${a.nombre}: aria-label coherente en ambos estados`,
+        asc.boton?.ariaLabel === 'Ordenar del más reciente al más antiguo' &&
+          desc.boton?.ariaLabel === 'Ordenar del más antiguo al más reciente',
+        [asc.boton?.ariaLabel, desc.boton?.ariaLabel]
+      );
+      check(
+        `${a.nombre}: tokens del botón (chip/borde/radio/--fs-sm)`,
+        asc.boton?.bg === asc.tokens.chip &&
+          asc.boton?.border === asc.tokens.border &&
+          asc.boton?.radius === asc.tokens.rMd &&
+          asc.boton?.fontSize === asc.tokens.fsSm,
+        {
+          bg: asc.boton?.bg,
+          chip: asc.tokens.chip,
+          border: asc.boton?.border,
+          radius: asc.boton?.radius,
+          rMd: asc.tokens.rMd,
+          fs: asc.boton?.fontSize,
+          fsSm: asc.tokens.fsSm,
+        }
+      );
+      check(
+        `${a.nombre}: ascendente Ep. 1 → Ep. 366`,
+        asc.cards.primero === 'Ep. 1' && asc.cards.ultimo === 'Ep. 366',
+        { primero: asc.cards.primero, ultimo: asc.cards.ultimo }
+      );
+      check(
+        `${a.nombre}: descendente Ep. 366 → Ep. 1`,
+        desc.cards.primero === 'Ep. 366' && desc.cards.ultimo === 'Ep. 1',
+        { primero: desc.cards.primero, ultimo: desc.cards.ultimo }
+      );
+      check(`${a.nombre}: 366 tarjetas en ambos órdenes`, asc.cards.total === 366 && desc.cards.total === 366, {
+        asc: asc.cards.total,
+        desc: desc.cards.total,
+      });
+      check(
+        `${a.nombre}: sin ids repetidos al invertir`,
+        asc.cards.duplicados === 0 && desc.cards.duplicados === 0,
+        { asc: asc.cards.duplicados, desc: desc.cards.duplicados }
+      );
+      check(
+        `${a.nombre}: la CTA/«Continuar · Ep. 9» no cambia`,
+        asc.cta === 'Continuar · Ep. 9' && desc.cta === asc.cta && asc2.cta === asc.cta,
+        { asc: asc.cta, desc: desc.cta, asc2: asc2.cta }
+      );
+      check(
+        `${a.nombre}: columnas sin cambios`,
+        asc.columnas === desc.columnas && asc.columnas === asc2.columnas,
+        asc.columnas
+      );
+      check(
+        `${a.nombre}: altura de tarjeta sin cambios`,
+        asc.cards.altoMin === asc.cards.altoMax &&
+          desc.cards.altoMin === desc.cards.altoMax &&
+          Math.abs(asc.cards.altoMax - desc.cards.altoMax) <= 0.5,
+        { asc: asc.cards.altoMin, desc: desc.cards.altoMin }
+      );
+      check(`${a.nombre}: overflowH = 0`, asc.overflowH === 0 && desc.overflowH === 0, {
+        asc: asc.overflowH,
+        desc: desc.overflowH,
+      });
+      check(
+        `${a.nombre}: revelado coherente (entra + pendiente = total)`,
+        desc.revelado.entra + desc.revelado.pendiente === desc.revelado.total,
+        desc.revelado
+      );
+      const perdidas = asc.revelado.entraIds.filter((id) => !desc.revelado.entraIds.includes(id));
+      check(`${a.nombre}: ninguna revelada pierde .entra al invertir`, perdidas.length === 0, {
+        perdidas: perdidas.length,
+        entraAsc: asc.revelado.entra,
+        entraDesc: desc.revelado.entra,
+      });
+      if (a.nombre === '360') rep.revelado = { perdidas: perdidas.length, entraAsc: asc.revelado.entra, entraDesc: desc.revelado.entra };
+      log('orden ancho', a.nombre, 'botón=', asc.boton && `${asc.boton.w}×${asc.boton.h}`, 'desc=', desc.cards.primero, '→', desc.cards.ultimo);
+    }
+  });
+
+  // --- B. Detalle de JKAnime: el botón también invierte su lista ---
+  await paso('B', async () => {
+    const a = ANCHOS_ORDEN[0];
+    await abrir('jkanime', a);
+    const asc = await page.evaluate(MEDIR_ORDEN);
+    await page.locator('.orden').click();
+    await page.waitForTimeout(350);
+    const desc = await page.evaluate(MEDIR_ORDEN);
+    check('JKAnime 360: botón de orden presente', !!asc.boton, asc.boton);
+    check('JKAnime 360: hay más de un episodio', asc.cards.total > 1, asc.cards.total);
+    check(
+      'JKAnime 360: el orden se invierte (primero ↔ último)',
+      desc.cards.primero === asc.cards.ultimo && desc.cards.ultimo === asc.cards.primero,
+      { asc: [asc.cards.primero, asc.cards.ultimo], desc: [desc.cards.primero, desc.cards.ultimo] }
+    );
+    check('JKAnime 360: sin ids repetidos', desc.cards.duplicados === 0, desc.cards.duplicados);
+    await page.locator('.orden').click();
+    await page.waitForTimeout(250);
+  });
+
+  // --- C. Anime con un solo episodio: sin botón ---
+  await paso('C', async () => {
+    const objetivo = await page.evaluate(async () => {
+      const App = window.go?.main?.App;
+      if (!App) return null;
+      for (const q of ['your name', 'suzume', 'akira', 'mononoke', 'el viaje de chihiro']) {
+        const res = await App.SearchAnime(q).catch(() => []);
+        for (const r of res.slice(0, 6)) {
+          const d = await App.GetAnimeDetails(r.provider, r.id).catch(() => null);
+          if (d && Array.isArray(d.episodes) && d.episodes.length === 1) {
+            return { q, title: r.title, provider: r.provider };
+          }
+        }
+      }
+      return null;
+    });
+    if (!objetivo) {
+      check('1 episodio: se encontró un anime de prueba', false, 'ninguno');
+      return;
+    }
+    await page.setViewportSize({ width: 360, height: 740 });
+    await gotoApp(page);
+    await buscar(page, objetivo.q);
+    const abierto = await page.evaluate((o) => {
+      const etiqueta = o.provider === 'animeav1' ? 'AnimeAV1' : 'JKAnime';
+      const card = [...document.querySelectorAll('main .rejilla > .tarjeta')].find(
+        (c) =>
+          (c.querySelector('.titulo')?.textContent || '').trim() === o.title &&
+          ((c.querySelector('.etiqueta')?.textContent || '').trim() === etiqueta)
+      );
+      if (!card) return false;
+      card.click();
+      return true;
+    }, objetivo);
+    if (!abierto) {
+      check('1 episodio: la tarjeta del anime se abre', false, objetivo);
+      return;
+    }
+    await page.waitForSelector('.ficha', { timeout: 45000 });
+    await page.waitForTimeout(800);
+    const uni = await page.evaluate(MEDIR_ORDEN);
+    rep.unEpisodio = { ...objetivo, cards: uni.cards.total, boton: !!uni.boton };
+    check('1 episodio: el detalle tiene 1 tarjeta', uni.cards.total === 1, uni.cards.total);
+    check('1 episodio: sin botón de orden', uni.boton === null, uni.boton);
+  });
+
+  // --- D. Scroll con la lista desplazada: cabecera fija y CTA intactas ---
+  await paso('D', async () => {
+    const a = ANCHOS_ORDEN[0];
+    await abrir('animeav1', a);
+    await page.evaluate(() => window.scrollTo(0, 1600));
+    await page.waitForTimeout(500);
+    const antes = await page.evaluate(MEDIR_ORDEN);
+    await page.evaluate(() => document.querySelector('.orden').click());
+    await page.waitForTimeout(400);
+    const despues = await page.evaluate(MEDIR_ORDEN);
+    const sat = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sat')) || 0);
+    rep.scroll = {
+      antes: antes.scrollY,
+      despues: despues.scrollY,
+      cabeceraY: despues.cabecera.rect?.y ?? null,
+      sat,
+      barraBottom: despues.barra?.bottom ?? null,
+      innerHeight: await page.evaluate(() => window.innerHeight),
+    };
+    check(
+      'D: la cabecera sigue fija al invertir con scroll',
+      despues.cabecera.posicion === 'sticky' && Math.abs((despues.cabecera.rect?.y ?? NaN) - sat) <= 2,
+      rep.scroll
+    );
+    check(
+      'D: la CTA sigue pegada a la barra inferior',
+      despues.barra !== null &&
+        despues.barraInferior !== null &&
+        Math.abs(despues.barra.bottom - despues.barraInferior.y) <= 1,
+      { barra: despues.barra, barraInferior: despues.barraInferior }
+    );
+    check('D: sin overflow horizontal', despues.overflowH === 0, despues.overflowH);
+    await page.evaluate(() => document.querySelector('.orden').click());
+    await page.waitForTimeout(250);
+  });
+
+  // --- E. Detalle (desc) → reproductor → Atrás: vuelve a ascendente y restaura scroll ---
+  await paso('E', async () => {
+    const a = ANCHOS_ORDEN[0];
+    await abrir('animeav1', a);
+    await page.locator('.orden').click();
+    await page.waitForTimeout(300);
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await page.waitForTimeout(500);
+    const antes = await page.evaluate(MEDIR_ORDEN);
+    const ultima = page.locator('.rejilla .celda .tarjeta').last();
+    if ((await ultima.count()) > 0) {
+      await ultima.click();
+      await page.waitForTimeout(1800);
+      await page.locator('.cabecera .atras').first().click();
+      await page.waitForTimeout(1200);
+      const despues = await page.evaluate(MEDIR_ORDEN);
+      rep.retorno = { yAntes: antes.scrollY, yDespues: despues.scrollY, ariaPressed: despues.boton?.ariaPressed };
+      check('E: al volver del reproductor el orden es ascendente', despues.boton?.ariaPressed === 'false', despues.boton?.ariaPressed);
+      check(
+        'E: T66/T67 restaura el scroll (tolerancia 5 px)',
+        Math.abs(despues.scrollY - antes.scrollY) <= 5,
+        rep.retorno
+      );
+    } else {
+      check('E: hay tarjetas para volver del reproductor', false, antes.cards.total);
+    }
+  });
+
+  // --- F. Hover solo con puntero fino y reduced-motion sin transición ---
+  await paso('F', async () => {
+    const a = ANCHOS_ORDEN[3];
+    await abrir('animeav1', a);
+    await verTitulo();
+    const btn = page.locator('.orden');
+    await btn.hover();
+    await page.waitForTimeout(250);
+    const hover = await page.evaluate(MEDIR_ORDEN);
+    rep.hover = { fine: await page.evaluate(() => matchMedia('(hover: hover) and (pointer: fine)').matches), bg: hover.boton.bg, chipHover: hover.tokens.chipHover };
+    check(
+      'F: hover con puntero fino usa --surface-chip-hover',
+      rep.hover.fine && hover.boton.bg === hover.tokens.chipHover,
+      rep.hover
+    );
+    await page.mouse.move(0, 0);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const reduce = await page.evaluate(() => {
+      const b = document.querySelector('.orden');
+      return b ? getComputedStyle(b).transitionDuration : null;
+    });
+    rep.reduced = { transitionDuration: reduce };
+    check('F: reduced-motion sin transición en el botón', reduce === '0s', reduce);
+    await page.emulateMedia({ reducedMotion: null });
+  });
+
+  writeFileSync(join(dirOut, 'orden.json'), JSON.stringify(rep, null, 2));
+  await browser.close();
+  return rep;
+}
+
+// ---------------------------------------------------------------------------
 // CLI
 // ---------------------------------------------------------------------------
 
@@ -3750,6 +4208,33 @@ if (modo === 'comparar') {
   console.log(`\nComprobaciones: ${rep.funciones.length - fallos.length}/${rep.funciones.length} OK`);
   if (rep.errores.length) console.log('\nErrores:', rep.errores);
   console.log(`\nCapturas (${process.argv[3] ?? 'docs/img/v1.4/episodios'}): ${rep.capturas.join(', ') || 'ninguna'}`);
+} else if (modo === 'orden') {
+  const rep = await orden();
+  console.log('## Modo orden (T82) — botón ascendente/descendente de episodios\n');
+  console.log('| ancho | botón w×h | texto | aria-pressed | 1.º asc → últ. asc | 1.º desc → últ. desc | tarjetas | CTA | cols | alto | overflowH |');
+  console.log('|---:|---|---|:--:|---|---|---:|---|---:|---:|---:|');
+  for (const m of rep.anchos) {
+    const b = m.asc.boton;
+    console.log(
+      `| ${m.ancho} | ${b ? `${b.w}×${b.h}` : '—'} | ${b?.texto ?? '—'}${b ? (b.textoVisible ? '' : ' (oculto)') : ''} | ` +
+        `${m.asc2.boton?.ariaPressed ?? '—'} | ${m.asc.cards.primero} → ${m.asc.cards.ultimo} | ` +
+        `${m.desc.cards.primero} → ${m.desc.cards.ultimo} | ${m.asc.cards.total} | ${m.asc.cta ?? '—'} | ` +
+        `${m.asc.columnas} | ${m.asc.cards.altoMin} | ${m.asc.overflowH} |`
+    );
+  }
+  console.log('\nRevelado T65:', JSON.stringify(rep.revelado));
+  console.log('Scroll al invertir:', JSON.stringify(rep.scroll));
+  console.log('Detalle → reproductor → Atrás:', JSON.stringify(rep.retorno));
+  console.log('Anime de 1 episodio:', JSON.stringify(rep.unEpisodio));
+  console.log('Hover:', JSON.stringify(rep.hover), '| reduced-motion:', JSON.stringify(rep.reduced));
+  const fallos = rep.funciones.filter((f) => !f.ok);
+  console.log('\n| comprobación | ok | detalle |');
+  console.log('|---|:--:|---|');
+  for (const f of rep.funciones)
+    console.log(`| ${f.nombre} | ${f.ok ? 'sí' : 'NO'} | ${f.detalle === null ? '' : JSON.stringify(f.detalle)} |`);
+  console.log(`\nComprobaciones: ${rep.funciones.length - fallos.length}/${rep.funciones.length} OK`);
+  if (rep.errores.length) console.log('\nErrores:', rep.errores);
+  console.log(`\nCapturas (${process.argv[3] ?? 'docs/img/v1.4/orden'}): ${rep.capturas.join(', ') || 'ninguna'}`);
 } else {
   const dirOut = process.argv[3] ?? DIR_DEF;
   const res = await capturar(dirOut);

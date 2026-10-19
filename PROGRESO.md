@@ -1,4 +1,4 @@
-    # PROGRESO — Comfort Anime Desktop (T01–T81 hechas)
+    # PROGRESO — Comfort Anime Desktop (T01–T82 hechas)
 
 > Este archivo es la **memoria entre sesiones**. Cada sesión lo lee al inicio y lo actualiza al final.
 > Reglas y layout: `tareas/00_REGLAS.md`. Detalle de cada tarea: `tareas/Txx.md`.
@@ -151,6 +151,7 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha y verificada
 | [x] | T79 | Ficha de detalle: portada, metadatos, géneros y sinopsis (v1.4.0) | T74, T78 |
 | [x] | T80 | Barra de acción fija «Continuar / Reiniciar» del detalle en estrecho (v1.4.0) | T73b, T74, T79 |
 | [x] | T81 | Tarjeta de episodio y rejilla en modo estrecho (v1.4.0) | T72, T79, T80 |
+| [x] | T82 | Orden ascendente/descendente de episodios (v1.4.0) | T70–T81 |
 
 T01–T29 = v1.0 (`docs/PROGRESO_v1.0.md`) · T30–T35 = v1.1.0 AnimeAV1 (`docs/PROGRESO_v1.1.md`) · T36 = cierre de la v1.1.0 · T37 = portabilidad Android · T38 = cierre documental de T37.
 T39–T57 = v1.2.0 (Home, historial lateral, favoritos, "Siguiente" y su estado discreto; **incluye T53b y T57**); plan en `tareas/v1.2_PLAN.md`, detalle **T39–T58 + cierres T56/T59** archivado en `docs/PROGRESO_v1.2.md`, con resúmenes al final de este archivo.
@@ -1393,3 +1394,44 @@ Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**
 **Capturas** en `docs/img/v1.4/episodios/`: `episodios_{360,390,768,1024,1280}.png` (inicio), `episodios_{360,390,768,1024,1280}_rejilla.png` (rejilla desplazada), `episodios_360_estados.png`, `episodios_360_hueco.png` (+ `episodios.json`).
 
 **Archivos tocados:** `frontend/src/TarjetaEpisodio.svelte` (**markup + `<style>`**; en `<script>`, solo `import Icono`), `frontend/src/VistaDetalle.svelte` (**solo `<style>`**: `.rejilla` en estrecho), `docs/investigacion/ui/verificar_ui.mjs` (modo `episodios` **nuevo**), `docs/img/v1.4/episodios/**` y `PROGRESO.md`. **Nada fuera de "Puedes tocar"** (regla 7 no se activó): `*.go`, `frontend/wailsjs/**`, `api.ts`, `stores.ts`, `views.ts`, `ui.ts`, `revelar.ts`, `ventana.ts`, `App.svelte`, `BarraInferior`, `BarraAccion`, `CabeceraVista`, `BotonFavorito`, `index.html`, la CTA (T80), la ficha (T79) y el **`<script>` de `VistaDetalle.svelte`** intactos. **Sin tag ni release** (los hace el humano); **T82 no iniciada**.
+
+## T82 — Orden ascendente/descendente de episodios (v1.4.0) — bloque de esta sesión
+
+Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**. Fecha **2026-10-19**. Añade un **botón** a la derecha de `h3.titular` («Episodios (N)», texto intacto) que **invierte la presentación** de la rejilla de episodios del detalle. **Solo presentación**: la lista ascendente sigue siendo la fuente de la CTA, de `episodioContinuar`/`episodioInicio`, de la carga y del scroll T66/T67.
+
+- **`<script>` de `VistaDetalle.svelte` (8 líneas, contando comentarios):** `let ordenDesc = false;`, `$: episodiosVista = ordenDesc ? [...episodios].reverse() : episodios;`, el reinicio `$: if ($currentAnimeID) ordenDesc = false;` y `function alternarOrden(): void { ordenDesc = !ordenDesc; }`. `episodiosVista` se usa **solo** en el `{#each}` de la rejilla; la clave sigue siendo `ep.id`.
+- **Botón**: `<button type="button" class="orden">` con `Icono orden-asc`/`orden-desc` (tam 20) y `<span class="orden-texto">` («Más recientes»/«Más antiguos») visible solo en **≥ 480 px**; `aria-label` completo siempre y `aria-pressed={ordenDesc}`; existe **solo** si `episodios.length > 1`. Estilo con `--surface-chip`, `--border`, `--r-md`, `--fs-sm`; mínimo `var(--tap)` (44) en estrecho, **36 px** de alto en **≥ 900**; `:hover` solo en `(hover: hover) and (pointer: fine)`; `:active` y `:focus-visible` (`--ring`); sin transición con `prefers-reduced-motion: reduce`.
+
+**Resultados de la verificación** (modo `orden` **nuevo** en `verificar_ui.mjs`, localhost:34115, red real; AnimeAV1 «bleach» con historial sembrado ep. 9 → CTA «Continuar · Ep. 9» — 366 episodios — y JKAnime):
+
+| ancho | botón w×h | texto | 1.º/últ. asc | 1.º/últ. desc | tarjetas | CTA | cols | alto | `overflowH` |
+|---:|---|---|---|---|---:|---|---:|---:|---:|
+| 360 | 46×44 | oculto | Ep. 1 / Ep. 366 | Ep. 366 / Ep. 1 | 366 | Continuar · Ep. 9 | 2 | 146 | 0 |
+| 390 | 46×44 | oculto | Ep. 1 / Ep. 366 | Ep. 366 / Ep. 1 | 366 | Continuar · Ep. 9 | 2 | 146 | 0 |
+| 768 | 145,14×44 | «Más recientes» | Ep. 1 / Ep. 366 | Ep. 366 / Ep. 1 | 366 | Continuar · Ep. 9 | 3 | 179 | 0 |
+| 1280 | 145,14×36 | «Más recientes» | Ep. 1 / Ep. 366 | Ep. 366 / Ep. 1 | 366 | Continuar · Ep. 9 | 4 | 170,38 | 0 |
+
+| comprobación (89 en total) | resultado |
+|---|---|
+| A: 4 anchos — botón presente, `aria-pressed` `false→true→false`, `aria-label` coherente, ≥ 44×44 (360/390/768) y 36 de alto (1280); texto visible solo ≥ 480; tokens `--surface-chip`/`--border`/`--r-md`/`--fs-sm`; inversión Ep. 1↔366; **366 tarjetas** y **0 ids repetidos** en ambos órdenes; CTA/«Continuar · Ep. 9» sin cambio; columnas y altura de tarjeta sin cambio; `overflowH = 0` | **sí** |
+| A: revelado T65 coherente (`.entra` + `.pendiente` = 366) y **0 reveladas pierden `.entra`** al invertir (`.entra` asc 2/4/6/4 y desc 14/14/21/32 por ancho) | **sí** |
+| B: JKAnime 360 — botón presente, más de un episodio, orden se invierte (primero ↔ último), sin ids repetidos | **sí** |
+| C: anime de 1 episodio (`your name` → «Bleach Movie 3…», JKAnime) — 1 tarjeta y **sin botón** | **sí** |
+| D: invertir con la lista desplazada (scroll 1600) — cabecera `sticky` en `y = --sat`, CTA pegada a la barra inferior, `overflowH = 0` | **sí** |
+| E: detalle (desc) → reproductor → Atrás — orden vuelve a ascendente (`aria-pressed = false`) y scroll T66/T67 restaurado (Δ0) | **sí** |
+| F: hover solo con puntero fino usa `--surface-chip-hover`; `prefers-reduced-motion` → `0s` de transición | **sí** |
+| `npm run check` | **0 errores / 0 avisos** |
+| `npm run build` | **OK** |
+| tests `.ts` | **13 / 48 / 32** comprobaciones OK (`views`, `ventana`, `etiquetas`; sin lógica pura nueva) |
+| `gofmt -l .` / `go vet ./...` / `go vet -tags integration ./...` / `go test -race -count=1 ./...` | **sin salida** / **OK** / **OK** / **435 `--- PASS`** de nivel superior, 0 FAIL (`*.go` intactos) |
+| `grep -rn wailsjs frontend/src` | **solo `api.ts`** |
+
+**Desviaciones / notas (documentadas):**
+- **`.revelada` no existe**: T82 pedía reportar cuántas reveladas pierden `.revelada`; `revelar.ts` usa **`.entra`** (y `.pendiente`). El modo `orden` mide `.entra`/`.pendiente` y comprueba que **ninguna** revelada pierde `.entra` al invertir (0 pérdidas).
+- **Reinicio del orden**: se hace con `$: if ($currentAnimeID) ordenDesc = false;`, sobre el id del anime seleccionado del store (`$currentAnimeID`), que también se resetea a `''` al cerrar el detalle. Reportado tal como pedía el punto 5.
+- **Ajuste del propio modo `orden` durante la sesión** (no del producto): (1) los tokens `--r-md`/`--fs-sm` (radio y tamaño, no colores) se resuelven con `getComputedStyle(documentElement)`, porque el resolver de color del arnés no los devuelve; (2) la comprobación D compara la CTA con el borde superior de `.barra-inferior` (va pegada **encima** de ella), no con `innerHeight`.
+- **Sin cambios en el resto**: la rejilla T81, la ficha T79, la CTA T80, la cabecera T74, el revelado T65, las columnas, la carga por lotes y el scroll T66/T67 quedan igual; el `<script>` de `VistaDetalle.svelte` solo recibe las 8 líneas indicadas.
+
+**Capturas** en `docs/img/v1.4/orden/`: `detalle_360_asc.png`, `detalle_360_desc.png`, `detalle_1280_asc.png`, `detalle_1280_desc.png` (+ `orden.json`).
+
+**Archivos tocados:** `frontend/src/VistaDetalle.svelte` (**`<script>`** con las 8 líneas indicadas + **markup** de `.fila-titular`/botón y `<style>` del botón), `docs/investigacion/ui/verificar_ui.mjs` (modo `orden` **nuevo**), `docs/img/v1.4/orden/**` y `PROGRESO.md`. **Nada fuera de "Puedes tocar"** (regla 7 no se activó): `*.go`, `frontend/wailsjs/**`, `api.ts`, `stores.ts`, `views.ts`, `ui.ts`, `revelar.ts`, `ventana.ts`, `TarjetaEpisodio`, `BarraAccion`, `CabeceraVista`, componentes T72, `index.html`, la CTA (T80), la ficha/rejilla (T79/T81) y el scroll T66/T67 intactos. **Sin tag ni release** (los hace el humano); **T83 no iniciada**.
