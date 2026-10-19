@@ -19,6 +19,7 @@
   import { isNarrow } from './ui';
   import { COLUMNAS_POR_DEFECTO } from './ventana';
   import { medirColumnas, revelar } from './revelar';
+  import BarraAccion from './BarraAccion.svelte';
   import BotonFavorito from './BotonFavorito.svelte';
   import CabeceraVista from './CabeceraVista.svelte';
   import Insignia from './Insignia.svelte';
@@ -211,6 +212,30 @@
     if (episodioContinuar) abrirEpisodio(episodioContinuar);
   }
 
+  // T80: CTA fija del modo estrecho. `episodioInicio` es el primero de la lista
+  // ordenada (destino de "Reiniciar" y del respaldo "Empezar"); `accionPrincipal`
+  // decide la etiqueta y la acción de la CTA según haya continuidad o no.
+  $: episodioInicio = episodios[0] ?? null;
+
+  function reiniciar(): void {
+    if (episodioInicio) abrirEpisodio(episodioInicio);
+  }
+
+  function accionPrincipal(
+    continuarCon: models.Episode | null,
+    inicio: models.Episode | null
+  ): { etiqueta: string; accion: () => void } {
+    if (continuarCon)
+      return { etiqueta: `Continuar · Ep. ${continuarCon.number}`, accion: continuar };
+    if (inicio)
+      return { etiqueta: `Empezar · Ep. ${inicio.number}`, accion: () => abrirEpisodio(inicio) };
+    return { etiqueta: 'Empezar', accion: () => {} };
+  }
+
+  // T80: la llamada a una función en el template se compila `untrack` en Svelte 5
+  // legacy (no crea dependencias); con los argumentos explícitos, `$:` sí las ve.
+  $: accion = accionPrincipal(episodioContinuar, episodioInicio);
+
   // T79: sinopsis con "Ver más" sólo en estrecho; se mide tras pintar y en resize.
   let sinopsisAbierta = false;
   let sinopsisDesborda = false;
@@ -237,7 +262,7 @@
   });
 </script>
 
-<main class="contenedor">
+<main class="contenedor" class:con-cta={$isNarrow && $currentDetail && episodios.length > 0}>
   <CabeceraVista
     fija
     titulo={$currentDetail?.title ?? $seleccion?.title ?? 'Detalle'}
@@ -351,8 +376,19 @@
   {/if}
 </main>
 
+{#if $isNarrow && $currentDetail && episodios.length > 0}
+  <BarraAccion
+    etiquetaPrincipal={accion.etiqueta}
+    onPrincipal={accion.accion}
+    etiquetaSecundaria={episodioContinuar ? 'Reiniciar' : ''}
+    onSecundaria={reiniciar}
+  />
+{/if}
+
 <style>
   .contenedor {
+    /* T80: alto de la CTA fija (tópico local, no global). */
+    --cta-h: 60px;
     padding: 2rem;
     text-align: left;
     max-width: 1100px;
@@ -522,6 +558,14 @@
     /* T74: el padding superior lo da la cabecera fija. */
     .contenedor {
       padding: 0 var(--gutter) var(--sp-4);
+    }
+    /* T80: el botón "Continuar" en línea se sustituye por la CTA fija. */
+    .continuar {
+      display: none;
+    }
+    /* T80: deja hueco para la CTA fija (solo cuando está visible). */
+    .contenedor.con-cta {
+      padding-bottom: calc(var(--sp-4) + var(--cta-h));
     }
     /* T79: 641–899 px también pasa a columna (antes sólo < 641 px): portada
        centrada arriba y datos debajo. */

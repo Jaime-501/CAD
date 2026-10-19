@@ -295,6 +295,7 @@ const TACTILES_CHICOS = () => {
         w: Math.round(r.width),
         h: Math.round(r.height),
         enBarra: !!b.closest('.barra-inferior'),
+        enCta: !!b.closest('.barra-accion'),
         enCajon: !!b.closest('.cajon'),
         enFilaContinuar: !!b.closest('.fila-continuar'),
       };
@@ -2740,6 +2741,330 @@ async function ficha() {
 }
 
 // ---------------------------------------------------------------------------
+// Modo cta (T80): barra de acción fija "Continuar / Reiniciar" del detalle
+// ---------------------------------------------------------------------------
+
+const ANCHOS_CTA = [
+  { w: 360, h: 740, nombre: '360' },
+  { w: 390, h: 844, nombre: '390' },
+  { w: 768, h: 1024, nombre: '768' },
+  { w: 1024, h: 768, nombre: '1024' },
+  { w: 1280, h: 800, nombre: '1280' },
+];
+
+// Geometría y estado de la CTA del detalle, la barra inferior y la ficha.
+const MEDIR_CTA = () => {
+  const d = document.documentElement;
+  const round = (n) => Math.round(n * 100) / 100;
+  const rect = (el) => {
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return {
+      x: round(r.x), y: round(r.y), w: round(r.width), h: round(r.height),
+      top: round(r.top), bottom: round(r.bottom), right: round(r.right),
+    };
+  };
+  const cta = document.querySelector('.barra-accion');
+  const barra = document.querySelector('.barra-inferior');
+  const cont = document.querySelector('main.contenedor');
+  const continuar = document.querySelector('.ficha .continuar');
+  const botones = cta ? [...cta.querySelectorAll('.btn')] : [];
+  const principal = cta ? cta.querySelector('.principal .btn') : null;
+  const secundario = cta ? botones.find((b) => !b.closest('.principal') && b !== principal) : null;
+  const celdas = document.querySelectorAll('.rejilla .celda');
+  const ultimaEl = celdas.length ? celdas[celdas.length - 1] : null;
+  const cab = document.querySelector('main .cabecera');
+  return {
+    overflowH: d.scrollWidth - d.clientWidth,
+    innerWidth: window.innerWidth,
+    innerHeight: window.innerHeight,
+    cta: cta
+      ? { ...rect(cta), texto: (cta.textContent || '').trim(), role: cta.getAttribute('role'), label: cta.getAttribute('aria-label') }
+      : null,
+    ctaTransition: cta ? getComputedStyle(cta).transitionDuration : null,
+    ctaZ: cta ? getComputedStyle(cta).zIndex : null,
+    barra: rect(barra),
+    hueco: cta && barra ? round(cta.getBoundingClientRect().bottom - barra.getBoundingClientRect().top) : null,
+    botones: botones.map((b) => ({
+      texto: (b.textContent || '').trim(),
+      w: round(b.getBoundingClientRect().width),
+      h: round(b.getBoundingClientRect().height),
+    })),
+    principalTexto: principal ? (principal.textContent || '').trim() : null,
+    secundarioTexto: secundario ? (secundario.textContent || '').trim() : null,
+    continuar: continuar ? { display: getComputedStyle(continuar).display, visible: continuar.offsetParent !== null } : null,
+    conCta: cont ? cont.classList.contains('con-cta') : null,
+    contenedorPB: cont ? getComputedStyle(cont).paddingBottom : null,
+    tarjetaEp: rect(document.querySelector('.rejilla .celda .tarjeta')),
+    ultima: rect(ultimaEl),
+    huecoUltima: cta && ultimaEl ? round(cta.getBoundingClientRect().top - ultimaEl.getBoundingClientRect().bottom) : null,
+    entra: document.querySelectorAll('.celda.entra').length,
+    cabecera: cab ? { posicion: getComputedStyle(cab).position, y: Math.round(cab.getBoundingClientRect().y), sat: parseFloat(getComputedStyle(d).getPropertyValue('--sat')) || 0 } : null,
+  };
+};
+
+async function cta() {
+  const dirOut = process.argv[3] ?? 'docs/img/v1.4/cta';
+  mkdirSync(dirOut, { recursive: true });
+  const browser = await chromium.launch();
+  const rep = { anchos: [], tactiles: [], funciones: [], capturas: [], lote: null, sinProgreso: null, finScroll: null, scroll: null, cajon: null, errores: [] };
+  const check = (nombre, ok, detalle) =>
+    rep.funciones.push({ nombre, ok: !!ok, detalle: detalle === undefined ? null : detalle });
+  const paso = async (nombre, fn) => {
+    try {
+      await fn();
+    } catch (e) {
+      rep.errores.push(`${nombre}: ${e.message}`);
+    }
+  };
+  const ctx = await browser.newContext({ viewport: { width: 360, height: 740 } });
+  const page = await ctx.newPage();
+  const captura = async (nombre) => {
+    try {
+      await page.screenshot({ path: join(dirOut, `${nombre}.png`) });
+      rep.capturas.push(`${nombre}.png`);
+    } catch (e) {
+      rep.errores.push(`${nombre}: ${e.message}`);
+    }
+  };
+  const destino = (texto) => page.locator('.barra-inferior .destino', { hasText: texto });
+  const subtitulo = () =>
+    page.evaluate(() => {
+      const s = document.querySelector('main .cabecera .subtitulo');
+      return s ? (s.textContent || '').trim() : null;
+    });
+  const abrir = async (proveedor, ancho = 360) => {
+    await page.setViewportSize({ width: ancho, height: 740 });
+    await gotoApp(page);
+    await buscar(page, 'bleach');
+    await abrirDetalle(page, proveedor);
+  };
+  const volverDetalle = async () => {
+    for (let i = 0; i < 4; i++) {
+      if (await page.locator('.ficha').isVisible().catch(() => false)) return;
+      await page.locator('.cabecera .atras').first().click().catch(() => {});
+      await page.waitForTimeout(800);
+    }
+  };
+
+  // Historial sembrado (T77): Bleach de AnimeAV1 con progreso en el ep. 9.
+  const SEMILLA = [
+    { anime_id: 'bleach', episode_id: 'animeav1:bleach:episode:9', current_time: 900, total_duration: 1420, is_watched: false, provider: 'animeav1', anime_title: 'Bleach', cover_url: '', episode_number: 9, updated_at: 1749999940 },
+  ];
+  const sembrar = async () => {
+    await gotoApp(page);
+    await page.evaluate(async (seed) => {
+      const App = window.go?.main?.App;
+      if (!App) throw new Error('puente window.go no disponible (usa localhost:34115)');
+      await App.ClearProgress();
+      for (const s of seed) await App.SaveProgress(s);
+    }, SEMILLA);
+    await page.waitForTimeout(300);
+  };
+
+  // --- A. Geometría por ancho (con progreso: Bleach de AnimeAV1) ---
+  await paso('A', async () => {
+    await sembrar();
+    for (const a of ANCHOS_CTA) {
+      await abrir('animeav1', a.w);
+      await page.setViewportSize({ width: a.w, height: a.h });
+      await page.waitForTimeout(400);
+      const m = await page.evaluate(MEDIR_CTA);
+      rep.anchos.push({ ancho: a.nombre, ...m });
+      if (a.nombre === '360') await captura('detalle_360_progreso');
+      if (a.nombre === '768') await captura('detalle_768');
+      if (a.nombre === '1280') await captura('detalle_1280');
+      check(`${a.nombre}: overflowH = 0`, m.overflowH === 0, m.overflowH);
+      if (a.w < 900) {
+        check(`${a.nombre}: CTA presente`, !!m.cta, m.cta);
+        check(`${a.nombre}: role=group + aria-label`, !!m.cta && m.cta.role === 'group' && m.cta.label === 'Acciones del anime', m.cta);
+        check(`${a.nombre}: CTA pegada a la barra inferior (hueco ≤ 1 px)`, m.hueco !== null && Math.abs(m.hueco) <= 1, m.hueco);
+        check(`${a.nombre}: botones ≥ 44 px`, m.botones.length >= 1 && m.botones.every((b) => b.w >= 44 && b.h >= 44), m.botones);
+        check(`${a.nombre}: principal "Continuar · Ep. 9"`, m.principalTexto === 'Continuar · Ep. 9', m.principalTexto);
+        check(`${a.nombre}: secundario "Reiniciar"`, m.secundarioTexto === 'Reiniciar', m.secundarioTexto);
+        check(`${a.nombre}: ".continuar" oculto`, !!m.continuar && m.continuar.display === 'none' && !m.continuar.visible, m.continuar);
+        check(`${a.nombre}: ".contenedor.con-cta"`, m.conCta === true, m.conCta);
+      } else {
+        check(`${a.nombre}: CTA ausente`, m.cta === null, m.cta);
+        check(`${a.nombre}: ".continuar" visible`, !!m.continuar && m.continuar.visible, m.continuar);
+        check(`${a.nombre}: tarjeta de episodio 170,39 (T79)`, !!m.tarjetaEp && Math.abs(m.tarjetaEp.h - 170.39) <= 0.6, m.tarjetaEp?.h);
+        check(`${a.nombre}: sin ".con-cta"`, m.conCta === false, m.conCta);
+      }
+      log('cta ancho', a.nombre, 'cta=', !!m.cta, 'hueco=', m.hueco, 'principal=', m.principalTexto);
+    }
+  });
+
+  // --- B. Con progreso (360): "Continuar" (ep. 9) y "Reiniciar" (ep. 1) ---
+  await paso('B', async () => {
+    await sembrar();
+    await abrir('animeav1', 360);
+    await page.locator('.barra-accion .principal .btn').click();
+    await page.waitForSelector('.cabecera .atras', { timeout: 30000 });
+    await page.waitForTimeout(900);
+    check('B: la CTA se oculta en el reproductor', (await page.locator('.barra-accion').count()) === 0);
+    const subContinuar = await subtitulo();
+    check('B: "Continuar" abre el Ep. 9', /^Ep\. 9\b/.test(subContinuar ?? ''), subContinuar);
+    await volverDetalle();
+    check('B: al volver reaparece la CTA', (await page.locator('.barra-accion').count()) > 0);
+    await page.locator('.barra-accion .btn').filter({ hasText: 'Reiniciar' }).click();
+    await page.waitForSelector('.cabecera .atras', { timeout: 30000 });
+    await page.waitForTimeout(900);
+    const subReiniciar = await subtitulo();
+    check('B: "Reiniciar" abre el Ep. 1', /^Ep\. 1\b/.test(subReiniciar ?? ''), subReiniciar);
+    await volverDetalle();
+  });
+
+  // --- C. Sin progreso (otro anime): "Empezar · Ep. 1" y sin secundario ---
+  await paso('C', async () => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await gotoApp(page);
+    await buscar(page, 'naruto');
+    await abrirDetalle(page, 'animeav1');
+    const m = await page.evaluate(MEDIR_CTA);
+    rep.sinProgreso = { principal: m.principalTexto, secundario: m.secundarioTexto };
+    check('C: principal "Empezar · Ep. 1"', m.principalTexto === 'Empezar · Ep. 1', m.principalTexto);
+    check('C: sin secundario', m.secundarioTexto === null, m.secundarioTexto);
+    await captura('detalle_360_sin_progreso');
+    await page.locator('.barra-accion .principal .btn').click();
+    await page.waitForSelector('.cabecera .atras', { timeout: 30000 });
+    await page.waitForTimeout(900);
+    const sub = await subtitulo();
+    check('C: "Empezar" abre el Ep. 1', /^Ep\. 1\b/.test(sub ?? ''), sub);
+    await volverDetalle();
+  });
+
+  // --- D. Fin de scroll (360, AnimeAV1) + revelado T65 + cabecera T74 + scroll T66/T67 ---
+  await paso('D', async () => {
+    await abrir('animeav1', 360);
+    await page.waitForFunction(() => !document.querySelector('.cargando'), null, { timeout: 60000 }).catch(() => {});
+    await page.waitForTimeout(500);
+    await page.evaluate(() => {
+      const r = document.querySelector('.rejilla');
+      if (r) window.scrollTo(0, r.getBoundingClientRect().top + window.scrollY);
+    });
+    await page.waitForTimeout(1200);
+    const entra = await page.evaluate(() => document.querySelectorAll('.celda.entra').length);
+    check('D: revelado T65 (.entra > 0)', entra > 0, entra);
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await page.waitForTimeout(600);
+    const fin = await page.evaluate(MEDIR_CTA);
+    rep.finScroll = { ultima: fin.ultima, cta: fin.cta, huecoUltima: fin.huecoUltima, cabecera: fin.cabecera };
+    check('D: último episodio completo sobre la CTA (≥ 0 px)', fin.huecoUltima !== null && fin.huecoUltima >= -0.5, fin.huecoUltima);
+    check('D: cabecera fija "sticky" (T74)', !!fin.cabecera && fin.cabecera.posicion === 'sticky' && Math.abs(fin.cabecera.y - fin.cabecera.sat) <= 2, fin.cabecera);
+    await captura('detalle_360_fin_scroll');
+    const yAntes = await page.evaluate(() => Math.round(window.scrollY));
+    const ultima = page.locator('.rejilla .celda .tarjeta').last();
+    if (yAntes > 0 && (await ultima.count()) > 0) {
+      await ultima.click();
+      await page.waitForTimeout(1800);
+      await volverDetalle();
+      await page.waitForTimeout(1200);
+      const desp = await page.evaluate(() => ({
+        y: Math.round(window.scrollY),
+        max: document.documentElement.scrollHeight - window.innerHeight,
+      }));
+      // Deriva pre-existente (verificada con T80 revertido, Δ ≈ 35 px): entre
+      // la salida y la vuelta el alto del detalle cambia unas decenas de px
+      // (asentado de la rejilla por lotes/imágenes), así que la posición
+      // guardada puede superar el máximo alcanzable y el navegador la recorta.
+      // Se comprueba que se restaura hasta donde es posible (≤ 5 px).
+      const esperado = Math.min(yAntes, desp.max);
+      rep.scroll = { yAntes, ...desp, esperado, delta: Math.abs(desp.y - esperado) };
+      check('D: scroll del detalle restaurado (T66/T67)', Math.abs(desp.y - esperado) <= 5, rep.scroll);
+    } else {
+      check('D: scroll del detalle restaurado (T66/T67)', false, { yAntes });
+    }
+    check('D: de vuelta reaparece la CTA', (await page.locator('.barra-accion').count()) > 0);
+  });
+
+  // --- E. Lotes de JKAnime: la CTA aparece con el primer lote y su texto es coherente ---
+  await paso('E', async () => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await gotoApp(page);
+    await buscar(page, 'bleach');
+    await abrirDetalle(page, 'jkanime');
+    const primero = await page
+      .waitForFunction(
+        () => {
+          const c = document.querySelector('.barra-accion .principal .btn');
+          const eps = document.querySelectorAll('.rejilla .celda').length;
+          return c && eps > 0 ? (c.textContent || '').trim() : false;
+        },
+        null,
+        { polling: 20, timeout: 60000 }
+      )
+      .then((h) => h.jsonValue())
+      .catch(() => null);
+    await page.waitForFunction(() => !document.querySelector('.cargando'), null, { timeout: 60000 }).catch(() => {});
+    await page.waitForTimeout(500);
+    const final = await page.evaluate(() => {
+      const c = document.querySelector('.barra-accion .principal .btn');
+      return { texto: c ? (c.textContent || '').trim() : null, total: document.querySelectorAll('.rejilla .celda').length };
+    });
+    rep.lote = { primero, final };
+    check('E: la CTA aparece al llegar el primer lote', typeof primero === 'string' && primero !== '', primero);
+    check('E: texto de la CTA con el formato esperado', typeof primero === 'string' && /^(Empezar|Continuar) · Ep\. \d+$/.test(primero), primero);
+    check('E: el texto de la CTA no cambia al llegar el resto de lotes', primero === final.texto, { primero, final });
+  });
+
+  // --- F. El cajón de Historial cubre la CTA ---
+  await paso('F', async () => {
+    await abrir('animeav1', 360);
+    await destino('Historial').click();
+    await page.waitForSelector('.barra.cajon', { timeout: 10000 });
+    await page.waitForTimeout(400);
+    const cubre = await page.evaluate(() => {
+      const cta = document.querySelector('.barra-accion');
+      const cajon = document.querySelector('.barra.cajon');
+      if (!cta || !cajon) return { hayCta: !!cta, hayCajon: !!cajon };
+      const r = cta.getBoundingClientRect();
+      const x = Math.round(r.left + r.width / 2);
+      const y = Math.round(r.top + r.height / 2);
+      const top = document.elementFromPoint(x, y);
+      return {
+        hayCta: true,
+        hayCajon: true,
+        ctaZ: getComputedStyle(cta).zIndex,
+        cajonZ: getComputedStyle(cajon).zIndex,
+        topEnCajon: !!(top && top.closest('.cajon')),
+        topEnCta: !!(top && top.closest('.barra-accion')),
+      };
+    });
+    rep.cajon = cubre;
+    check('F: con el cajón abierto, el punto de la CTA cae en el cajón', cubre.hayCajon && cubre.topEnCajon && !cubre.topEnCta, cubre);
+    check('F: z-index del cajón > z-index de la CTA', Number(cubre.cajonZ) > Number(cubre.ctaZ), { cajonZ: cubre.cajonZ, ctaZ: cubre.ctaZ });
+    await captura('detalle_360_cajon');
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(300);
+  });
+
+  // --- G. prefers-reduced-motion: la CTA no transiciona ---
+  await paso('G', async () => {
+    await abrir('animeav1', 360);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const td = await page.evaluate(() => {
+      const el = document.querySelector('.barra-accion');
+      return el ? getComputedStyle(el).transitionDuration : null;
+    });
+    check('G: reduced-motion sin transición en la CTA', td === '0s' || td === '0s, 0s', td);
+    await page.emulateMedia({ reducedMotion: null });
+  });
+
+  // --- H. Objetivos táctiles <44 px en el detalle estrecho ---
+  await paso('H', async () => {
+    await abrir('animeav1', 360);
+    rep.tactiles = (await page.evaluate(TACTILES_CHICOS)).map((t) => ({ ...t, estado: 'detalle_360' }));
+    const enCta = rep.tactiles.filter((t) => t.enCta);
+    check('H: ningún táctil <44 px dentro de la CTA', enCta.length === 0, enCta);
+    log('cta táctiles <44:', rep.tactiles.length);
+  });
+
+  writeFileSync(join(dirOut, 'cta.json'), JSON.stringify(rep, null, 2));
+  await browser.close();
+  return rep;
+}
+
+// ---------------------------------------------------------------------------
 // CLI
 // ---------------------------------------------------------------------------
 
@@ -2985,6 +3310,34 @@ if (modo === 'comparar') {
   for (const t of rep.tactiles) console.log(`- ${t.texto} ${t.w}×${t.h}`);
   if (rep.errores.length) console.log('\nErrores:', rep.errores);
   console.log(`\nCapturas (${process.argv[3] ?? 'docs/img/v1.4/ficha'}): ${rep.capturas.join(', ') || 'ninguna'}`);
+} else if (modo === 'cta') {
+  const rep = await cta();
+  console.log('## Modo cta (T80) — barra de acción fija del detalle\n');
+  console.log('| ancho | CTA | hueco cta/barra | botones w×h | principal | secundario | ".continuar" | tarj.ep w×h | overflowH |');
+  console.log('|---|:--:|---:|---|---|---|:--:|---:|---:|');
+  for (const m of rep.anchos) {
+    const fmt = (r) => (r ? `${r.w}×${r.h}` : '—');
+    console.log(
+      `| ${m.ancho} | ${m.cta ? 'sí' : 'no'} | ${m.hueco ?? '—'} | ` +
+        `${m.botones.map((b) => `${b.w}×${b.h}`).join(', ') || '—'} | ${m.principalTexto ?? '—'} | ${m.secundarioTexto ?? '—'} | ` +
+        `${m.continuar ? (m.continuar.visible ? 'visible' : 'oculto') : '—'} | ${fmt(m.tarjetaEp)} | ${m.overflowH} |`
+    );
+  }
+  console.log('\nSin progreso:', JSON.stringify(rep.sinProgreso));
+  console.log('Lote JKAnime:', JSON.stringify(rep.lote));
+  console.log('Fin de scroll (CTA vs última celda):', JSON.stringify(rep.finScroll));
+  console.log('Scroll T66/T67:', JSON.stringify(rep.scroll));
+  console.log('Cajón:', JSON.stringify(rep.cajon));
+  console.log('\n| comprobación | ok | detalle |');
+  console.log('|---|:--:|---|');
+  for (const f of rep.funciones)
+    console.log(`| ${f.nombre} | ${f.ok ? 'sí' : 'NO'} | ${f.detalle === null ? '' : JSON.stringify(f.detalle)} |`);
+  const fallos = rep.funciones.filter((f) => !f.ok).length;
+  console.log(`\nComprobaciones: ${rep.funciones.length - fallos}/${rep.funciones.length} OK`);
+  console.log(`Táctiles <44 px visibles en el detalle (${rep.tactiles.length}); en la CTA: ${rep.tactiles.filter((t) => t.enCta).length}`);
+  for (const t of rep.tactiles) console.log(`- ${t.texto} ${t.w}×${t.h}${t.enCta ? ' [CTA]' : ''}${t.enBarra ? ' [BARRA]' : ''}`);
+  if (rep.errores.length) console.log('\nErrores:', rep.errores);
+  console.log(`\nCapturas (${process.argv[3] ?? 'docs/img/v1.4/cta'}): ${rep.capturas.join(', ') || 'ninguna'}`);
 } else {
   const dirOut = process.argv[3] ?? DIR_DEF;
   const res = await capturar(dirOut);
