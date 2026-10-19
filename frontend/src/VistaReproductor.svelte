@@ -726,7 +726,8 @@
     border: 1px solid var(--danger);
     border-radius: var(--r-md);
     padding: 12px 14px;
-    margin-bottom: 1rem;
+    margin: var(--sp-3) 0;
+    font-size: var(--fs-sm);
     display: flex;
     align-items: center;
     gap: 14px;
@@ -752,14 +753,17 @@
     background: var(--bg-2);
     border-radius: var(--r-md);
     padding: 10px 14px;
-    margin: 0 0 1rem;
+    margin: var(--sp-3) 0;
+    font-size: var(--fs-sm);
   }
   .marco {
     position: relative;
     width: 100%;
     aspect-ratio: 16 / 9;
     background: var(--bg-0);
-    border-radius: var(--r-md);
+    border-radius: var(--r-lg);
+    border: 1px solid var(--border-subtle);
+    box-shadow: var(--sh-player);
     overflow: hidden;
   }
   .video {
@@ -803,9 +807,10 @@
     z-index: 2;
   }
   @media (max-width: 899px) {
-    /* T74: cabecera compacta; el padding superior lo da la cabecera. */
+    /* T74: cabecera compacta; el padding superior lo da la cabecera.
+       T83: hueco inferior respetando la safe-area. */
     .contenedor {
-      padding: 0 var(--gutter) var(--sp-4);
+      padding: 0 var(--gutter) calc(var(--sp-4) + var(--sab));
     }
   }
 </style>

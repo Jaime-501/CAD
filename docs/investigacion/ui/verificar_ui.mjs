@@ -3910,6 +3910,410 @@ async function orden() {
 }
 
 // ---------------------------------------------------------------------------
+// Modo reproductor (T83): layout del reproductor y selector de fuentes
+// ---------------------------------------------------------------------------
+
+const ANCHOS_REPRODUCTOR = [
+  { w: 360, h: 740, nombre: '360' },
+  { w: 390, h: 844, nombre: '390' },
+  { w: 768, h: 1024, nombre: '768' },
+  { w: 1024, h: 768, nombre: '1024' },
+  { w: 1280, h: 800, nombre: '1280' },
+];
+
+const MEDIR_REPRODUCTOR = () => {
+  const d = document.documentElement;
+  const round = (n) => Math.round(n * 100) / 100;
+  const rect = (el) => {
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return {
+      x: round(r.x),
+      y: round(r.y),
+      w: round(r.width),
+      h: round(r.height),
+      right: round(r.right),
+      bottom: round(r.bottom),
+    };
+  };
+  const cs = (el) => (el ? getComputedStyle(el) : null);
+  const fila = document.querySelector('.selector > .botones:not(.extras)');
+  const extras = document.querySelector('.selector > .botones.extras');
+  const plegable = document.querySelector('.selector .plegable');
+  const botones = fila ? [...fila.querySelectorAll('button')] : [];
+  const extrasBtns = extras ? [...extras.querySelectorAll('button')] : [];
+  const marco = document.querySelector('.marco');
+  const avisos = [...document.querySelectorAll('main > .aviso')].map((a) => {
+    const r = rect(a);
+    const m = marco ? rect(marco) : null;
+    const encima = m && r ? r.bottom <= m.y + 1 : false;
+    const debajo = m && r ? r.y >= m.bottom - 1 : false;
+    return {
+      texto: (a.textContent || '').trim().slice(0, 60),
+      rect: r,
+      posicion: encima ? 'encima' : debajo ? 'debajo' : 'otra',
+      separacion: m && r ? (encima ? round(m.y - r.bottom) : debajo ? round(r.y - m.bottom) : null) : null,
+      marginTop: cs(a).marginTop,
+      marginBottom: cs(a).marginBottom,
+      fontSize: cs(a).fontSize,
+    };
+  });
+  const activo = document.querySelector('.selector > .botones button.activa');
+  const chip = botones[0] ?? null;
+  const filaInfo = (el, btns) => {
+    if (!el) return null;
+    const c = cs(el);
+    return {
+      rect: rect(el),
+      scrollWidth: el.scrollWidth,
+      clientWidth: el.clientWidth,
+      scrollHeight: el.scrollHeight,
+      clientHeight: el.clientHeight,
+      scrollLeft: round(el.scrollLeft),
+      flexWrap: c.flexWrap,
+      overflowX: c.overflowX,
+      scrollSnapType: c.scrollSnapType,
+      scrollbarWidth: c.scrollbarWidth,
+      marginLeft: c.marginLeft,
+      marginRight: c.marginRight,
+      paddingLeft: c.paddingLeft,
+      paddingRight: c.paddingRight,
+      scrollPaddingLeft: c.scrollPaddingLeft,
+      overscroll: c.overscrollBehaviorX,
+      botones: btns.map((b) => {
+        const r = b.getBoundingClientRect();
+        const bc = cs(b);
+        return {
+          texto: (b.textContent || '').trim(),
+          w: round(r.width),
+          h: round(r.height),
+          x: round(r.x),
+          y: round(r.y),
+          ariaPressed: b.getAttribute('aria-pressed'),
+          activa: b.classList.contains('activa'),
+          checkVisible: !!b.querySelector('.check') && getComputedStyle(b.querySelector('.check')).display !== 'none',
+          fontSize: bc.fontSize,
+          minHeight: bc.minHeight,
+          borderRadius: bc.borderRadius,
+          whiteSpace: bc.whiteSpace,
+        };
+      }),
+    };
+  };
+  return {
+    innerWidth: window.innerWidth,
+    overflowH: d.scrollWidth - d.clientWidth,
+    gutter: getComputedStyle(d).getPropertyValue('--gutter').trim(),
+    contenedor: rect(document.querySelector('main.contenedor')),
+    cabecera: rect(document.querySelector('main .cabecera')),
+    atras: rect(document.querySelector('main .cabecera .atras')),
+    marco: rect(marco),
+    ratio: marco ? round(marco.getBoundingClientRect().width / marco.getBoundingClientRect().height) : null,
+    marcoEstilo: marco
+      ? {
+          radius: cs(marco).borderRadius,
+          border: cs(marco).borderTopWidth + ' ' + cs(marco).borderTopStyle + ' ' + cs(marco).borderTopColor,
+          shadow: cs(marco).boxShadow,
+          overflow: cs(marco).overflow,
+          background: cs(marco).backgroundColor,
+          aspect: cs(marco).aspectRatio,
+        }
+      : null,
+    fila: filaInfo(fila, botones),
+    extras: filaInfo(extras, extrasBtns),
+    plegable: plegable
+      ? {
+          rect: rect(plegable),
+          ariaExpanded: plegable.getAttribute('aria-expanded'),
+          fontSize: cs(plegable).fontSize,
+          minHeight: cs(plegable).minHeight,
+          texto: (plegable.textContent || '').trim(),
+        }
+      : null,
+    activo: activo
+      ? {
+          texto: (activo.textContent || '').trim(),
+          ariaPressed: activo.getAttribute('aria-pressed'),
+          checkVisible: !!activo.querySelector('.check') && getComputedStyle(activo.querySelector('.check')).display !== 'none',
+          background: cs(activo).backgroundImage,
+          color: cs(activo).color,
+          fontWeight: cs(activo).fontWeight,
+        }
+      : null,
+    avisos,
+    barraInferior: !!document.querySelector('.barra-inferior'),
+    botonSiguiente: rect(document.querySelector('.marco .boton-siguiente')),
+    chip: chip
+      ? {
+          h: round(chip.getBoundingClientRect().height),
+          fontSize: cs(chip).fontSize,
+          radius: cs(chip).borderRadius,
+        }
+      : null,
+    ultimaSeccion: (() => {
+      const s = document.querySelector('.selector');
+      return s ? rect(s) : null;
+    })(),
+  };
+};
+
+async function reproductor() {
+  const dirOut = process.argv[3] ?? 'docs/img/v1.4/reproductor';
+  mkdirSync(dirOut, { recursive: true });
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  const rep = { anchos: [], funciones: [], tactiles: [], capturas: [], errores: [] };
+  const check = (nombre, ok, detalle) =>
+    rep.funciones.push({ nombre, ok: !!ok, detalle: detalle === undefined ? null : detalle });
+  const captura = async (nombre) => {
+    try {
+      await page.screenshot({ path: join(dirOut, `${nombre}.png`) });
+      rep.capturas.push(`${nombre}.png`);
+    } catch (e) {
+      rep.errores.push(`${nombre}: ${e.message}`);
+    }
+  };
+  const paso = async (nombre, fn) => {
+    try {
+      await fn();
+    } catch (e) {
+      rep.errores.push(`${nombre}: ${e.message}`);
+    }
+  };
+  const abrir = async (a) => {
+    await page.setViewportSize({ width: a.w, height: a.h });
+    await gotoApp(page);
+    await page.waitForSelector('.fila .carrusel .tarjeta', { timeout: 60000 }).catch(() => {});
+    await buscar(page, 'bleach');
+    await abrirDetalle(page, 'animeav1');
+    const ok = await abrirReproductor(page);
+    await page.waitForSelector('.selector', { timeout: 20000 }).catch(() => {});
+    return ok;
+  };
+  const principal = page.locator('.selector > .botones:not(.extras) > button');
+
+  // --- A. Geometría y capturas por ancho ---
+  await paso('A', async () => {
+    for (const a of ANCHOS_REPRODUCTOR) {
+      const abierto = await abrir(a);
+      if (!abierto) {
+        rep.anchos.push({ ancho: a.nombre, err: 'sin tarjetas de episodio' });
+        check(`${a.nombre}: reproductor abierto`, false, 'sin tarjetas de episodio');
+        continue;
+      }
+      // Fuente principal activa (el primer chip) para la captura de referencia.
+      if (await principal.count()) await principal.first().click().catch(() => {});
+      await page.waitForTimeout(400);
+      const med = await page.evaluate(MEDIR_REPRODUCTOR);
+      rep.anchos.push({ ancho: a.nombre, ...med });
+      if (['360', '768', '1280'].includes(a.nombre)) await captura(`reproductor_${a.nombre}`);
+
+      if (a.w < 900) {
+        check(`${a.nombre}: Atrás x = marco x = gutter`, med.atras && med.marco && Math.abs(med.atras.x - med.marco.x) <= 1 && Math.abs(med.marco.x - parseFloat(med.gutter)) <= 1, { atras: med.atras?.x, marco: med.marco?.x, gutter: med.gutter });
+        check(`${a.nombre}: marco 16:9`, med.ratio !== null && Math.abs(med.ratio - 16 / 9) < 0.01, med.ratio);
+        check(`${a.nombre}: sin overflow horizontal`, med.overflowH === 0, med.overflowH);
+        const fila = med.fila;
+        check(`${a.nombre}: chips en una fila`, fila && fila.flexWrap === 'nowrap' && fila.scrollHeight <= fila.clientHeight + 2, fila ? { flexWrap: fila.flexWrap, scrollH: fila.scrollHeight, clientH: fila.clientHeight } : null);
+        check(`${a.nombre}: todos los chips ≥44 px de alto`, fila && fila.botones.length > 0 && fila.botones.every((b) => b.h >= 44), fila?.botones.map((b) => `${b.texto}:${b.h}`));
+      } else {
+        const fila = med.fila;
+        const filasChips = fila ? new Set(fila.botones.map((b) => b.y)).size : 0;
+        check(`${a.nombre}: chips con wrap (sin scroll horizontal)`, fila && fila.flexWrap === 'wrap' && fila.overflowX !== 'auto', { flexWrap: fila?.flexWrap, overflowX: fila?.overflowX, filas: filasChips });
+        check(`${a.nombre}: alto de chip igual que T69 (31±2)`, med.chip && Math.abs(med.chip.h - 31) <= 2, med.chip);
+        check(`${a.nombre}: tamaño de fuente del chip igual que antes (13 px)`, med.chip?.fontSize === '13px', med.chip?.fontSize);
+      }
+      if (med.botonSiguiente) check(`${a.nombre}: BotonSiguiente < 44 (esperado)`, med.botonSiguiente.h < 44, med.botonSiguiente.h);
+      log('reproductor ancho', a.nombre, 'gutter=', med.gutter, 'marco=', JSON.stringify(med.marco), 'chips=', med.fila?.botones.length);
+    }
+  });
+
+  // --- B. Extras abiertas a 360 (y 768) ---
+  await paso('B', async () => {
+    for (const a of [{ w: 360, h: 740, nombre: '360' }, { w: 768, h: 1024, nombre: '768' }]) {
+      const abierto = await abrir(a);
+      if (!abierto) continue;
+      const pleg = page.locator('.selector .plegable');
+      if (!(await pleg.count())) {
+        check(`${a.nombre}: plegable presente`, false, 'sin fuentes extra');
+        continue;
+      }
+      const antes = await pleg.getAttribute('aria-expanded');
+      if (antes !== 'true') {
+        await pleg.click();
+        await page.waitForTimeout(400);
+      }
+      const med = await page.evaluate(MEDIR_REPRODUCTOR);
+      rep.anchos.push({ ancho: a.nombre, vista: 'extras', ...med });
+      check(`${a.nombre}: plegable ≥44 px`, med.plegable && med.plegable.rect.h >= 44, med.plegable?.rect.h);
+      check(`${a.nombre}: aria-expanded=true con extras abiertas`, med.plegable?.ariaExpanded === 'true', med.plegable?.ariaExpanded);
+      check(`${a.nombre}: fila de extras en una fila`, med.extras && med.extras.flexWrap === 'nowrap' && med.extras.scrollHeight <= med.extras.clientHeight + 2, med.extras ? { flexWrap: med.extras.flexWrap, scrollH: med.extras.scrollHeight, clientH: med.extras.clientHeight } : null);
+      check(`${a.nombre}: chips extra ≥44 px`, med.extras && med.extras.botones.length > 0 && med.extras.botones.every((b) => b.h >= 44), med.extras?.botones.map((b) => `${b.texto}:${b.h}`));
+      // Scroll horizontal hasta el último chip y vuelta al inicio.
+      const desplazado = await page.evaluate(() => {
+        const fila = document.querySelector('.selector > .botones.extras');
+        if (!fila) return null;
+        fila.scrollLeft = fila.scrollWidth;
+        return { max: fila.scrollWidth - fila.clientWidth, izquierda: Math.round(fila.scrollLeft) };
+      });
+      check(`${a.nombre}: los extras scrollean hasta el final`, !!desplazado && (desplazado.max === 0 || desplazado.izquierda > 0), desplazado);
+      if (a.nombre === '360') await captura('reproductor_360_extras');
+    }
+  });
+
+  // --- C. Activo con check, aria-pressed y cambio de fuente (360) ---
+  await paso('C', async () => {
+    const abierto = await abrir({ w: 360, h: 740, nombre: '360' });
+    if (!abierto) return;
+    const med = await page.evaluate(MEDIR_REPRODUCTOR);
+    check('360: activo con aria-pressed=true', med.activo?.ariaPressed === 'true', med.activo?.ariaPressed);
+    check('360: activo con icono check visible', med.activo?.checkVisible === true, med.activo?.checkVisible);
+    check('360: activo con degradado de marca', (med.activo?.background ?? '').includes('gradient'), med.activo?.background);
+    check('360: inactivos con aria-pressed=false', med.fila?.botones.filter((b) => !b.activa).every((b) => b.ariaPressed === 'false'), med.fila?.botones.map((b) => `${b.texto}:${b.ariaPressed}`));
+    if ((await principal.count()) >= 2) {
+      await principal.nth(1).click();
+      await page.waitForTimeout(700);
+      const tras = await page.evaluate(MEDIR_REPRODUCTOR);
+      check('360: cambiar de fuente deja el segundo chip activo', tras.fila?.botones[1]?.activa === true && tras.fila?.botones[1]?.ariaPressed === 'true', tras.fila?.botones.map((b) => `${b.texto}:${b.activa}/${b.ariaPressed}`));
+      await principal.first().click().catch(() => {});
+      await page.waitForTimeout(400);
+    }
+    // Plegable: al abrirlo manualmente, aria-expanded cambia.
+    const pleg = page.locator('.selector .plegable');
+    if (await pleg.count()) {
+      const antes = await pleg.getAttribute('aria-expanded');
+      await pleg.click();
+      await page.waitForTimeout(300);
+      const despues = await pleg.getAttribute('aria-expanded');
+      check('360: el plegable alterna aria-expanded', antes !== despues, { antes, despues });
+      if (despues === 'true') await pleg.click();
+      await page.waitForTimeout(200);
+    }
+    // Aviso (si existe) separado del marco.
+    const conAviso = rep.anchos.find((m) => m.ancho === '360' && m.vista === undefined);
+    if (conAviso?.avisos?.length) {
+      for (const av of conAviso.avisos) {
+        check(`360: aviso ${av.posicion} separado del marco`, av.separacion !== null && av.separacion >= 8, av);
+      }
+    } else {
+      check('360: aviso separado del marco', true, 'sin aviso visible en este estado');
+    }
+  });
+
+  // --- D. Plegable automático con iframe activo ---
+  await paso('D', async () => {
+    await abrir({ w: 360, h: 740, nombre: '360' });
+    // En el navegador el proxy local del contenedor no sirve el HLS: el
+    // reproductor acaba cayendo al iframe y el pliegue debe abrirse solo.
+    // Cada fallo refresca las fuentes por red, así que se da hasta ~30 s.
+    let auto = false;
+    for (let i = 0; i < 40; i++) {
+      await page.waitForTimeout(750);
+      auto = await page.evaluate(() => {
+        const p = document.querySelector('.selector .plegable');
+        return !!p && p.getAttribute('aria-expanded') === 'true';
+      });
+      if (auto) break;
+    }
+    check('360: plegable abierto automáticamente con iframe activo', auto, auto ? 'sí' : 'no se llegó al iframe');
+    rep.iframeAuto = auto;
+    if (auto) {
+      const med = await page.evaluate(MEDIR_REPRODUCTOR);
+      const av = med.avisos.find((x) => x.posicion === 'debajo') ?? med.avisos[0] ?? null;
+      rep.avisoIframe = av;
+      check('360: aviso del iframe separado del marco', !!av && av.separacion !== null && av.separacion >= 8, av);
+      check('360: plegable ≥44 px con iframe activo', !!med.plegable && med.plegable.rect.h >= 44, med.plegable?.rect.h);
+      check('360: fila de extras sigue en una fila con iframe', !!med.extras && med.extras.flexWrap === 'nowrap' && med.extras.scrollHeight <= med.extras.clientHeight + 2, med.extras ? { flexWrap: med.extras.flexWrap, scrollH: med.extras.scrollHeight, clientH: med.extras.clientHeight } : null);
+    } else {
+      check('360: aviso del iframe separado del marco', false, 'no se llegó al iframe');
+    }
+  });
+
+  // --- E. Barra inferior, fin de scroll y atajo N (360) ---
+  await paso('E', async () => {
+    const abierto = await abrir({ w: 360, h: 740, nombre: '360' });
+    if (!abierto) return;
+    const barra = await page.locator('.barra-inferior').count();
+    check('360: sin barra inferior en el reproductor', barra === 0, barra);
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await page.waitForTimeout(400);
+    const fin = await page.evaluate(() => {
+      const s = document.querySelector('.selector');
+      if (!s) return null;
+      return { fondo: Math.round(s.getBoundingClientRect().bottom), alto: window.innerHeight };
+    });
+    check('360: fin del scroll sin nada tapado', !!fin && fin.fondo <= fin.alto + 1, fin);
+    const subtituloAntes = await page.evaluate(() => ((document.querySelector('.cabecera .subtitulo') || {}).textContent || '').trim());
+    await page.keyboard.press('n');
+    await page.waitForTimeout(900);
+    const subtituloDespues = await page.evaluate(() => ((document.querySelector('.cabecera .subtitulo') || {}).textContent || '').trim());
+    const sigueReproductor = await page.locator('.marco').count();
+    check('360: atajo N responde en el reproductor', sigueReproductor > 0 && (subtituloAntes !== subtituloDespues || subtituloAntes !== ''), { subtituloAntes, subtituloDespues });
+  });
+
+  // --- F. Atrás y scroll T66/T67 (360) ---
+  await paso('F', async () => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await gotoApp(page);
+    await buscar(page, 'bleach');
+    await abrirDetalle(page, 'animeav1');
+    await page.waitForTimeout(900);
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await page.waitForTimeout(500);
+    const yAntes = await page.evaluate(() => Math.round(window.scrollY));
+    const ultima = page.locator('.rejilla .celda .tarjeta').last();
+    if ((await ultima.count()) && yAntes > 0) {
+      await ultima.click();
+      await page.waitForSelector('.marco', { timeout: 30000 }).catch(() => {});
+      await page.waitForTimeout(1500);
+      await page.locator('.cabecera .atras').first().click();
+      await page.waitForTimeout(1200);
+      const yDespues = await page.evaluate(() => Math.round(window.scrollY));
+      check('360: T66/T67 scroll restaurado al volver', Math.abs(yDespues - yAntes) <= 5, { yAntes, yDespues });
+    } else {
+      check('360: T66/T67 scroll restaurado al volver', false, { yAntes });
+    }
+  });
+
+  // --- G. prefers-reduced-motion: sin transiciones en chips y plegable ---
+  await paso('G', async () => {
+    await abrir({ w: 360, h: 740, nombre: '360' });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const trans = await page.evaluate(() => {
+      const chip = document.querySelector('.selector .botones button');
+      const pleg = document.querySelector('.selector .plegable');
+      return {
+        chip: chip ? getComputedStyle(chip).transitionDuration : null,
+        plegable: pleg ? getComputedStyle(pleg).transitionDuration : null,
+      };
+    });
+    rep.reduced = trans;
+    check('reduced-motion: chips sin transición', trans.chip === '0s', trans.chip);
+    check('reduced-motion: plegable sin transición', trans.plegable === '0s', trans.plegable);
+    await page.emulateMedia({ reducedMotion: null });
+  });
+
+  // --- H. Táctiles < 44 px restantes (360) ---
+  await paso('H', async () => {
+    await abrir({ w: 360, h: 740, nombre: '360' });
+    rep.tactiles = await page.evaluate(TACTILES_CHICOS);
+    const chips = await page.evaluate(() =>
+      [...document.querySelectorAll('.selector button')]
+        .filter((b) => b.offsetParent !== null)
+        .map((b) => {
+          const r = b.getBoundingClientRect();
+          return { texto: (b.textContent || '').trim().slice(0, 30), w: Math.round(r.width), h: Math.round(r.height) };
+        })
+    );
+    rep.chips = chips;
+    check('360: todos los controles del selector ≥44 px de alto', chips.length > 0 && chips.every((c) => c.h >= 44), chips.map((c) => `${c.texto}:${c.h}`));
+  });
+
+  writeFileSync(join(dirOut, 'reproductor.json'), JSON.stringify(rep, null, 2));
+  await browser.close();
+  return rep;
+}
+
+// ---------------------------------------------------------------------------
 // CLI
 // ---------------------------------------------------------------------------
 
@@ -4235,6 +4639,41 @@ if (modo === 'comparar') {
   console.log(`\nComprobaciones: ${rep.funciones.length - fallos.length}/${rep.funciones.length} OK`);
   if (rep.errores.length) console.log('\nErrores:', rep.errores);
   console.log(`\nCapturas (${process.argv[3] ?? 'docs/img/v1.4/orden'}): ${rep.capturas.join(', ') || 'ninguna'}`);
+} else if (modo === 'reproductor') {
+  const rep = await reproductor();
+  console.log('## Modo reproductor (T83) — layout y selector de fuentes\n');
+  console.log('| vista@ancho | gutter | Atrás x | marco x/y w×h | ratio | chips | alto chip | fila wrap | extras | plegable h | overflowH | barra |');
+  console.log('|---|---:|---:|---|---:|---:|---:|---|---:|---:|---:|:--:|');
+  for (const m of rep.anchos) {
+    if (m.err) { console.log(`| ${m.ancho} | — | — | — | — | — | — | — | — | — | — | — |`); continue; }
+    const fmtR = (r) => (r ? `${r.x}/${r.y} ${r.w}×${r.h}` : '—');
+    console.log(
+      `| ${m.vista ? m.vista + '@' : ''}${m.ancho} | ${m.gutter} | ${m.atras?.x ?? '—'} | ${fmtR(m.marco)} | ${m.ratio ?? '—'} | ` +
+        `${m.fila?.botones.length ?? 0} | ${m.chip?.h ?? '—'} | ${m.fila?.flexWrap ?? '—'} | ${m.extras?.botones.length ?? 0} | ` +
+        `${m.plegable?.rect.h ?? '—'} | ${m.overflowH} | ${m.barraInferior ? 'SÍ' : 'no'} |`
+    );
+  }
+  console.log('\nChips por ancho:');
+  for (const m of rep.anchos) {
+    if (m.err || !m.fila) continue;
+    const b = m.fila.botones.map((x) => `${x.texto} ${x.w}×${x.h}${x.activa ? ' [activa]' : ''}${x.ariaPressed ? ` (aria-pressed=${x.ariaPressed})` : ''}`).join(' · ');
+    console.log(`- ${m.vista ? m.vista + '@' : ''}${m.ancho}: ${b}`);
+  }
+  console.log('\nAvisos:', JSON.stringify(rep.anchos.flatMap((m) => (m.avisos ?? []).map((a) => ({ ancho: m.ancho, ...a })))));
+  console.log('Extras abiertas automáticamente (iframe):', rep.iframeAuto ? 'sí' : 'no');
+  console.log('Aviso con iframe activo:', JSON.stringify(rep.avisoIframe ?? null));
+  console.log('Reduced-motion:', JSON.stringify(rep.reduced));
+  console.log('Táctiles del selector:', JSON.stringify(rep.chips));
+  const fallos = rep.funciones.filter((f) => !f.ok);
+  console.log('\n| comprobación | ok | detalle |');
+  console.log('|---|:--:|---|');
+  for (const f of rep.funciones)
+    console.log(`| ${f.nombre} | ${f.ok ? 'sí' : 'NO'} | ${f.detalle === null ? '' : JSON.stringify(f.detalle)} |`);
+  console.log(`\nComprobaciones: ${rep.funciones.length - fallos.length}/${rep.funciones.length} OK`);
+  console.log(`Táctiles <44 px visibles en el reproductor (${rep.tactiles.length}):`);
+  for (const t of rep.tactiles) console.log(`- ${t.texto} ${t.w}×${t.h}${t.enBarra ? ' [BARRA]' : ''}`);
+  if (rep.errores.length) console.log('\nErrores:', rep.errores);
+  console.log(`\nCapturas (${process.argv[3] ?? 'docs/img/v1.4/reproductor'}): ${rep.capturas.join(', ') || 'ninguna'}`);
 } else {
   const dirOut = process.argv[3] ?? DIR_DEF;
   const res = await capturar(dirOut);

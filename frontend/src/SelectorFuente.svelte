@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { VideoSourceView } from './api';
   import { agruparFuentes, type FiltroIdioma } from './etiquetas';
+  import Icono from './Icono.svelte';
 
   /**
    * Selector manual de servidor/idioma/calidad (T27/T34/T63).
@@ -52,9 +53,13 @@
         <button
           type="button"
           class:activa={fila.indice === actual}
+          aria-pressed={fila.indice === actual}
           on:click={() => elegir(fila.indice)}
         >
-          {fila.etiqueta}
+          {#if fila.indice === actual}
+            <span class="check" aria-hidden="true"><Icono nombre="check" tam={16} /></span>
+          {/if}
+          <span class="texto">{fila.etiqueta}</span>
         </button>
       {/each}
     </div>
@@ -67,8 +72,10 @@
       aria-expanded={abiertoVisible}
       on:click={alternar}
     >
-      <span class="flecha" aria-hidden="true">{abiertoVisible ? '▾' : '▸'}</span>
-      Otras fuentes (embebidas, pueden incluir publicidad)
+      <span class="flecha" aria-hidden="true">
+        <Icono nombre={abiertoVisible ? 'chevron-abajo' : 'chevron-der'} tam={16} />
+      </span>
+      <span class="texto-plegable">Otras fuentes (embebidas, pueden incluir publicidad)</span>
     </button>
     {#if abiertoVisible}
       <div class="botones extras">
@@ -76,9 +83,13 @@
           <button
             type="button"
             class:activa={fila.indice === actual}
+            aria-pressed={fila.indice === actual}
             on:click={() => elegir(fila.indice)}
           >
-            {fila.etiqueta}
+            {#if fila.indice === actual}
+              <span class="check" aria-hidden="true"><Icono nombre="check" tam={16} /></span>
+            {/if}
+            <span class="texto">{fila.etiqueta}</span>
           </button>
         {/each}
       </div>
@@ -110,12 +121,10 @@
     font-size: 13px;
     cursor: pointer;
   }
-  .botones button:hover {
-    border-color: var(--brand-400);
-  }
-  .botones button:focus-visible {
-    outline: 2px solid var(--brand-400);
-    outline-offset: 2px;
+  .botones button:focus-visible,
+  .plegable:focus-visible {
+    outline: none;
+    box-shadow: var(--ring);
   }
   .botones button.activa {
     background: var(--brand-500);
@@ -137,18 +146,99 @@
     text-align: left;
     cursor: pointer;
   }
-  .plegable:hover {
-    color: var(--text-2);
-    border-color: var(--border);
-  }
-  .plegable:focus-visible {
-    outline: 2px solid var(--brand-400);
-    outline-offset: 2px;
+  .check {
+    display: none;
   }
   .flecha {
-    font-size: 11px;
+    display: inline-flex;
+    align-items: center;
   }
   .botones.extras {
     margin-top: 8px;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .botones button:hover {
+      border-color: var(--brand-400);
+    }
+    .plegable:hover {
+      color: var(--text-2);
+      border-color: var(--border);
+    }
+  }
+
+  /* Modo estrecho (< 900 px): una fila con scroll horizontal y chips táctiles. */
+  @media (max-width: 899px) {
+    .selector {
+      margin-top: var(--sp-4);
+    }
+    .titulo {
+      font-size: var(--fs-sm);
+      margin-bottom: var(--sp-2);
+    }
+    .botones {
+      flex-wrap: nowrap;
+      gap: var(--sp-2);
+      overflow-x: auto;
+      scroll-snap-type: x proximity;
+      scrollbar-width: none;
+      margin-inline: calc(-1 * var(--gutter));
+      padding-inline: var(--gutter);
+      scroll-padding-inline: var(--gutter);
+      overscroll-behavior-x: contain;
+    }
+    .botones::-webkit-scrollbar {
+      display: none;
+    }
+    .botones button {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--sp-2);
+      flex-shrink: 0;
+      scroll-snap-align: start;
+      min-height: var(--tap);
+      padding: 0 var(--sp-4);
+      font-size: var(--fs-sm);
+      white-space: nowrap;
+    }
+    .check {
+      display: inline-flex;
+      align-items: center;
+    }
+    .botones button.activa {
+      background: var(--grad-chip-active);
+      border-color: var(--brand-400);
+      color: var(--on-brand);
+      font-weight: var(--fw-semibold);
+    }
+    .plegable {
+      min-height: var(--tap);
+      font-size: var(--fs-sm);
+      border-radius: var(--r-md);
+      padding: var(--sp-2) var(--sp-3);
+    }
+    .texto-plegable {
+      white-space: normal;
+    }
+    .botones.extras {
+      margin-top: var(--sp-2);
+    }
+    .botones button,
+    .plegable {
+      transition:
+        transform var(--dur-fast) var(--ease-std),
+        background-color var(--dur-fast) var(--ease-std),
+        border-color var(--dur-fast) var(--ease-std),
+        color var(--dur-fast) var(--ease-std);
+    }
+    .botones button:active,
+    .plegable:active {
+      transform: scale(0.97);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .botones button,
+      .plegable {
+        transition: none;
+      }
+    }
   }
 </style>

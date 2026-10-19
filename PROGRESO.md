@@ -1,4 +1,4 @@
-    # PROGRESO — Comfort Anime Desktop (T01–T82 hechas)
+    # PROGRESO — Comfort Anime Desktop (T01–T83 hechas)
 
 > Este archivo es la **memoria entre sesiones**. Cada sesión lo lee al inicio y lo actualiza al final.
 > Reglas y layout: `tareas/00_REGLAS.md`. Detalle de cada tarea: `tareas/Txx.md`.
@@ -152,6 +152,7 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha y verificada
 | [x] | T80 | Barra de acción fija «Continuar / Reiniciar» del detalle en estrecho (v1.4.0) | T73b, T74, T79 |
 | [x] | T81 | Tarjeta de episodio y rejilla en modo estrecho (v1.4.0) | T72, T79, T80 |
 | [x] | T82 | Orden ascendente/descendente de episodios (v1.4.0) | T70–T81 |
+| [x] | T83 | Layout del reproductor y selector de fuentes (v1.4.0) | T70–T82 |
 
 T01–T29 = v1.0 (`docs/PROGRESO_v1.0.md`) · T30–T35 = v1.1.0 AnimeAV1 (`docs/PROGRESO_v1.1.md`) · T36 = cierre de la v1.1.0 · T37 = portabilidad Android · T38 = cierre documental de T37.
 T39–T57 = v1.2.0 (Home, historial lateral, favoritos, "Siguiente" y su estado discreto; **incluye T53b y T57**); plan en `tareas/v1.2_PLAN.md`, detalle **T39–T58 + cierres T56/T59** archivado en `docs/PROGRESO_v1.2.md`, con resúmenes al final de este archivo.
@@ -1435,3 +1436,40 @@ Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**
 **Capturas** en `docs/img/v1.4/orden/`: `detalle_360_asc.png`, `detalle_360_desc.png`, `detalle_1280_asc.png`, `detalle_1280_desc.png` (+ `orden.json`).
 
 **Archivos tocados:** `frontend/src/VistaDetalle.svelte` (**`<script>`** con las 8 líneas indicadas + **markup** de `.fila-titular`/botón y `<style>` del botón), `docs/investigacion/ui/verificar_ui.mjs` (modo `orden` **nuevo**), `docs/img/v1.4/orden/**` y `PROGRESO.md`. **Nada fuera de "Puedes tocar"** (regla 7 no se activó): `*.go`, `frontend/wailsjs/**`, `api.ts`, `stores.ts`, `views.ts`, `ui.ts`, `revelar.ts`, `ventana.ts`, `TarjetaEpisodio`, `BarraAccion`, `CabeceraVista`, componentes T72, `index.html`, la CTA (T80), la ficha/rejilla (T79/T81) y el scroll T66/T67 intactos. **Sin tag ni release** (los hace el humano); **T83 no iniciada**.
+
+## T83 — Layout del reproductor y selector de fuentes (v1.4.0) — bloque de esta sesión
+
+Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**. Fecha **2026-10-19**. Cabecera alineada, marco 16:9 con borde/sombra de tokens y selector de fuentes con chips táctiles de 44 px en una fila con scroll horizontal en modo estrecho (`< 900 px`). En **≥ 900 px** la geometría del reproductor y de los chips no cambia (solo borde/sombra del marco).
+
+- **`CabeceraVista.svelte` (solo `<style>`)**: en estrecho, `.cabecera:not(.fija)` deja `padding-inline: 0` (el gutter lo aporta el `.contenedor`); `.cabecera.fija` sigue exactamente igual, así que el detalle (cabecera fija T74) no cambia.
+- **`VistaReproductor.svelte` (solo `<style>`)**: `.contenedor` estrecho → `padding: 0 var(--gutter) calc(var(--sp-4) + var(--sab))`; `.marco` → `--r-lg` + `1px solid var(--border-subtle)` + `var(--sh-player)` (mantiene 16:9, `overflow: hidden` y `--bg-0`); `.aviso`/`.error-caja` → `margin: var(--sp-3) 0`, `--fs-sm` y `--r-md`.
+- **`SelectorFuente.svelte`**: en el `<script>` SOLO se añade `import Icono` (lógica intacta: `agruparFuentes`, `alternar`, pliegue). Markup: `aria-pressed` en todos los chips, `Icono check` (16) en el activo y `chevron-der`/`chevron-abajo` (16) en el plegable. Estrecho: `.botones` en una fila con `flex-wrap: nowrap`, scroll horizontal con sangrado al gutter, `scroll-snap`, `scrollbar-width: none` y `overscroll-behavior-x: contain`; chips `min-height: var(--tap)`, `padding: 0 var(--sp-4)`, `--fs-sm`, `--r-full`, `--surface-chip`; activo con `--grad-chip-active`, `--brand-400`, `--on-brand` y `--fw-semibold`; `:hover` solo con puntero fino, `:active` `scale(0.97)`, `:focus-visible` con `--ring`. Escritorio: envoltura y tamaño originales (13 px).
+
+**Resultados reales** (modo `reproductor` **nuevo** en `verificar_ui.mjs`, localhost:34115, red real; AnimeAV1 «bleach»):
+
+| ancho | gutter | Atrás x | marco x/y w×h | ratio | chips | alto chip | wrap | `overflowH` | barra inferior |
+|---:|---:|---:|---|---:|---:|---:|---|---:|:--:|
+| 360 | 16 px | 16 | 16/84 330×186,5 | 1,77 | 4 (+8 extras) | 44 | nowrap | 0 | no |
+| 390 | 16 px | 16 | 16/84 360×203,38 | 1,77 | 4 | 44 | nowrap | 0 | no |
+| 768 | 24 px | 24 | 24/84 722×407 | 1,77 | 4 (+8 extras) | 44 | nowrap | 0 | no |
+| 1024 | 32 px | 32 | 32/107 962×542 | 1,77 | 4 | 31 | wrap | 0 | no |
+| 1280 | 32 px | 90 | 90/107 1102×620,75 | 1,78 | 4 | 31 | wrap | 0 | no |
+
+- **54 / 54 comprobaciones OK**. Chips en una fila (`scrollHeight = clientHeight = 44`) y scroll hasta el último extra (828 px de recorrido a 360, 434 a 768); plegable de 50 px (360) / 44 px (768) con `aria-expanded` correcto; activo con check visible, `aria-pressed="true"` y degradado de marca; cambiar de fuente deja activo el segundo chip (`aria-pressed` coherente). Con iframe activo el pliegue **se abre solo** (hasta ~30 s por los refrescos de fuentes en Docker) y el aviso queda **12 px** debajo del marco (`--fs-sm`, margen `--sp-3`).
+- Escritorio: chips de **31 px** de alto y **13 px** de fuente, igual que T69 (anchos 95 / 94,3 / 186,78 / 187,5 vs 95 / 94 / 187 / 188 → Δ ≤ 1 px); sin scroll horizontal (`flex-wrap: wrap`), con una sola fila visual porque solo hay 4 fuentes. Plegable 30 px (T69: 29; Δ1 por el icono de 16 px).
+- Sin barra inferior en el reproductor; fin del scroll sin nada tapado; atajo **N** (Ep. 1 → Ep. 2) y «← Atrás» OK; scroll T66/T67 restaurado (Δ0); `prefers-reduced-motion` → transición `0s` en chips y plegable.
+- Literales de color en lo tocado: **0** (la única excepción es el scrim `rgba(0,0,0,0.65)` del spinner, ya documentado). Táctiles < 44 px restantes: solo `BotonSiguiente` 147×36 (esperado; su solape es T84).
+
+**Desviaciones / notas (documentadas):**
+- **768 px usa `--gutter: 24px`**, no 16: el token de T70 sube a 24 desde 768. Verificado que Atrás = marco = gutter (24) en 768.
+- **`--fs-sm` = 14 px**, no 13: en escritorio el punto 6 pedía tokenizar `13px` solo si el tamaño resultante era el mismo, así que se deja `font-size: 13px` y se reporta (+1 px); en estrecho sí se usa `--fs-sm`.
+- **`reanudar` al cambiar de fuente no se puede medir en Docker** (el proxy local no sirve el HLS y no hay `currentTime`); el cambio de fuente y su estado activo sí se verifican. La lógica de reanudación es la de T27/T63 y no se tocó.
+- **Aviso del proxy ausente en el estado medido**: en el navegador el aviso que aparece es el del iframe («Fuente embebida: sin control de progreso»), separado 12 px del marco; el aviso de proxy solo se muestra si la URL no es local.
+- **1024/1280 con una fila visual**: `flex-wrap: wrap` está activo y no hay scroll horizontal; con 4 fuentes caben en una fila. No es un fallo de la especificación de envoltura.
+- **Modo nuevo del arnés**: `verificar_ui.mjs` añade `MEDIR_REPRODUCTOR` + `reproductor()` (+ dispatch); no toca código de producto.
+
+**Comprobaciones finales:** `npm run check` **0 errores / 0 avisos** · `npm run build` **OK** · tests `.ts` **48 / 32 / 13** OK (`ventana`, `etiquetas`, `views`) · `gofmt -l .` **sin salida** · `go vet ./...` y `go vet -tags integration ./...` **OK** · `go test -race -count=1 ./...` **435 `--- PASS`** de nivel superior, 0 FAIL (`*.go` intactos) · `grep wailsjs frontend/src` **solo `api.ts`**.
+
+**Capturas** en `docs/img/v1.4/reproductor/`: `reproductor_360.png`, `reproductor_360_extras.png`, `reproductor_768.png`, `reproductor_1280.png` (+ `reproductor.json`).
+
+**Archivos tocados:** `frontend/src/SelectorFuente.svelte` (script: solo `import Icono`; markup y `<style>`), `frontend/src/VistaReproductor.svelte` (**solo `<style>`**), `frontend/src/CabeceraVista.svelte` (**solo `<style>`**), `docs/investigacion/ui/verificar_ui.mjs`, `docs/img/v1.4/reproductor/**` y `PROGRESO.md`. **Nada fuera de "Puedes tocar"** (regla 7 no se activó): `*.go`, `frontend/wailsjs/**`, `api.ts`, `stores.ts`, `views.ts`, `ui.ts`, `BotonSiguiente.svelte`, el `<script>`/markup de `VistaReproductor`, `BotonFavorito`, `etiquetas.ts` e `index.html` intactos. **Sin tag ni release** (los hace el humano); **T84 no iniciada**.

@@ -88,6 +88,10 @@
     .cabecera {
       padding: calc(var(--sat) + var(--sp-2)) var(--gutter) var(--sp-2);
     }
+    /* T83: sin cabecera fija, el gutter lo aporta el `.contenedor`. */
+    .cabecera:not(.fija) {
+      padding-inline: 0;
+    }
     .atras {
       justify-content: center;
       min-width: var(--tap);
