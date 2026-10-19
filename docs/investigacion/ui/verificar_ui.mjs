@@ -2317,6 +2317,429 @@ async function busqueda() {
 }
 
 // ---------------------------------------------------------------------------
+// Modo ficha (T79): ficha de detalle (portada, metadatos, géneros, sinopsis)
+// ---------------------------------------------------------------------------
+
+const ANCHOS_FICHA = [
+  { w: 360, h: 740, nombre: '360' },
+  { w: 390, h: 844, nombre: '390' },
+  { w: 768, h: 1024, nombre: '768' },
+  { w: 1024, h: 768, nombre: '1024' },
+  { w: 1280, h: 800, nombre: '1280' },
+];
+
+const MEDIR_FICHA = () => {
+  const d = document.documentElement;
+  const round = (n) => Math.round(n * 100) / 100;
+  const rect = (el) => {
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return { x: round(r.x), y: round(r.y), w: round(r.width), h: round(r.height), right: round(r.right), bottom: round(r.bottom) };
+  };
+  const ficha = document.querySelector('.ficha');
+  const marco = document.querySelector('.ficha .portada-marco');
+  const img = document.querySelector('.ficha .portada');
+  const generos = document.querySelector('.ficha .generos');
+  const sinopsis = document.querySelector('.ficha .sinopsis');
+  const verMas = document.querySelector('.ficha .ver-mas');
+  const punto = document.querySelector('.ficha .metadatos .punto');
+  const rejilla = document.querySelector('.rejilla');
+  const csGen = generos ? getComputedStyle(generos) : null;
+  const csSin = sinopsis ? getComputedStyle(sinopsis) : null;
+  const csMarco = marco ? getComputedStyle(marco) : null;
+  const csRej = rejilla ? getComputedStyle(rejilla) : null;
+  const csPunto = punto ? getComputedStyle(punto) : null;
+  const rg = ficha ? ficha.getBoundingClientRect() : null;
+  const chips = [...document.querySelectorAll('.ficha .metadatos .insignia')].map((c) => ({
+    texto: (c.textContent || '').trim(),
+    tono: [...c.classList].find((k) => k.startsWith('tono-')) || null,
+  }));
+  return {
+    overflowH: d.scrollWidth - d.clientWidth,
+    innerWidth: window.innerWidth,
+    ficha: rect(ficha),
+    fichaRadius: ficha ? getComputedStyle(ficha).borderRadius : null,
+    fichaPadding: ficha ? getComputedStyle(ficha).padding : null,
+    fichaBorder: ficha ? getComputedStyle(ficha).borderTopWidth : null,
+    fichaShadow: ficha ? getComputedStyle(ficha).boxShadow : null,
+    fichaFondo: ficha ? getComputedStyle(ficha).backgroundColor : null,
+    marco: rect(marco),
+    marcoPadding: csMarco ? csMarco.padding : null,
+    marcoRadius: csMarco ? csMarco.borderRadius : null,
+    marcoFondo: csMarco ? csMarco.backgroundImage : null,
+    img: rect(img),
+    imgRadius: img ? getComputedStyle(img).borderRadius : null,
+    imgAspect: img ? getComputedStyle(img).aspectRatio : null,
+    centrada: rg && rect(marco) ? Math.abs((rect(marco).x + rect(marco).w / 2) - (rg.x + rg.w / 2)) <= 1 : null,
+    chips,
+    punto: punto ? { color: csPunto.backgroundColor, w: round(punto.getBoundingClientRect().width) } : null,
+    generos: generos
+      ? {
+          rect: rect(generos),
+          flexWrap: csGen.flexWrap,
+          overflowX: csGen.overflowX,
+          marginLeft: csGen.marginLeft,
+          paddingLeft: csGen.paddingLeft,
+          scrollWidth: generos.scrollWidth,
+          clientWidth: generos.clientWidth,
+          scrollable: generos.scrollWidth > generos.clientWidth + 1,
+        }
+      : null,
+    sinopsis: sinopsis
+      ? {
+          rect: rect(sinopsis),
+          display: csSin.display,
+          lineClamp: csSin.webkitLineClamp || csSin.lineClamp || null,
+          scrollHeight: sinopsis.scrollHeight,
+          clientHeight: sinopsis.clientHeight,
+          lineHeight: csSin.lineHeight,
+          lineas: Math.round(sinopsis.clientHeight / parseFloat(csSin.lineHeight)),
+          desborda: sinopsis.scrollHeight > sinopsis.clientHeight + 1,
+        }
+      : null,
+    verMas: verMas
+      ? {
+          rect: rect(verMas),
+          aria: verMas.getAttribute('aria-expanded'),
+          texto: (verMas.textContent || '').trim(),
+          minHeight: getComputedStyle(verMas).minHeight,
+          color: getComputedStyle(verMas).color,
+        }
+      : null,
+    columnas: csRej && csRej.gridTemplateColumns ? csRej.gridTemplateColumns.split(' ').filter(Boolean).length : 0,
+    tarjetaEp: rect(document.querySelector('.rejilla .celda .tarjeta')),
+    entra: document.querySelectorAll('.celda.entra').length,
+  };
+};
+
+async function abrirFilaHome(page, titulo) {
+  const filas = page.locator('.fila');
+  const n = await filas.count();
+  for (let i = 0; i < n; i++) {
+    const t = ((await filas.nth(i).locator('.titulo-fila').textContent().catch(() => '')) ?? '').trim();
+    if (t === titulo) {
+      await filas.nth(i).locator('.carrusel .tarjeta').first().click();
+      break;
+    }
+  }
+  await page.waitForSelector('.ficha, .estado', { timeout: 45000 });
+  await page.waitForSelector('.rejilla .celda .tarjeta', { timeout: 60000 }).catch(() => {});
+  await page.waitForTimeout(700);
+}
+
+async function ficha() {
+  const dirOut = process.argv[3] ?? 'docs/img/v1.4/ficha';
+  mkdirSync(dirOut, { recursive: true });
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  const rep = { anchos: [], funciones: [], capturas: [], tactiles: [], geo: {}, base1280: null, errores: [] };
+  const check = (nombre, ok, detalle) =>
+    rep.funciones.push({ nombre, ok: !!ok, detalle: detalle === undefined ? null : detalle });
+  const paso = async (nombre, fn) => {
+    try {
+      await fn();
+    } catch (e) {
+      rep.errores.push(`${nombre}: ${e.message}`);
+    }
+  };
+  const captura = async (nombre) => {
+    try {
+      await page.screenshot({ path: join(dirOut, `${nombre}.png`) });
+      rep.capturas.push(`${nombre}.png`);
+    } catch (e) {
+      rep.errores.push(`${nombre}: ${e.message}`);
+    }
+  };
+
+  // --- A. Geometría y estado por ancho (AnimeAV1 Bleach) ---
+  await paso('A', async () => {
+    for (const a of ANCHOS_FICHA) {
+      await page.setViewportSize({ width: a.w, height: a.h });
+      await gotoApp(page);
+      await page.waitForSelector('.fila .carrusel .tarjeta', { timeout: 60000 }).catch(() => {});
+      await buscar(page, 'bleach');
+      await abrirDetalle(page, 'animeav1');
+      const m = await page.evaluate(MEDIR_FICHA);
+      rep.anchos.push({ ancho: a.nombre, ...m });
+      rep.geo[a.nombre] = { tarjeta: m.tarjetaEp, columnas: m.columnas, fichaY: m.ficha?.y, fichaH: m.ficha?.h };
+      if (a.nombre === '360') await captura('detalle_animeav1_360');
+      if (a.nombre === '1280') rep.base1280 = m;
+      check(`${a.nombre}: overflowH = 0`, m.overflowH === 0, m.overflowH);
+      check(`${a.nombre}: 4 chips (proveedor/tipo/estado/total)`, m.chips.length === 4, m.chips.map((c) => c.texto));
+      check(`${a.nombre}: proveedor en tono marca`, m.chips[0] && m.chips[0].tono === 'tono-marca', m.chips[0]);
+      check(`${a.nombre}: resto de chips neutros`, m.chips.slice(1).every((c) => c.tono === 'tono-neutro'), m.chips.slice(1));
+      if (a.w < 900) {
+        const difCentro = m.marco && m.ficha
+          ? Math.abs(m.marco.x + m.marco.w / 2 - (m.ficha.x + m.ficha.w / 2))
+          : null;
+        check(`${a.nombre}: portada centrada`, difCentro !== null && difCentro <= 1, { difCentro, marco: m.marco, ficha: m.ficha });
+        check(`${a.nombre}: portada ≤ 200 px`, !!m.marco && m.marco.w <= 200.5, m.marco?.w);
+        check(`${a.nombre}: marco con padding 3 px`, m.marcoPadding === '3px', m.marcoPadding);
+        check(`${a.nombre}: sinopsis a 4 líneas`, !!m.sinopsis && m.sinopsis.lineas === 4, m.sinopsis?.lineas);
+        check(`${a.nombre}: sinopsis con -webkit-line-clamp: 4`, m.sinopsis?.lineClamp === '4', m.sinopsis?.lineClamp);
+        check(`${a.nombre}: "Ver más" presente y ≥44 px`, !!m.verMas && m.verMas.rect.h >= 44, m.verMas);
+        check(`${a.nombre}: "Ver más" aria-expanded=false`, m.verMas?.aria === 'false', m.verMas?.aria);
+        check(`${a.nombre}: géneros en una línea con scroll`, !!m.generos && m.generos.flexWrap === 'nowrap' && m.generos.overflowX === 'auto', m.generos);
+        check(`${a.nombre}: ficha padding var(--sp-4)=16 px`, m.fichaPadding === '16px', m.fichaPadding);
+      } else {
+        check(`${a.nombre}: sin "Ver más"`, m.verMas === null, m.verMas);
+        check(`${a.nombre}: sinopsis sin límite`, !!m.sinopsis && m.sinopsis.lineClamp !== '4', m.sinopsis?.lineClamp);
+        check(`${a.nombre}: géneros con wrap`, !!m.generos && m.generos.flexWrap === 'wrap', m.generos?.flexWrap);
+        // Ancho de referencia del marco: 220 px, topado por `max-width: 35 %`
+        // del contenido de la ficha (mismo comportamiento que la portada previa).
+        const disp = m.ficha ? m.ficha.w - 2 * (parseFloat(m.fichaBorder) + parseFloat(m.fichaPadding)) : NaN;
+        const esperado = Math.min(220, 0.35 * disp);
+        check(`${a.nombre}: portada 220 px (máx. 35 %)`, !!m.marco && Math.abs(m.marco.w - esperado) <= 1, { w: m.marco?.w, esperado });
+        check(`${a.nombre}: portada a la izquierda`, !!m.marco && !!m.ficha && m.marco.x <= m.ficha.x + 30, { marcoX: m.marco?.x, fichaX: m.ficha?.x });
+        check(`${a.nombre}: punto neutro (Finalizado)`, m.punto && m.punto.color === 'rgb(148, 163, 184)', m.punto);
+      }
+      check(`${a.nombre}: aspecto 2/3`, m.imgAspect === '2 / 3', m.imgAspect);
+      check(`${a.nombre}: imagen radio --r-md`, m.imgRadius === '12px', m.imgRadius);
+      log('ficha ancho', a.nombre, 'marco=', m.marco?.w, 'tarjetaEp=', m.tarjetaEp && `${m.tarjetaEp.w}x${m.tarjetaEp.h}`, 'cols=', m.columnas);
+    }
+  });
+
+  // --- B. Sinopsis: expandir y colapsar (360, AnimeAV1 Bleach) ---
+  await paso('B', async () => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await gotoApp(page);
+    await buscar(page, 'bleach');
+    await abrirDetalle(page, 'animeav1');
+    const cerrada = await page.evaluate(MEDIR_FICHA);
+    const hCerrada = cerrada.ficha.h;
+    await captura('detalle_animeav1_360_cerrada');
+    await page.locator('.ficha .ver-mas').click();
+    await page.waitForTimeout(400);
+    const abierta = await page.evaluate(MEDIR_FICHA);
+    rep.sinopsis = { hCerrada, hAbierta: abierta.ficha.h };
+    await captura('detalle_animeav1_360_abierta');
+    check('B: al abrir crece la ficha', abierta.ficha.h > hCerrada, rep.sinopsis);
+    check('B: "Ver menos" con aria-expanded=true', abierta.verMas?.texto === 'Ver menos' && abierta.verMas?.aria === 'true', abierta.verMas);
+    check('B: sinopsis completa sin recorte', abierta.sinopsis?.lineClamp !== '4' && abierta.sinopsis?.desborda === false, abierta.sinopsis);
+    await page.locator('.ficha .ver-mas').click();
+    await page.waitForTimeout(400);
+    const recerrada = await page.evaluate(MEDIR_FICHA);
+    check('B: al colapsar vuelve a 4 líneas', recerrada.sinopsis?.lineas === 4, recerrada.sinopsis);
+    check('B: "Ver más" de nuevo', recerrada.verMas?.texto === 'Ver más' && recerrada.verMas?.aria === 'false', recerrada.verMas);
+  });
+
+  // --- C. Resize 800 → 1000 → 800 conservando el estado abierto ---
+  await paso('C', async () => {
+    await page.setViewportSize({ width: 800, height: 900 });
+    await gotoApp(page);
+    await buscar(page, 'bleach');
+    await abrirDetalle(page, 'animeav1');
+    const a800 = await page.evaluate(MEDIR_FICHA);
+    check('C: 800 con "Ver más"', !!a800.verMas, a800.verMas);
+    await page.locator('.ficha .ver-mas').click();
+    await page.waitForTimeout(300);
+    await page.setViewportSize({ width: 1000, height: 900 });
+    await page.waitForTimeout(700);
+    const a1000 = await page.evaluate(MEDIR_FICHA);
+    check('C: 1000 sin botón ni recorte', a1000.verMas === null && a1000.sinopsis?.lineClamp !== '4', { verMas: a1000.verMas, lineClamp: a1000.sinopsis?.lineClamp });
+    await page.setViewportSize({ width: 800, height: 900 });
+    await page.waitForTimeout(700);
+    const volvio = await page.evaluate(MEDIR_FICHA);
+    check('C: 800 de vuelta con botón', !!volvio.verMas, volvio.verMas);
+    check('C: conserva el estado abierto ("Ver menos")', volvio.verMas?.texto === 'Ver menos' && volvio.verMas?.aria === 'true', volvio.verMas);
+    await page.locator('.ficha .ver-mas').click().catch(() => {});
+    await page.waitForTimeout(200);
+  });
+
+  // --- D. Géneros con scroll horizontal real (360) ---
+  await paso('D', async () => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await gotoApp(page);
+    await buscar(page, 'bleach');
+    await abrirDetalle(page, 'animeav1');
+    const m = await page.evaluate(MEDIR_FICHA);
+    check('D: 5 géneros (AnimeAV1 Bleach)', m.chips.length === 4 && (m.generos?.scrollWidth ?? 0) > 0, m.generos);
+    const desplazo = await page.evaluate(() => {
+      const g = document.querySelector('.ficha .generos');
+      g.scrollLeft = 200;
+      return g.scrollLeft;
+    });
+    check('D: los géneros se desplazan (scrollLeft > 0)', desplazo > 0, desplazo);
+    await page.evaluate(() => { document.querySelector('.ficha .generos').scrollLeft = 0; });
+  });
+
+  // --- E. Estado "En emisión": punto de marca (AnimeAV1, dato real) ---
+  await paso('E', async () => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await gotoApp(page);
+    await page.waitForSelector('.fila .carrusel .tarjeta', { timeout: 60000 }).catch(() => {});
+    await buscar(page, 'battle spirits');
+    await abrirDetalle(page, 'animeav1');
+    const m = await page.evaluate(MEDIR_FICHA);
+    rep.emision = { chips: m.chips.map((c) => c.texto), punto: m.punto };
+    const chipEstado = m.chips.find((c) => c.texto === 'En emisión');
+    check('E: chip "En emisión" presente (AnimeAV1 con acento)', !!chipEstado, m.chips.map((c) => c.texto));
+    check('E: punto de marca (--brand-400) por "En emisión"', !!m.punto && m.punto.color === 'rgb(52, 211, 153)', m.punto);
+  });
+
+  // --- F. Estado vacío simulado: sin chip de estado ---
+  await paso('F', async () => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await gotoApp(page);
+    await page.waitForSelector('.fila .carrusel .tarjeta', { timeout: 60000 }).catch(() => {});
+    await page.evaluate(() => {
+      const App = window.go.main.App;
+      window.__origDet79 = App.GetAnimeDetails;
+      App.GetAnimeDetails = async (p, id) => {
+        const d = await window.__origDet79(p, id);
+        const det = d.detail ?? d.Detail;
+        if (det) det.status = '';
+        return d;
+      };
+    });
+    await buscar(page, 'bleach');
+    await abrirDetalle(page, 'animeav1');
+    const m = await page.evaluate(MEDIR_FICHA);
+    check('F: estado vacío → 3 chips, sin chip de estado', m.chips.length === 3, m.chips.map((c) => c.texto));
+    check('F: sin punto de estado', m.punto === null, m.punto);
+    await page.evaluate(() => { const App = window.go.main.App; if (window.__origDet79) App.GetAnimeDetails = window.__origDet79; });
+  });
+
+  // --- G. Sinopsis corta simulada: sin botón "Ver más" ---
+  await paso('G', async () => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await gotoApp(page);
+    await page.waitForSelector('.fila .carrusel .tarjeta', { timeout: 60000 }).catch(() => {});
+    await page.evaluate(() => {
+      const App = window.go.main.App;
+      window.__origDet79b = App.GetAnimeDetails;
+      App.GetAnimeDetails = async (p, id) => {
+        const d = await window.__origDet79b(p, id);
+        const det = d.detail ?? d.Detail;
+        if (det) det.synopsis = 'Sinopsis breve de prueba.';
+        return d;
+      };
+    });
+    await buscar(page, 'bleach');
+    await abrirDetalle(page, 'animeav1');
+    const m = await page.evaluate(MEDIR_FICHA);
+    check('G: sinopsis corta sin botón "Ver más"', m.verMas === null, { verMas: m.verMas, sinopsis: m.sinopsis });
+    check('G: sinopsis corta no recortada', !!m.sinopsis && m.sinopsis.desborda === false, m.sinopsis);
+    await captura('detalle_sinopsis_corta_360');
+    await page.evaluate(() => { const App = window.go.main.App; if (window.__origDet79b) App.GetAnimeDetails = window.__origDet79b; });
+  });
+
+  // --- H. Detalle JKAnime: 360, 768 y 1280 ---
+  await paso('H', async () => {
+    for (const a of [{ w: 360, h: 740, nombre: '360' }, { w: 768, h: 1024, nombre: '768' }, { w: 1280, h: 800, nombre: '1280' }]) {
+      await page.setViewportSize({ width: a.w, height: a.h });
+      await gotoApp(page);
+      await buscar(page, 'bleach');
+      await abrirDetalle(page, 'jkanime');
+      const m = await page.evaluate(MEDIR_FICHA);
+      rep.anchos.push({ ancho: a.nombre, vista: 'jkanime', ...m });
+      await captura(`detalle_jkanime_${a.nombre}`);
+      check(`H ${a.nombre}: 4 chips`, m.chips.length === 4, m.chips.map((c) => c.texto));
+      check(`H ${a.nombre}: overflowH = 0`, m.overflowH === 0, m.overflowH);
+      if (a.w < 900) {
+        check(`H ${a.nombre}: punto neutro ("Concluido")`, m.punto && m.punto.color === 'rgb(148, 163, 184)', m.punto);
+        check(`H ${a.nombre}: "Ver más" presente`, !!m.verMas, m.verMas);
+      } else {
+        check(`H ${a.nombre}: sin "Ver más"`, m.verMas === null, m.verMas);
+      }
+    }
+  });
+
+  // --- I. 1024/1280: geometría de la rejilla de episodios ---
+  await paso('I', async () => {
+    for (const a of [{ w: 1024, h: 768, nombre: '1024' }, { w: 1280, h: 800, nombre: '1280' }]) {
+      await page.setViewportSize({ width: a.w, height: a.h });
+      await gotoApp(page);
+      await buscar(page, 'bleach');
+      await abrirDetalle(page, 'animeav1');
+      const m = await page.evaluate(MEDIR_FICHA);
+      rep.anchos.push({ ancho: a.nombre, vista: 'rejilla', ...m });
+      const base = rep.geo[a.nombre];
+      check(
+        `${a.nombre}: tarjeta de episodio 170,39 de alto (sin cambios)`,
+        !!m.tarjetaEp && Math.abs(m.tarjetaEp.h - 170.39) <= 0.5,
+        { base: base?.tarjeta, actual: m.tarjetaEp }
+      );
+      check(`${a.nombre}: columnas de la rejilla iguales`, m.columnas === base?.columnas, { base: base?.columnas, actual: m.columnas });
+      rep.geo[`${a.nombre}_delta`] = {
+        y: m.tarjetaEp ? Math.round((m.tarjetaEp.y - base.tarjeta.y) * 100) / 100 : null,
+        fichaH: base.fichaH !== undefined && m.ficha ? Math.round((m.ficha.h - base.fichaH) * 100) / 100 : null,
+      };
+    }
+  });
+
+  // --- J. T66/T67, revelado T65 y cabecera fija T74 intactos (360) ---
+  await paso('J', async () => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await gotoApp(page);
+    await buscar(page, 'bleach');
+    await abrirDetalle(page, 'animeav1');
+    await page.waitForSelector('.rejilla .celda .tarjeta', { timeout: 60000 }).catch(() => {});
+    await page.evaluate(() => {
+      const r = document.querySelector('.rejilla');
+      window.scrollTo(0, r.getBoundingClientRect().top + window.scrollY);
+    });
+    await page.waitForTimeout(1000);
+    const entra = await page.evaluate(() => document.querySelectorAll('.celda.entra').length);
+    rep.entra = entra;
+    check('J: revelado T65 activo (.entra > 0)', entra > 0, entra);
+    await page.waitForTimeout(100);
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await page.waitForTimeout(500);
+    const yAntes = await page.evaluate(() => Math.round(window.scrollY));
+    const cabFija = await page.evaluate(() => {
+      const c = document.querySelector('main .cabecera');
+      const d = document.documentElement;
+      const sat = parseFloat(getComputedStyle(d).getPropertyValue('--sat')) || 0;
+      return { posicion: c ? getComputedStyle(c).position : null, y: c ? Math.round(c.getBoundingClientRect().y) : null, sat };
+    });
+    check('J: cabecera fija T74 sticky al scrollear', cabFija.posicion === 'sticky' && Math.abs(cabFija.y - cabFija.sat) <= 2, cabFija);
+    const ultima = page.locator('.rejilla .celda .tarjeta').last();
+    if (yAntes > 0 && (await ultima.count())) {
+      await ultima.click();
+      await page.waitForTimeout(1800);
+      await page.locator('.cabecera .atras').first().click();
+      await page.waitForTimeout(1200);
+      const yDespues = await page.evaluate(() => Math.round(window.scrollY));
+      check('J: T66/T67 scroll del detalle restaurado', Math.abs(yDespues - yAntes) <= 5, { yAntes, yDespues });
+    } else {
+      check('J: T66/T67 scroll del detalle restaurado', false, { yAntes });
+    }
+  });
+
+  // --- K. prefers-reduced-motion: sin transiciones en la ficha ---
+  await paso('K', async () => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await gotoApp(page);
+    await buscar(page, 'bleach');
+    await abrirDetalle(page, 'animeav1');
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const td = await page.evaluate(() => {
+      const el = document.querySelector('.ficha .ver-mas');
+      return el ? getComputedStyle(el).transitionDuration : 'n/a';
+    });
+    check('K: reduced-motion sin transición en "Ver más"', td === '0s' || td === 'n/a', td);
+    await page.emulateMedia({ reducedMotion: null });
+  });
+
+  // --- L. Objetivos táctiles <44 px nuevos (360, detalle) ---
+  await paso('L', async () => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await gotoApp(page);
+    await buscar(page, 'bleach');
+    await abrirDetalle(page, 'animeav1');
+    rep.tactiles = (await page.evaluate(TACTILES_CHICOS)).map((t) => ({ ...t, estado: 'detalle_360' }));
+    const enFicha = rep.tactiles.filter((t) => t.texto.includes('Ver'));
+    check('L: "Ver más" ≥44 px (no aparece en la lista)', enFicha.length === 0, enFicha);
+    log('ficha táctiles <44:', rep.tactiles.length);
+  });
+
+  writeFileSync(join(dirOut, 'ficha.json'), JSON.stringify(rep, null, 2));
+  await browser.close();
+  return rep;
+}
+
+// ---------------------------------------------------------------------------
 // CLI
 // ---------------------------------------------------------------------------
 
@@ -2536,6 +2959,32 @@ if (modo === 'comparar') {
   for (const t of rep.tactiles) console.log(`- ${t.texto} ${t.w}×${t.h}`);
   if (rep.errores.length) console.log('\nErrores:', rep.errores);
   console.log(`\nCapturas (${process.argv[3] ?? 'docs/img/v1.4/busqueda'}): ${rep.capturas.join(', ') || 'ninguna'}`);
+} else if (modo === 'ficha') {
+  const rep = await ficha();
+  console.log('## Modo ficha (T79) — ficha de detalle\n');
+  console.log('| vista@ancho | ficha w×h | marco w×h | chips | géneros | sinopsis líneas | "Ver más" | tarj.ep w×h | cols | overflowH |');
+  console.log('|---|---:|---:|---:|---|---:|:--:|---:|---:|---:|');
+  for (const m of rep.anchos) {
+    const fmt = (r) => (r ? `${r.w}×${r.h}` : '—');
+    console.log(
+      `| ${m.vista ? `${m.vista}@` : ''}${m.ancho} | ${fmt(m.ficha)} | ${fmt(m.marco)} | ${m.chips.length} | ` +
+        `${m.generos ? `${m.generos.flexWrap}/${m.generos.overflowX}` : '—'} | ${m.sinopsis?.lineas ?? '—'} | ` +
+        `${m.verMas ? `${m.verMas.texto} ${m.verMas.rect.h}px` : '—'} | ${fmt(m.tarjetaEp)} | ${m.columnas} | ${m.overflowH} |`
+    );
+  }
+  console.log('\nAltura de la ficha (360):', JSON.stringify(rep.sinopsis));
+  console.log('Estado "En emisión":', JSON.stringify(rep.emision));
+  console.log('Revelado T65 (.entra):', rep.entra);
+  const fallos = rep.funciones.filter((f) => !f.ok);
+  console.log('\n| comprobación | ok | detalle |');
+  console.log('|---|:--:|---|');
+  for (const f of rep.funciones)
+    console.log(`| ${f.nombre} | ${f.ok ? 'sí' : 'NO'} | ${f.detalle === null ? '' : JSON.stringify(f.detalle)} |`);
+  console.log(`\nComprobaciones: ${rep.funciones.length - fallos.length}/${rep.funciones.length} OK`);
+  console.log(`Táctiles <44 px visibles en el detalle (${rep.tactiles.length}):`);
+  for (const t of rep.tactiles) console.log(`- ${t.texto} ${t.w}×${t.h}`);
+  if (rep.errores.length) console.log('\nErrores:', rep.errores);
+  console.log(`\nCapturas (${process.argv[3] ?? 'docs/img/v1.4/ficha'}): ${rep.capturas.join(', ') || 'ninguna'}`);
 } else {
   const dirOut = process.argv[3] ?? DIR_DEF;
   const res = await capturar(dirOut);

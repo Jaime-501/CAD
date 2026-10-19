@@ -1,4 +1,4 @@
-    # PROGRESO — Comfort Anime Desktop (T01–T78 hechas)
+    # PROGRESO — Comfort Anime Desktop (T01–T79 hechas)
 
 > Este archivo es la **memoria entre sesiones**. Cada sesión lo lee al inicio y lo actualiza al final.
 > Reglas y layout: `tareas/00_REGLAS.md`. Detalle de cada tarea: `tareas/Txx.md`.
@@ -148,6 +148,7 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha y verificada
 | [x] | T76 | Filas y tarjetas del Home (v1.4.0) | T75 |
 | [x] | T77 | Fila "Continuar viendo" del Home (v1.4.0) | T76 |
 | [x] | T78 | Rejilla de resultados de búsqueda y estados (v1.4.0) | T77 |
+| [x] | T79 | Ficha de detalle: portada, metadatos, géneros y sinopsis (v1.4.0) | T74, T78 |
 
 T01–T29 = v1.0 (`docs/PROGRESO_v1.0.md`) · T30–T35 = v1.1.0 AnimeAV1 (`docs/PROGRESO_v1.1.md`) · T36 = cierre de la v1.1.0 · T37 = portabilidad Android · T38 = cierre documental de T37.
 T39–T57 = v1.2.0 (Home, historial lateral, favoritos, "Siguiente" y su estado discreto; **incluye T53b y T57**); plan en `tareas/v1.2_PLAN.md`, detalle **T39–T58 + cierres T56/T59** archivado en `docs/PROGRESO_v1.2.md`, con resúmenes al final de este archivo.
@@ -155,7 +156,7 @@ La **v1.2.0 está PUBLICADA** (prueba manual con el `.exe` y release hechas por 
 
 **v1.3.0 — episodios incrementales** (rama `feature/episodios-incrementales`): serie **T64–T69** para mostrar los episodios del detalle de forma incremental y con animación de entrada. **T64** (lógica pura de `ventana.ts` + tests), **T65** (revelado animado por visibilidad, sin paginar), **T66** (clave de scroll del detalle por proveedor + slug) y **T67** (restauración del scroll del detalle cuando la lista se recarga) hechas; **T68** (cierre documental de la v1.3.0) hecho: `productVersion` **1.3.0**, **sin tag ni release** (los hace el humano). Los **T66–T67 originales** (paginado / ventana client-side) quedan **descartados** por las mediciones de T65 (sin jank y con 0 saltos de scroll; el coste real es de red, ya cubierto por el mostrado por lotes); **T69 pendiente** de la serie. Notas largas de T64–T67 archivadas en `docs/PROGRESO_v1.3.md`.
 
-**v1.4.0 — rediseño y enfoque móvil** (rama `feature/rediseno-movil`): serie nueva que empieza con **T69** (auditoría de UI base, **solo lectura**: inventario, literales CSS, 24 capturas a 360/768/1280, métricas por vista y extracción de la paleta de los 4 HTML de Stitch), hecha y documentada en `docs/investigacion/ui_base.md`; los scripts de medición viven en `docs/investigacion/ui/` y las capturas en `docs/img/v1.4/base/`. **No se tocó código** (`frontend/**`, `*.go`, `package.json`, `wails.json` intactos). Le sigue **T70** (tokens de diseño: un bloque `:root` **añadido** a `frontend/src/style.css` con las variables del rediseño —colores, superficies, bordes, texto, marca, semánticos, radios, sombras, marco de póster, blur, movimiento, espacio, táctil, gutter y capas—, **sin modificar ninguna línea existente** y sin cambio visual; documentadas en `docs/investigacion/ui_tokens.md` con la tabla de contraste de `docs/investigacion/ui/contraste.mjs`; las `--cad-*` quedan como legado hasta **T93**) y **T71** (base global móvil: fuentes locales **Inter**/Outfit por subconjunto latin, escala tipográfica y safe-area como tokens, `viewport-fit=cover`, corrección del fondo dividido, `:focus-visible` y ajustes táctiles; herramienta reutilizable `docs/investigacion/ui/verificar_ui.mjs`). Le sigue **T72** (primitivas de UI e iconos: 6 componentes **nuevos** — `Icono`, `Btn`, `Chip`, `Insignia`, `Esqueleto` y `EstadoVista` — con tokens, sin migrar ningún componente existente; el arnés de galería fue temporal) y **T72b** (puente de color: los 15 `.svelte` existentes dejan de escribir literales de color/radio/sombra/`--cad-*` y pasan a los tokens de T70 —solo dentro de `<style>`—, documentado en `docs/investigacion/ui_mapeo_color.md`; sin cambio de geometría). Le sigue **T73** (barra de navegación inferior móvil y cajón de historial: en modo estrecho —< 900 px— la hamburguesa se sustituye por una barra fija de 4 destinos —Descubrir, Buscar, Favoritos, Historial— con tokens, safe-area y objetivos táctiles de 44 px, reutilizando el cajón existente; en modo ancho, sin cambios). Próximas tareas de la serie: pendientes de definir. Los `--cad-*` siguen **definidos** en `style.css` (sin uso) hasta **T93**.
+**v1.4.0 — rediseño y enfoque móvil** (rama `feature/rediseno-movil`): serie nueva que empieza con **T69** (auditoría de UI base, **solo lectura**: inventario, literales CSS, 24 capturas a 360/768/1280, métricas por vista y extracción de la paleta de los 4 HTML de Stitch), hecha y documentada en `docs/investigacion/ui_base.md`; los scripts de medición viven en `docs/investigacion/ui/` y las capturas en `docs/img/v1.4/base/`. **No se tocó código** (`frontend/**`, `*.go`, `package.json`, `wails.json` intactos). Le sigue **T70** (tokens de diseño: un bloque `:root` **añadido** a `frontend/src/style.css` con las variables del rediseño —colores, superficies, bordes, texto, marca, semánticos, radios, sombras, marco de póster, blur, movimiento, espacio, táctil, gutter y capas—, **sin modificar ninguna línea existente** y sin cambio visual; documentadas en `docs/investigacion/ui_tokens.md` con la tabla de contraste de `docs/investigacion/ui/contraste.mjs`; las `--cad-*` quedan como legado hasta **T93**) y **T71** (base global móvil: fuentes locales **Inter**/Outfit por subconjunto latin, escala tipográfica y safe-area como tokens, `viewport-fit=cover`, corrección del fondo dividido, `:focus-visible` y ajustes táctiles; herramienta reutilizable `docs/investigacion/ui/verificar_ui.mjs`). Le sigue **T72** (primitivas de UI e iconos: 6 componentes **nuevos** — `Icono`, `Btn`, `Chip`, `Insignia`, `Esqueleto` y `EstadoVista` — con tokens, sin migrar ningún componente existente; el arnés de galería fue temporal) y **T72b** (puente de color: los 15 `.svelte` existentes dejan de escribir literales de color/radio/sombra/`--cad-*` y pasan a los tokens de T70 —solo dentro de `<style>`—, documentado en `docs/investigacion/ui_mapeo_color.md`; sin cambio de geometría). Le sigue **T73** (barra de navegación inferior móvil y cajón de historial: en modo estrecho —< 900 px— la hamburguesa se sustituye por una barra fija de 4 destinos —Descubrir, Buscar, Favoritos, Historial— con tokens, safe-area y objetivos táctiles de 44 px, reutilizando el cajón existente; en modo ancho, sin cambios). Después siguieron **T74** (cabecera compacta de detalle/reproductor), **T75** (buscador y pestañas del Home), **T76** (filas y tarjetas del Home), **T77** (fila «Continuar viendo»), **T78** (rejilla de resultados de búsqueda y estados) y **T79** (ficha de detalle: portada, metadatos, géneros y sinopsis); cada una tiene su bloque al final de este archivo. Próximas tareas de la serie (p. ej. **T80**, el botón «Continuar»): pendientes de definir. Los `--cad-*` siguen **definidos** en `style.css` (sin uso) hasta **T93**.
 
 ## Auditoría de portabilidad (T37)
 
@@ -1238,3 +1239,62 @@ La **rejilla** pasa de `auto-fill minmax(160px)` + `gap: 20px` (valores fijos) a
 **Capturas** en `docs/img/v1.4/busqueda/`: `resultados_360_arriba.png`, `resultados_360_scroll.png`, `resultados_768.png`, `resultados_1280.png`, `esqueleto_360.png`, `error_360.png`, `vacio_360.png` (+ `busqueda.json`).
 
 **Archivos tocados:** `frontend/src/VistaBusqueda.svelte` (**markup + `<style>`**, lógica intacta), `docs/investigacion/ui/verificar_ui.mjs` (modo `busqueda` **nuevo** + `abrirDetalle`/`abrirDetalleLargo` a `.etiqueta`), `docs/img/v1.4/busqueda/**` y `PROGRESO.md`. **Nada fuera de "Puedes tocar"** (regla 7 no se activó): `*.go`, `frontend/wailsjs/**`, `api.ts`, `stores.ts`, `views.ts`, `ui.ts`, `historial.ts`, `GridFavoritos`, `FilaAnimes`, `TarjetaAnime`, `VistaInicio`, `BarraInferior`, `index.html` y los componentes de T72 intactos. **Sin tag ni release** (los hace el humano); **T79 no iniciada**.
+
+## T79 — Ficha de detalle: portada, metadatos, géneros y sinopsis (v1.4.0) — bloque de esta sesión
+
+Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**. Fecha **2026-10-18**. Rediseña la **ficha de detalle** (`VistaDetalle.svelte`, dentro de `section.ficha`) reutilizando las **primitivas de T72** (`Insignia`, `Icono`) y la cabecera de T74. **Solo se toca el `<style>` de la ficha y su markup**; el `<script>` recibe únicamente el import de `Insignia`/`Icono`/`isNarrow` y **24 líneas** (comentario incluido) para la sinopsis plegable; **el resto de la lógica del detalle (T66/T67, revelado T65, carga, `abrirEpisodio`, `continuar` y el botón «Continuar») queda intacto**.
+
+- **Portada**: se envuelve en `.portada-marco` (padding 3 px con `--frame-poster`, radio `--r-lg`, sombra `--sh-panel`); la imagen mantiene `aspect-ratio: 2/3` y radio `--r-md`. En estrecho (`< 900 px`) la portada va **centrada** arriba (`width: min(45%, 200px)`) y los datos debajo; en ancho queda a la izquierda (220 px, **máx. 35 %** como hoy).
+- **Metadatos**: la línea `·`-separada pasa a **4 insignias** (`Insignia`): proveedor en `tono="marca"` (valor crudo `jkanime`/`animeav1`), tipo (`etiquetaTipo`) y total (`N episodios`) en `tono="neutro"`, y estado neutro con un **punto** de 8 px (`--sp-2`) delante. El punto usa **`--brand-400` solo con el valor exacto `"En emisión"`** (grafía de AnimeAV1); en cualquier otro texto (p. ej. el `"En emision"` sin tilde de JKAnime) es neutro (`--text-3`). Si el estado viene vacío, el chip no se pinta.
+- **Géneros**: en estrecho, **una sola línea con scroll horizontal** (sin barra nativa) que sangra hasta el borde de la ficha con márgenes negativos (`calc(-1 * var(--sp-4))`); en ancho, `flex-wrap: wrap` como hoy.
+- **Sinopsis**: en estrecho se **recorta a 4 líneas** (`-webkit-line-clamp: 4`) y aparece un botón **«Ver más»/«Ver menos»** con `aria-expanded` y `min-height: var(--tap)` (44 px) e icono `chevron-abajo`; solo se muestra si la sinopsis **desborda** (medido por `scrollHeight > clientHeight`, en `requestAnimationFrame` y al `resize`, nunca con la sinopsis abierta). En ancho no hay recorte ni botón. El botón **«Continuar»** sigue debajo, intacto (lo rediseña **T80**).
+
+**Resultados de la verificación** (modo `ficha` **nuevo** en `verificar_ui.mjs`, localhost:34115, red real; AnimeAV1/JKAnime «bleach»):
+
+| ancho | cols rejilla | ficha w×h | marco w×h | chips | géneros | sinopsis líneas | «Ver más» | tarj.ep w×h | `overflowH` |
+|---|:--:|---:|---:|---:|---|---:|:--:|---:|---:|
+| 360 | 1 | 328×521,22 | 132,3×195,44 | 4 | nowrap/auto | 4 | 44 px | 328×170,39 | 0 |
+| 390 | 1 | 358×509,08 | 145,8×215,69 | 4 | nowrap/auto | 4 | 44 px | 358×170,39 | 0 |
+| 768 | 3 | 720×590,39 | 200×297 | 4 | nowrap/auto | 4 | 44 px | 228×170,39 | 0 |
+| 1024 | 3 | 660×740,39 | 216,3×321,44 | 4 | wrap | 24 | — | 208×170,39 | 0 |
+| 1280 | 4 | 916×524,39 | 220×327 | 4 | wrap | 15 | — | 215,5×170,39 | 0 |
+
+(JKAnime «bleach»: 360 → 328×521,22 · 768 → 720×590,39 · 1280 → 916×404,39.)
+
+| comprobación (106 en total) | resultado |
+|---|---|
+| A: 5 anchos — `overflowH = 0`, **4 chips** (marca + 3 neutras), portada centrada ≤ 200 px (estrecho) / 220 px-máx 35 % (ancho), marco padding 3 px, aspecto 2/3, imagen radio 12 px | **sí** |
+| A: estrecho — sinopsis **4 líneas** recortada (`-webkit-line-clamp: 4`), «Ver más» ≥ 44 px con `aria-expanded=false`, géneros `nowrap`/`auto`, ficha padding 16 px | **sí** |
+| A: ancho — **sin** «Ver más», sinopsis sin límite, géneros `wrap`, punto neutro («Finalizado») | **sí** |
+| B: 360 — al pulsar «Ver más» la ficha crece (**521,22 → 1169,22**) y pasa a «Ver menos» (`aria-expanded=true`); al colapsar vuelve a 4 líneas | **sí** |
+| C: resize **800 → 1000 → 800** — a 1000 desaparece el botón/recorte; de vuelta a 800 reaparece **conservando el estado abierto** («Ver menos») | **sí** |
+| D: los géneros **se desplazan de verdad** (`scrollLeft = 200`) | **sí** |
+| E: dato real AnimeAV1 «En emisión» (`battle-spirits-re-zekkai-no-kuu`) → chip `En emisión` y **punto `--brand-400`** `rgb(52,211,153)` | **sí** |
+| F: estado vacío simulado → **3 chips**, sin punto | **sí** |
+| G: sinopsis corta simulada → **sin** botón «Ver más», sin recorte | **sí** |
+| H: JKAnime 360/768/1280 — 4 chips, `overflowH = 0`, punto neutro («Concluido»), «Ver más» solo en estrecho | **sí** |
+| I: rejilla de episodios **sin cambios** — tarjeta de episodio **170,39 px** de alto y mismas columnas (3 @1024, 4 @1280) | **sí** |
+| J: revelado T65 (`.entra = 4`), cabecera fija T74 (`sticky`) y scroll T66/T67 restaurado | **sí** |
+| K: `prefers-reduced-motion: reduce` → «Ver más» sin transición (`0s`) | **sí** |
+| L: táctiles < 44 px en el detalle (360) — **1** (el botón «Continuar», 103×35; lo rediseña **T80**); «Ver más» **no** aparece en la lista (es ≥ 44) | **sí** |
+| `npm run check` | **0 errores / 0 avisos** |
+| `npm run build` | **OK** (`index-Qn4W6-Ir.js`, 710,34 kB) |
+| tests `.ts` | **13 / 48 / 32** comprobaciones OK (`views`, `ventana`, `etiquetas`; sin test nuevo, no hay lógica pura nueva) |
+| `gofmt -l .` / `go vet ./...` / `go test -race -count=1 ./...` | **sin salida** / **sin salida** / **435 `--- PASS` de nivel superior** (+281 subtests), 0 FAIL (`*.go` intactos) |
+| `grep -rn wailsjs frontend/src` | **solo `api.ts`** |
+
+**Geometría (desviaciones > 2 px, documentadas):**
+- **Ancho estrecho (360):** la ficha pasa de **~1000/1216 px** (sinopsis completa, sin recorte) a **521,22 px** cerrada (**1169,22** abierta) — es el objetivo de T79 (la sinopsis se pliega).
+- **641–899 px (p. ej. 768):** la portada deja de ir **en fila** (se mostraba a la derecha en 768) y pasa a **columna** con la portada centrada; la ficha queda en **590,39 px** (antes ~657). El breakpoint de la portada cambia de **640 px a 899 px** (641–899 ya no son «ancho»).
+- **≥ 900 px:** la ficha crece **~11 px** (1280: **513 → 524,39**; JKAnime 393 → 404,39) por el borde de 1 px, las insignias (una fila de ~24 px frente a la línea de texto) y el marco de la portada. La **rejilla de episodios no se mueve más allá de ese corrimiento**: tarjeta **170,39 px** y columnas idénticas (paso I).
+
+**Desviaciones (documentadas):**
+- **`box-sizing: border-box` en `.portada-marco`.** Sin él, `max-width: 35 %` se aplicaba al **contenido** y el marco medía **226 px** (1280) / 222,3 (1024) en vez de cuadrar con la portada previa. Con `border-box`, el ancho **externo** coincide con el de hoy (**220 px** / 216,3 px @1024); la imagen interior queda ~6 px menor (el padding de 3 px del marco). Ancho «hoy» tomado de la portada previa (mismo `max-width: 35 %`, mismo comportamiento).
+- **Breakpoint de la portada estrecha 640 → 899 px.** Consecuencia de unificar el modo estrecho en `< 900 px`; a 768 la ficha ahora es columna (antes fila). Documentado en la geometría de arriba.
+- **`padding` de la ficha en estrecho 20 → 16 px** (`var(--sp-4)`), como el resto de tarjetas de la serie; se suma al cambio de geometría de las vistas estrechas.
+- **El punto de estado distingue la tilde.** Solo `"En emisión"` (AnimeAV1) pinta el punto de **marca**; JKAnime devuelve `"En emision"` (sin tilde) y sale **neutro** — es lo esperado por el diseño (comparación literal), no un fallo.
+- **`abrirFilaHome` queda en el arnés sin uso** tras reescribir el paso E con **dato real** (busca «battle spirits» y abre el primer resultado AnimeAV1, que es el que emite). Se deja por si futuras verificaciones necesitan abrir una fila del Home por su título.
+
+**Capturas** en `docs/img/v1.4/ficha/`: `detalle_animeav1_360.png`, `detalle_animeav1_360_cerrada.png`, `detalle_animeav1_360_abierta.png`, `detalle_sinopsis_corta_360.png`, `detalle_jkanime_360.png`, `detalle_jkanime_768.png`, `detalle_jkanime_1280.png` (+ `ficha.json`).
+
+**Archivos tocados:** `frontend/src/VistaDetalle.svelte` (**markup + `<style>` de la ficha**; `<script>`: imports + **24 líneas** de sinopsis plegable), `docs/investigacion/ui/verificar_ui.mjs` (modo `ficha` **nuevo**), `docs/img/v1.4/ficha/**` y `PROGRESO.md`. **Nada fuera de "Puedes tocar"** (regla 7 no se activó): `*.go`, `frontend/wailsjs/**`, `api.ts`, `stores.ts`, `views.ts`, `ui.ts`, `CabeceraVista`, `TarjetaEpisodio`, `BotonFavorito`, `revelar.ts`, `ventana.ts`, `index.html`, la rejilla de episodios y el botón «Continuar» (T80) intactos. **Sin tag ni release** (los hace el humano); **T80 no iniciada**.

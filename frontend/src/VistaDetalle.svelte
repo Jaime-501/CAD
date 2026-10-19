@@ -16,10 +16,13 @@
     progressToMap,
   } from './stores';
   import { atras, claveScroll, navegarA, recuperarScroll, seleccion } from './views';
+  import { isNarrow } from './ui';
   import { COLUMNAS_POR_DEFECTO } from './ventana';
   import { medirColumnas, revelar } from './revelar';
   import BotonFavorito from './BotonFavorito.svelte';
   import CabeceraVista from './CabeceraVista.svelte';
+  import Insignia from './Insignia.svelte';
+  import Icono from './Icono.svelte';
   import TarjetaEpisodio from './TarjetaEpisodio.svelte';
 
   let cargando = true;
@@ -207,6 +210,31 @@
   function continuar(): void {
     if (episodioContinuar) abrirEpisodio(episodioContinuar);
   }
+
+  // T79: sinopsis con "Ver más" sólo en estrecho; se mide tras pintar y en resize.
+  let sinopsisAbierta = false;
+  let sinopsisDesborda = false;
+  let sinopsisEl: HTMLParagraphElement | undefined = undefined;
+  let frameSinopsis: number | null = null;
+
+  function programarMedirSinopsis(): void {
+    if (frameSinopsis !== null) return;
+    frameSinopsis = requestAnimationFrame(() => {
+      frameSinopsis = null;
+      if (sinopsisAbierta || !sinopsisEl) return;
+      sinopsisDesborda = $isNarrow && sinopsisEl.scrollHeight > sinopsisEl.clientHeight + 1;
+    });
+  }
+
+  $: if ($currentDetail?.synopsis && $isNarrow) programarMedirSinopsis();
+
+  onMount(() => {
+    window.addEventListener('resize', programarMedirSinopsis);
+    return () => {
+      window.removeEventListener('resize', programarMedirSinopsis);
+      if (frameSinopsis !== null) cancelAnimationFrame(frameSinopsis);
+    };
+  });
 </script>
 
 <main class="contenedor">
@@ -234,16 +262,31 @@
   {:else if $currentDetail}
     <section class="ficha">
       {#if $currentDetail.cover !== ''}
-        <img class="portada" src={$currentDetail.cover} alt={$currentDetail.title} />
+        <div class="portada-marco">
+          <img class="portada" src={$currentDetail.cover} alt={$currentDetail.title} />
+        </div>
       {/if}
       <div class="datos">
-        <p class="linea">
-          {$currentDetail.provider}
-          {#if tipoEtiqueta !== ''}· {tipoEtiqueta}{/if}
-          {#if $currentDetail.status !== ''}· {$currentDetail.status}{/if}
-          · {$currentDetail.total_episodes}
-          {$currentDetail.total_episodes === 1 ? 'episodio' : 'episodios'}
-        </p>
+        <div class="metadatos">
+          <Insignia tono="marca">{$currentDetail.provider}</Insignia>
+          {#if tipoEtiqueta !== ''}
+            <Insignia tono="neutro">{tipoEtiqueta}</Insignia>
+          {/if}
+          {#if $currentDetail.status !== ''}
+            <Insignia tono="neutro">
+              <span
+                class="punto"
+                class:emision={$currentDetail.status === 'En emisión'}
+                aria-hidden="true"
+              ></span>
+              {$currentDetail.status}
+            </Insignia>
+          {/if}
+          <Insignia tono="neutro">
+            {$currentDetail.total_episodes}
+            {$currentDetail.total_episodes === 1 ? 'episodio' : 'episodios'}
+          </Insignia>
+        </div>
         {#if $currentDetail.genres?.length}
           <ul class="generos">
             {#each $currentDetail.genres as genero (genero)}
@@ -252,7 +295,20 @@
           </ul>
         {/if}
         {#if $currentDetail.synopsis !== ''}
-          <p class="sinopsis">{$currentDetail.synopsis}</p>
+          <p class="sinopsis" class:recortada={!sinopsisAbierta} bind:this={sinopsisEl}>
+            {$currentDetail.synopsis}
+          </p>
+          {#if $isNarrow && sinopsisDesborda}
+            <button
+              type="button"
+              class="ver-mas"
+              aria-expanded={sinopsisAbierta}
+              on:click={() => (sinopsisAbierta = !sinopsisAbierta)}
+            >
+              {sinopsisAbierta ? 'Ver menos' : 'Ver más'}
+              <Icono nombre="chevron-abajo" tam={16} />
+            </button>
+          {/if}
         {/if}
         <button
           type="button"
@@ -307,48 +363,86 @@
     gap: 24px;
     margin-bottom: 2rem;
     background: var(--surface-card);
-    border-radius: var(--r-md);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    box-shadow: var(--sh-card);
     padding: 20px;
   }
-  .portada {
+  .portada-marco {
+    box-sizing: border-box;
+    flex-shrink: 0;
     width: 220px;
     max-width: 35%;
     height: fit-content;
+    padding: 3px;
+    background: var(--frame-poster);
+    border-radius: var(--r-lg);
+    box-shadow: var(--sh-panel);
+  }
+  .portada {
+    display: block;
+    width: 100%;
     aspect-ratio: 2 / 3;
     object-fit: cover;
     border-radius: var(--r-md);
     background: var(--bg-2);
-    flex-shrink: 0;
   }
   .datos {
     flex: 1;
     min-width: 0;
   }
-  .linea {
-    margin: 0 0 10px;
-    color: var(--text-3);
-    font-size: 14px;
+  .metadatos {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-2);
+    margin: 0 0 var(--sp-3);
+  }
+  .punto {
+    flex-shrink: 0;
+    width: var(--sp-2);
+    height: var(--sp-2);
+    border-radius: var(--r-full);
+    background: var(--text-3);
+  }
+  .punto.emision {
+    background: var(--brand-400);
   }
   .generos {
     list-style: none;
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    margin: 0 0 12px;
+    gap: var(--sp-2);
+    margin: 0 0 var(--sp-3);
     padding: 0;
   }
   .generos li {
     background: var(--surface-chip);
     color: var(--brand-400);
-    font-size: 12px;
-    padding: 4px 10px;
+    font-size: var(--fs-xs);
+    padding: var(--sp-1) var(--sp-3);
     border-radius: var(--r-full);
   }
   .sinopsis {
-    margin: 0 0 16px;
-    line-height: 1.5;
+    margin: 0 0 var(--sp-4);
+    line-height: var(--lh);
     color: var(--text-2);
     white-space: pre-line;
+  }
+  .ver-mas {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
+    min-height: var(--tap);
+    margin: 0 0 var(--sp-2);
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--brand-400);
+    font: inherit;
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+    cursor: pointer;
   }
   .continuar {
     padding: 10px 20px;
@@ -429,14 +523,42 @@
     .contenedor {
       padding: 0 var(--gutter) var(--sp-4);
     }
-  }
-  @media (max-width: 640px) {
+    /* T79: 641–899 px también pasa a columna (antes sólo < 641 px): portada
+       centrada arriba y datos debajo. */
     .ficha {
       flex-direction: column;
+      padding: var(--sp-4);
     }
-    .portada {
-      width: 160px;
-      max-width: 160px;
+    .portada-marco {
+      width: min(45%, 200px);
+      max-width: 200px;
+      align-self: center;
+    }
+    /* T79: géneros en una línea con scroll horizontal, sangrados al borde de la
+       ficha (márgenes negativos = padding de `.ficha`), sin barra nativa. */
+    .generos {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      margin-left: calc(-1 * var(--sp-4));
+      margin-right: calc(-1 * var(--sp-4));
+      padding: 0 var(--sp-4);
+      scroll-snap-type: x proximity;
+      scrollbar-width: none;
+    }
+    .generos::-webkit-scrollbar {
+      display: none;
+    }
+    .generos li {
+      flex-shrink: 0;
+      scroll-snap-align: start;
+    }
+    /* T79: sinopsis recortada a 4 líneas mientras no está abierta. */
+    .sinopsis.recortada {
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      line-clamp: 4;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
     }
   }
 </style>
