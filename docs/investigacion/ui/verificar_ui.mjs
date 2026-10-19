@@ -4122,7 +4122,7 @@ async function reproductor() {
         check(`${a.nombre}: alto de chip igual que T69 (31±2)`, med.chip && Math.abs(med.chip.h - 31) <= 2, med.chip);
         check(`${a.nombre}: tamaño de fuente del chip igual que antes (13 px)`, med.chip?.fontSize === '13px', med.chip?.fontSize);
       }
-      if (med.botonSiguiente) check(`${a.nombre}: BotonSiguiente < 44 (esperado)`, med.botonSiguiente.h < 44, med.botonSiguiente.h);
+      if (med.botonSiguiente) check(`${a.nombre}: BotonSiguiente ≥ 44 (T84)`, med.botonSiguiente.h >= 44, med.botonSiguiente.h);
       log('reproductor ancho', a.nombre, 'gutter=', med.gutter, 'marco=', JSON.stringify(med.marco), 'chips=', med.fila?.botones.length);
     }
   });
@@ -4309,6 +4309,517 @@ async function reproductor() {
   });
 
   writeFileSync(join(dirOut, 'reproductor.json'), JSON.stringify(rep, null, 2));
+  await browser.close();
+  return rep;
+}
+
+// ---------------------------------------------------------------------------
+// Modo siguiente (T84): chip "Siguiente" del reproductor
+// ---------------------------------------------------------------------------
+
+const ANCHOS_SIGUIENTE = [
+  { w: 360, h: 740, nombre: '360' },
+  { w: 390, h: 844, nombre: '390' },
+  { w: 768, h: 1024, nombre: '768' },
+  { w: 1280, h: 800, nombre: '1280' },
+];
+
+const MEDIR_SIGUIENTE = () => {
+  const d = document.documentElement;
+  const round = (n) => Math.round(n * 100) / 100;
+  const rect = (r) => ({
+    x: round(r.x), y: round(r.y), w: round(r.width), h: round(r.height),
+    right: round(r.right), bottom: round(r.bottom),
+  });
+  const chip = document.querySelector('.marco .boton-siguiente');
+  const marco = document.querySelector('.marco');
+  const overlay = document.querySelector('.marco .cargando-overlay');
+  const cr = chip ? chip.getBoundingClientRect() : null;
+  const mr = marco ? marco.getBoundingClientRect() : null;
+  const or = overlay ? overlay.getBoundingClientRect() : null;
+  const cs = chip ? getComputedStyle(chip) : null;
+  // El overlay no pinta un spinner gráfico: su indicador es el texto centrado.
+  // Para el solape se usa una caja centrada de --tap (44×44) y, además, se
+  // reporta el rectángulo real del texto.
+  const spinner = mr
+    ? { x: round(mr.x + mr.width / 2 - 22), y: round(mr.y + mr.height / 2 - 22), w: 44, h: 44 }
+    : null;
+  let textoOverlay = null;
+  if (overlay) {
+    const rango = document.createRange();
+    rango.selectNodeContents(overlay);
+    const tr = rango.getBoundingClientRect();
+    if (tr.width > 0) textoOverlay = rect(tr);
+  }
+  const controles = mr ? { x: round(mr.x), y: round(mr.bottom - 44), w: round(mr.width), h: 44 } : null;
+  const inter = (a, b) =>
+    !!a && !!b && a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+  // El punto que debe tapar el overlay es el centro del chip; el "centro del
+  // vídeo" es el del marco (no el del chip) para comprobar que no lo tapa.
+  const centroChip = cr ? { x: cr.x + cr.width / 2, y: cr.y + cr.height / 2 } : null;
+  const centroVideo = mr ? { x: mr.x + mr.width / 2, y: mr.y + mr.height / 2 } : null;
+  const top = centroChip ? document.elementFromPoint(centroChip.x, centroChip.y) : null;
+  const crRect = cr ? rect(cr) : null;
+  const csd = getComputedStyle(d);
+  const tok = (n) => csd.getPropertyValue(n).trim();
+  const resolver = (n) => {
+    const p = document.createElement('div');
+    p.style.color = `var(${n})`;
+    d.appendChild(p);
+    const c = getComputedStyle(p).color;
+    p.remove();
+    return c;
+  };
+  return {
+    innerWidth: window.innerWidth,
+    overflowH: d.scrollWidth - d.clientWidth,
+    pointerFine: matchMedia('(hover: hover) and (pointer: fine)').matches,
+    pointerCoarse: matchMedia('(pointer: coarse)').matches,
+    marco: mr ? rect(mr) : null,
+    chip: cr && cs
+      ? {
+          ...crRect,
+          texto: (chip.textContent || '').trim(),
+          disabled: chip.disabled,
+          opacity: cs.opacity,
+          filter: cs.filter,
+          backgroundImage: cs.backgroundImage,
+          backgroundColor: cs.backgroundColor,
+          color: cs.color,
+          borderColor: cs.borderTopColor,
+          borderRadius: cs.borderTopLeftRadius,
+          fontSize: cs.fontSize,
+          fontWeight: cs.fontWeight,
+          minHeight: cs.minHeight,
+          padding: cs.padding,
+          transitionDuration: cs.transitionDuration,
+          animationName: cs.animationName,
+        }
+      : null,
+    rightPx: cr && mr ? round(mr.right - cr.right) : null,
+    bottomPx: cr && mr ? round(mr.bottom - cr.bottom) : null,
+    overlay: or
+      ? { ...rect(or), texto: (overlay.textContent || '').trim(), textoRect: textoOverlay }
+      : null,
+    spinner,
+    controles,
+    centro: centroVideo ? { x: round(centroVideo.x), y: round(centroVideo.y) } : null,
+    centroChip: centroChip ? { x: round(centroChip.x), y: round(centroChip.y) } : null,
+    centroEnChip: !!(
+      cr &&
+      centroVideo &&
+      centroVideo.x >= cr.x &&
+      centroVideo.x <= cr.right &&
+      centroVideo.y >= cr.y &&
+      centroVideo.y <= cr.bottom
+    ),
+    solape: {
+      spinner: inter(crRect, spinner),
+      texto: inter(crRect, textoOverlay),
+      controles: inter(crRect, controles),
+    },
+    top: top
+      ? { tag: top.tagName, enChip: !!top.closest('.boton-siguiente'), enOverlay: !!top.closest('.cargando-overlay') }
+      : null,
+    tokens: {
+      tap: tok('--tap'),
+      sp4: tok('--sp-4'),
+      sp2: tok('--sp-2'),
+      surfacePanel: resolver('--surface-panel'),
+      blurSm: tok('--blur-sm'),
+      rFull: tok('--r-full'),
+      fsSm: tok('--fs-sm'),
+      border: resolver('--border'),
+      text1: resolver('--text-1'),
+      brand400: resolver('--brand-400'),
+      onBrand: resolver('--on-brand'),
+      gradBrand: tok('--grad-brand'),
+      brandGlow: tok('--brand-glow'),
+    },
+  };
+};
+
+// Fuente falsa para el modo siguiente: el proxy del contenedor no sirve el HLS
+// en el navegador; un iframe estable evita los ciclos de error y deja el chip
+// en `listo` (discreto en modo iframe). `retardo` mantiene el overlay visible.
+async function inyectarFuenteFalsa(contexto, retardo = 0) {
+  await contexto.addInitScript((espera) => {
+    const wrap = () => {
+      const App = window.go && window.go.main && window.go.main.App;
+      if (!App || App.__t84 || typeof App.GetVideoSources !== 'function') return false;
+      App.GetVideoSources = () =>
+        new Promise((res) =>
+          setTimeout(
+            () => res([{ url: 'about:blank', type: 'iframe', quality: '', server: 'prueba', language: 'SUB' }]),
+            espera
+          )
+        );
+      App.__t84 = true;
+      return true;
+    };
+    if (!wrap()) {
+      const id = setInterval(() => {
+        if (wrap()) clearInterval(id);
+      }, 2);
+      setTimeout(() => clearInterval(id), 10000);
+    }
+  }, retardo);
+}
+
+async function siguiente() {
+  const dirOut = process.argv[3] ?? 'docs/img/v1.4/siguiente';
+  mkdirSync(dirOut, { recursive: true });
+  const browser = await chromium.launch();
+  const rep = {
+    anchos: [],
+    funciones: [],
+    capturas: [],
+    overlay: null,
+    raton: null,
+    tactil: null,
+    resaltado: null,
+    click: null,
+    literales: null,
+    errores: [],
+  };
+  const check = (nombre, ok, detalle) =>
+    rep.funciones.push({ nombre, ok: !!ok, detalle: detalle === undefined ? null : detalle });
+  const paso = async (nombre, fn) => {
+    try {
+      await fn();
+    } catch (e) {
+      rep.errores.push(`${nombre}: ${e.message}`);
+    }
+  };
+  const captura = async (p, nombre) => {
+    try {
+      await p.screenshot({ path: join(dirOut, `${nombre}.png`) });
+      rep.capturas.push(`${nombre}.png`);
+    } catch (e) {
+      rep.errores.push(`${nombre}: ${e.message}`);
+    }
+  };
+  const abrirEn = async (p, a) => {
+    await p.setViewportSize({ width: a.w, height: a.h });
+    await gotoApp(p);
+    await p.waitForSelector('.fila .carrusel .tarjeta', { timeout: 60000 }).catch(() => {});
+    await buscar(p, 'bleach');
+    await abrirDetalle(p, 'animeav1');
+    const ep = p.locator('.rejilla .celda .tarjeta').first();
+    if (!(await ep.count())) return false;
+    await ep.click();
+    await p.waitForSelector('.marco', { timeout: 30000 });
+    await p.waitForSelector('.marco .boton-siguiente', { timeout: 20000 }).catch(() => {});
+    await p
+      .waitForFunction(() => !document.querySelector('.marco .cargando-overlay'), null, { timeout: 15000 })
+      .catch(() => {});
+    await p.waitForTimeout(300);
+    return true;
+  };
+  const baseVisible = (p) =>
+    p.evaluate(() => {
+      const b = document.querySelector('.marco .boton-siguiente');
+      if (!b) return false;
+      b.classList.remove('discreto', 'resaltado');
+      b.disabled = false;
+      return true;
+    });
+  const subtitulo = (p) =>
+    p.evaluate(() => ((document.querySelector('.cabecera .subtitulo') || {}).textContent || '').trim());
+  const esperarListo = (p) =>
+    p
+      .waitForFunction(
+        () => {
+          const b = document.querySelector('.marco .boton-siguiente');
+          return !!b && !b.disabled && /Ep \d+/.test((b.textContent || '').trim());
+        },
+        null,
+        { timeout: 15000 }
+      )
+      .then(() => true)
+      .catch(() => false);
+
+  const ctx = await browser.newContext({ viewport: { width: 360, height: 740 } });
+  await inyectarFuenteFalsa(ctx, 0);
+  const page = await ctx.newPage();
+
+  // --- A. Geometría y captura por ancho ---
+  await paso('A', async () => {
+    for (const a of ANCHOS_SIGUIENTE) {
+      const abierto = await abrirEn(page, a);
+      if (!abierto) {
+        check(`${a.nombre}: reproductor abierto`, false, 'sin tarjetas de episodio');
+        continue;
+      }
+      await baseVisible(page);
+      await page.waitForTimeout(250);
+      const m = await page.evaluate(MEDIR_SIGUIENTE);
+      rep.anchos.push({ ancho: a.nombre, ...m });
+      check(`${a.nombre}: alto del chip ≥44 px`, !!m.chip && m.chip.h >= 44, m.chip?.h);
+      check(`${a.nombre}: right = --sp-4 (16 px)`, m.rightPx !== null && Math.abs(m.rightPx - 16) <= 1, m.rightPx);
+      check(
+        `${a.nombre}: bottom = --tap + --sp-4 (60 px)`,
+        m.bottomPx !== null && Math.abs(m.bottomPx - 60) <= 1,
+        m.bottomPx
+      );
+      check(`${a.nombre}: sin overflow horizontal`, m.overflowH === 0, m.overflowH);
+      check(`${a.nombre}: no tapa el centro del vídeo`, m.centroEnChip === false, m.centro);
+      check(
+        `${a.nombre}: no pisa los controles nativos (últimos 44 px)`,
+        m.solape.controles === false,
+        { chip: m.chip, controles: m.controles }
+      );
+      if (a.nombre === '360') await captura(page, 'siguiente_360_normal');
+      if (a.nombre === '1280') await captura(page, 'siguiente_1280');
+      log('siguiente ancho', a.nombre, 'chip=', m.chip && `${m.chip.w}x${m.chip.h}`, 'marco=', JSON.stringify(m.marco));
+    }
+  });
+
+  // --- B. Discreto con ratón (puntero fino) ---
+  await paso('B', async () => {
+    await abrirEn(page, { w: 360, h: 740, nombre: '360' });
+    await page.evaluate(() => {
+      const b = document.querySelector('.marco .boton-siguiente');
+      if (b) {
+        b.classList.remove('resaltado');
+        b.classList.add('discreto');
+        b.disabled = false;
+      }
+    });
+    await page.waitForTimeout(300);
+    const antes = await page.evaluate(MEDIR_SIGUIENTE);
+    rep.raton = { fine: antes.pointerFine, antes: { opacity: antes.chip?.opacity, filter: antes.chip?.filter } };
+    check('ratón: puntero fino', antes.pointerFine === true, antes.pointerFine);
+    check('ratón: opacidad 0,15', antes.chip?.opacity === '0.15', antes.chip?.opacity);
+    check('ratón: blur 2 px', antes.chip?.filter === 'blur(2px)', antes.chip?.filter);
+    await page.locator('.marco .boton-siguiente').hover();
+    await page.waitForTimeout(400);
+    const hover = await page.evaluate(MEDIR_SIGUIENTE);
+    rep.raton.hover = { opacity: hover.chip?.opacity, filter: hover.chip?.filter };
+    check('ratón: hover aclara a opacidad 1', hover.chip?.opacity === '1', hover.chip?.opacity);
+    check('ratón: hover quita el blur', hover.chip?.filter === 'none', hover.chip?.filter);
+    await page.mouse.move(0, 0);
+    await page.waitForTimeout(400);
+    await page.locator('.marco .boton-siguiente').focus();
+    await page.waitForTimeout(400);
+    const foco = await page.evaluate(MEDIR_SIGUIENTE);
+    rep.raton.foco = { opacity: foco.chip?.opacity, filter: foco.chip?.filter };
+    check('ratón: foco aclara a opacidad 1', foco.chip?.opacity === '1', foco.chip?.opacity);
+  });
+
+  // --- C. Discreto táctil (hasTouch, pointer coarse) ---
+  await paso('C', async () => {
+    const ctxT = await browser.newContext({
+      viewport: { width: 360, height: 740 },
+      hasTouch: true,
+      isMobile: true,
+      deviceScaleFactor: 1,
+    });
+    await inyectarFuenteFalsa(ctxT, 0);
+    const pT = await ctxT.newPage();
+    await abrirEn(pT, { w: 360, h: 740, nombre: '360' });
+    await pT.evaluate(() => {
+      const b = document.querySelector('.marco .boton-siguiente');
+      if (b) {
+        b.classList.remove('resaltado');
+        b.classList.add('discreto');
+        b.disabled = false;
+      }
+    });
+    await pT.waitForTimeout(300);
+    const m = await pT.evaluate(MEDIR_SIGUIENTE);
+    rep.tactil = { coarse: m.pointerCoarse, fine: m.pointerFine, opacity: m.chip?.opacity, filter: m.chip?.filter };
+    check('táctil: pointer coarse', m.pointerCoarse === true, m.pointerCoarse);
+    check('táctil: opacidad 0,6', m.chip?.opacity === '0.6', m.chip?.opacity);
+    check('táctil: sin blur', m.chip?.filter === 'none', m.chip?.filter);
+    await captura(pT, 'siguiente_360_tactil');
+    await ctxT.close();
+  });
+
+  // --- D. Resaltado: degradado, tokens y pulso ---
+  await paso('D', async () => {
+    await abrirEn(page, { w: 360, h: 740, nombre: '360' });
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await page.evaluate(() => {
+      const b = document.querySelector('.marco .boton-siguiente');
+      if (b) {
+        b.classList.remove('discreto');
+        b.classList.add('resaltado');
+        b.disabled = false;
+      }
+    });
+    await page.waitForTimeout(300);
+    const m = await page.evaluate(MEDIR_SIGUIENTE);
+    rep.resaltado = {
+      backgroundImage: m.chip?.backgroundImage,
+      color: m.chip?.color,
+      border: m.chip?.borderColor,
+      animationName: m.chip?.animationName,
+      reduced: null,
+    };
+    check(
+      'resaltado: fondo con degradado de marca',
+      (m.chip?.backgroundImage ?? '').includes('linear-gradient'),
+      m.chip?.backgroundImage
+    );
+    check('resaltado: texto --on-brand', m.chip?.color === m.tokens.onBrand, {
+      got: m.chip?.color,
+      esperado: m.tokens.onBrand,
+    });
+    check('resaltado: borde --brand-400', m.chip?.borderColor === m.tokens.brand400, {
+      got: m.chip?.borderColor,
+      esperado: m.tokens.brand400,
+    });
+    check(
+      'resaltado: pulso presente sin reduced-motion',
+      !!m.chip?.animationName && m.chip.animationName.endsWith('-pulso-siguiente'),
+      m.chip?.animationName
+    );
+    await captura(page, 'siguiente_360_resaltado');
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.waitForTimeout(250);
+    const reduce = await page.evaluate(MEDIR_SIGUIENTE);
+    rep.resaltado.reduced = {
+      animationName: reduce.chip?.animationName,
+      transitionDuration: reduce.chip?.transitionDuration,
+    };
+    check('reduced-motion: sin pulso', reduce.chip?.animationName === 'none', reduce.chip?.animationName);
+    check('reduced-motion: sin transición', reduce.chip?.transitionDuration === '0s', reduce.chip?.transitionDuration);
+    await page.emulateMedia({ reducedMotion: null });
+    await page.evaluate(() => {
+      const b = document.querySelector('.marco .boton-siguiente');
+      if (b) b.disabled = true;
+    });
+    await page.waitForTimeout(100);
+    const disabled = await page.evaluate(MEDIR_SIGUIENTE);
+    rep.resaltado.disabled = { opacity: disabled.chip?.opacity };
+    check('disabled: opacidad 0,55', disabled.chip?.opacity === '0.55', disabled.chip?.opacity);
+    await baseVisible(page);
+    await page.waitForTimeout(200);
+  });
+
+  // --- E. Overlay de carga: cubre el chip y luego lo libera ---
+  await paso('E', async () => {
+    rep.overlay = {};
+    for (const a of [
+      { w: 360, h: 740, nombre: '360' },
+      { w: 390, h: 844, nombre: '390' },
+    ]) {
+      const ctxL = await browser.newContext({ viewport: { width: a.w, height: a.h } });
+      await inyectarFuenteFalsa(ctxL, 2500);
+      const pL = await ctxL.newPage();
+      await pL.setViewportSize({ width: a.w, height: a.h });
+      await gotoApp(pL);
+      await pL.waitForSelector('.fila .carrusel .tarjeta', { timeout: 60000 }).catch(() => {});
+      await buscar(pL, 'bleach');
+      await abrirDetalle(pL, 'animeav1');
+      const ep = pL.locator('.rejilla .celda .tarjeta').first();
+      if (!(await ep.count())) {
+        check(`${a.nombre}: overlay de carga`, false, 'sin tarjetas de episodio');
+        await ctxL.close();
+        continue;
+      }
+      await ep.click();
+      await pL.waitForSelector('.marco .cargando-overlay', { timeout: 15000 }).catch(() => {});
+      const cargando = await pL.evaluate(MEDIR_SIGUIENTE);
+      rep.overlay[a.nombre] = {
+        marco: cargando.marco,
+        spinner: cargando.spinner,
+        chip: cargando.chip
+          ? { x: cargando.chip.x, y: cargando.chip.y, w: cargando.chip.w, h: cargando.chip.h }
+          : null,
+        solape: cargando.solape,
+        top: cargando.top,
+        centro: cargando.centro,
+        aviso: cargando.solape.spinner
+          ? 'el rectángulo del chip se solapa con la caja central de 44×44; el chip se oculta con opacidad 0 bajo el overlay'
+          : null,
+      };
+      check(`${a.nombre}: overlay visible durante la carga`, !!cargando.overlay, cargando.overlay);
+      check(
+        `${a.nombre}: el overlay tapa el chip (elementFromPoint)`,
+        cargando.top?.enOverlay === true && cargando.top?.enChip === false,
+        cargando.top
+      );
+      await pL.locator('.marco .boton-siguiente').focus();
+      const enfocado = await pL.evaluate(() => {
+        const b = document.activeElement;
+        return !!b && b.classList.contains('boton-siguiente');
+      });
+      check(`${a.nombre}: el chip sigue enfocable durante la carga`, enfocado, enfocado);
+      check(`${a.nombre}: el chip no pisa los controles nativos`, cargando.solape.controles === false, {
+        chip: rep.overlay[a.nombre].chip,
+        controles: cargando.controles,
+      });
+      check(`${a.nombre}: el chip no tapa el centro del vídeo`, cargando.centroEnChip === false, cargando.centro);
+      check(
+        `${a.nombre}: el chip queda oculto bajo el overlay (sin solape visible)`,
+        cargando.chip?.opacity === '0',
+        { opacity: cargando.chip?.opacity, solapeGeometrico: cargando.solape.spinner }
+      );
+      if (a.nombre === '360') await captura(pL, 'siguiente_360_cargando');
+      await pL
+        .waitForFunction(() => !document.querySelector('.marco .cargando-overlay'), null, { timeout: 15000 })
+        .catch(() => {});
+      await pL.waitForTimeout(400);
+      const tras = await pL.evaluate(MEDIR_SIGUIENTE);
+      rep.overlay[a.nombre].tras = { overlay: tras.overlay, top: tras.top };
+      check(`${a.nombre}: al terminar la carga el chip recibe el punto`, tras.top?.enChip === true, tras.top);
+      if (a.nombre === '360') await captura(pL, 'siguiente_360_cargado');
+      await ctxL.close();
+    }
+  });
+
+  // --- F. Clic y tecla N navegan al siguiente episodio ---
+  await paso('F', async () => {
+    await abrirEn(page, { w: 360, h: 740, nombre: '360' });
+    await esperarListo(page);
+    await baseVisible(page);
+    await page.waitForTimeout(250);
+    const med = await page.evaluate(MEDIR_SIGUIENTE);
+    check(
+      'sin overlay el chip recibe el clic (elementFromPoint)',
+      med.overlay === null && med.top?.enChip === true,
+      med.top
+    );
+    const antes = await subtitulo(page);
+    let clicForzado = false;
+    try {
+      await page.locator('.marco .boton-siguiente').click({ timeout: 5000 });
+    } catch {
+      clicForzado = true;
+      await page.evaluate(() => document.querySelector('.marco .boton-siguiente')?.click());
+    }
+    await page.waitForTimeout(2500);
+    const trasClic = await subtitulo(page);
+    rep.click = { antes, trasClic, clicForzado };
+    check(
+      'clic: navega al siguiente episodio',
+      trasClic !== antes && trasClic !== '',
+      { antes, trasClic, clicForzado }
+    );
+
+    await esperarListo(page);
+    const antesN = await subtitulo(page);
+    await page.keyboard.press('n');
+    await page.waitForTimeout(2500);
+    const trasN = await subtitulo(page);
+    rep.click.n = { antes: antesN, despues: trasN };
+    check('tecla N: navega al siguiente episodio', trasN !== antesN && trasN !== '', { antes: antesN, despues: trasN });
+  });
+
+  // --- G. Literales de color prohibidos ---
+  await paso('G', async () => {
+    const ruta = 'frontend/src/BotonSiguiente.svelte';
+    const texto = readFileSync(ruta, 'utf8');
+    const rgba74 = (texto.match(/rgba\(74,\s*222,\s*128/gi) ?? []).length;
+    const hex = (texto.match(/#[0-9a-f]{3,8}\b/gi) ?? []).length;
+    rep.literales = { rgba74, hex };
+    check('0 literales rgba(74, 222, 128) en BotonSiguiente', rgba74 === 0, rgba74);
+    check('0 literales hex en BotonSiguiente', hex === 0, hex);
+  });
+
+  writeFileSync(join(dirOut, 'siguiente.json'), JSON.stringify(rep, null, 2));
   await browser.close();
   return rep;
 }
@@ -4674,6 +5185,40 @@ if (modo === 'comparar') {
   for (const t of rep.tactiles) console.log(`- ${t.texto} ${t.w}×${t.h}${t.enBarra ? ' [BARRA]' : ''}`);
   if (rep.errores.length) console.log('\nErrores:', rep.errores);
   console.log(`\nCapturas (${process.argv[3] ?? 'docs/img/v1.4/reproductor'}): ${rep.capturas.join(', ') || 'ninguna'}`);
+} else if (modo === 'siguiente') {
+  const rep = await siguiente();
+  const dirOut = process.argv[3] ?? 'docs/img/v1.4/siguiente';
+  console.log('## Modo siguiente (T84) — chip "Siguiente" del reproductor\n');
+  console.log('| ancho | chip w×h | right | bottom | opacidad | filter | centro en chip | solape controles | solape spinner | overflowH |');
+  console.log('|---|---:|---:|---:|---:|---|---|:--:|:--:|:--:|---:|');
+  for (const m of rep.anchos) {
+    const c = m.chip;
+    console.log(
+      `| ${m.ancho} | ${c ? `${c.w}×${c.h}` : '—'} | ${m.rightPx ?? '—'} | ${m.bottomPx ?? '—'} | ${c?.opacity ?? '—'} | ` +
+        `${c?.filter ?? '—'} | ${m.centroEnChip ? 'SÍ' : 'no'} | ${m.solape?.controles ? 'SÍ' : 'no'} | ` +
+        `${m.solape?.spinner ? 'SÍ' : 'no'} | ${m.overflowH} |`
+    );
+  }
+  console.log('\nOverlay de carga (medido durante la carga):');
+  console.log(JSON.stringify(rep.overlay, null, 2));
+  const avisosSolape = Object.entries(rep.overlay ?? {})
+    .filter(([, v]) => v?.aviso)
+    .map(([ancho, v]) => `${ancho}px: ${v.aviso}`);
+  console.log('\nAvisos de solape geométrico:', avisosSolape.length ? avisosSolape : 'ninguno');
+  console.log('\nRatón:', JSON.stringify(rep.raton));
+  console.log('Táctil:', JSON.stringify(rep.tactil));
+  console.log('Resaltado:', JSON.stringify(rep.resaltado));
+  console.log('Clic/tecla N:', JSON.stringify(rep.click));
+  console.log('Literales:', JSON.stringify(rep.literales));
+  const fallos = rep.funciones.filter((f) => !f.ok);
+  console.log('\n| comprobación | ok | detalle |');
+  console.log('|---|:--:|---|');
+  for (const f of rep.funciones)
+    console.log(`| ${f.nombre} | ${f.ok ? 'sí' : 'NO'} | ${f.detalle === null ? '' : JSON.stringify(f.detalle)} |`);
+  console.log(`\nComprobaciones: ${rep.funciones.length - fallos.length}/${rep.funciones.length} OK`);
+  if (rep.errores.length) console.log('\nErrores:', rep.errores);
+  console.log(`\nCapturas (${dirOut}): ${rep.capturas.join(', ') || 'ninguna'}`);
+  console.log(`Resumen JSON: ${join(dirOut, 'siguiente.json')}`);
 } else {
   const dirOut = process.argv[3] ?? DIR_DEF;
   const res = await capturar(dirOut);

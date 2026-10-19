@@ -804,7 +804,8 @@
     background: rgba(0, 0, 0, 0.65);
     color: var(--text-1);
     font-size: 15px;
-    z-index: 2;
+    /* T84: por encima del chip "Siguiente" (z-index 3) durante la carga. */
+    z-index: 4;
   }
   @media (max-width: 899px) {
     /* T74: cabecera compacta; el padding superior lo da la cabecera.

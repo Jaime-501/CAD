@@ -1458,7 +1458,7 @@ Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**
 - **54 / 54 comprobaciones OK**. Chips en una fila (`scrollHeight = clientHeight = 44`) y scroll hasta el último extra (828 px de recorrido a 360, 434 a 768); plegable de 50 px (360) / 44 px (768) con `aria-expanded` correcto; activo con check visible, `aria-pressed="true"` y degradado de marca; cambiar de fuente deja activo el segundo chip (`aria-pressed` coherente). Con iframe activo el pliegue **se abre solo** (hasta ~30 s por los refrescos de fuentes en Docker) y el aviso queda **12 px** debajo del marco (`--fs-sm`, margen `--sp-3`).
 - Escritorio: chips de **31 px** de alto y **13 px** de fuente, igual que T69 (anchos 95 / 94,3 / 186,78 / 187,5 vs 95 / 94 / 187 / 188 → Δ ≤ 1 px); sin scroll horizontal (`flex-wrap: wrap`), con una sola fila visual porque solo hay 4 fuentes. Plegable 30 px (T69: 29; Δ1 por el icono de 16 px).
 - Sin barra inferior en el reproductor; fin del scroll sin nada tapado; atajo **N** (Ep. 1 → Ep. 2) y «← Atrás» OK; scroll T66/T67 restaurado (Δ0); `prefers-reduced-motion` → transición `0s` en chips y plegable.
-- Literales de color en lo tocado: **0** (la única excepción es el scrim `rgba(0,0,0,0.65)` del spinner, ya documentado). Táctiles < 44 px restantes: solo `BotonSiguiente` 147×36 (esperado; su solape es T84).
+- Literales de color en lo tocado: **0** (la única excepción es el scrim `rgba(0,0,0,0.65)` del spinner, ya documentado). Táctiles < 44 px restantes en T83: `BotonSiguiente` 147×36 (T84 lo corrige a 44 px).
 
 **Desviaciones / notas (documentadas):**
 - **768 px usa `--gutter: 24px`**, no 16: el token de T70 sube a 24 desde 768. Verificado que Atrás = marco = gutter (24) en 768.
@@ -1472,4 +1472,42 @@ Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**
 
 **Capturas** en `docs/img/v1.4/reproductor/`: `reproductor_360.png`, `reproductor_360_extras.png`, `reproductor_768.png`, `reproductor_1280.png` (+ `reproductor.json`).
 
-**Archivos tocados:** `frontend/src/SelectorFuente.svelte` (script: solo `import Icono`; markup y `<style>`), `frontend/src/VistaReproductor.svelte` (**solo `<style>`**), `frontend/src/CabeceraVista.svelte` (**solo `<style>`**), `docs/investigacion/ui/verificar_ui.mjs`, `docs/img/v1.4/reproductor/**` y `PROGRESO.md`. **Nada fuera de "Puedes tocar"** (regla 7 no se activó): `*.go`, `frontend/wailsjs/**`, `api.ts`, `stores.ts`, `views.ts`, `ui.ts`, `BotonSiguiente.svelte`, el `<script>`/markup de `VistaReproductor`, `BotonFavorito`, `etiquetas.ts` e `index.html` intactos. **Sin tag ni release** (los hace el humano); **T84 no iniciada**.
+**Archivos tocados:** `frontend/src/SelectorFuente.svelte` (script: solo `import Icono`; markup y `<style>`), `frontend/src/VistaReproductor.svelte` (**solo `<style>`**), `frontend/src/CabeceraVista.svelte` (**solo `<style>`**), `docs/investigacion/ui/verificar_ui.mjs`, `docs/img/v1.4/reproductor/**` y `PROGRESO.md`. **Nada fuera de "Puedes tocar"** (regla 7 no se activó): `*.go`, `frontend/wailsjs/**`, `api.ts`, `stores.ts`, `views.ts`, `ui.ts`, `BotonSiguiente.svelte`, el `<script>`/markup de `VistaReproductor`, `BotonFavorito`, `etiquetas.ts` e `index.html` intactos. **Sin tag ni release** (los hace el humano); **T84 completada en el bloque siguiente**.
+
+## T84 — Chip "Siguiente" del reproductor (v1.4.0) — bloque de esta sesión
+
+Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**. Fecha **2026-10-19**. Solo estilos: el chip «Siguiente ▸» pasa de **~34 a 44 px** (`--tap`), se recoloca a `right: var(--sp-4)` / `bottom: calc(var(--tap) + var(--sp-4))` y el overlay de carga sube a **`z-index: 4`** para cubrirlo. **No cambian** `<script>` ni markup de ningún componente, ni el comportamiento de clic, tecla N o estados.
+
+- **`BotonSiguiente.svelte` (solo `<style>`)**: chip con `min-height: var(--tap)`, `padding: 0 var(--sp-4)`, `--r-full`, `--fs-sm`, `--surface-panel`, `backdrop-filter: blur(var(--blur-sm))`, `--border`, `--text-1`, `--fw-semibold` y `font-family: inherit`. Se eliminan `14px`, `8px 16px`, `bottom: 72px` y `right: 16px` literales. `:focus-visible` con `--ring`; `:hover` solo bajo `(hover: hover) and (pointer: fine)`; `:disabled` `opacity: 0.55`.
+- **Discreto**: ratón `opacity: 0.15` + `blur(2px)` con transición `--dur`, a `1` en hover/foco; táctil `opacity: 0.6` sin blur y `:active` a `1`; `prefers-reduced-motion: reduce` sin transición.
+- **Resaltado**: `--grad-brand`, borde `--brand-400`, texto `--on-brand`; pulso con `--brand-glow` y `transparent` en el `@keyframes` (cero literales), solo con `prefers-reduced-motion: no-preference`.
+- **`VistaReproductor.svelte` (solo `<style>`)**: `.cargando-overlay` `z-index: 4` (el chip es 3). Además, para que el chip no asome tras el scrim del overlay, `:global(.marco:has(.cargando-overlay)) .boton-siguiente { opacity: 0 }`; sigue en el DOM y enfocable, y reaparece al terminar. Esta regla es la única adición fuera de la letra de T84 y se documenta abajo.
+
+**Resultados reales** (modo `siguiente` **nuevo** en `verificar_ui.mjs`, localhost:34115, AnimeAV1 «bleach»). Para evitar los ciclos de error del proxy en el navegador se inyecta una fuente **iframe** falsa (`about:blank`, servidor `prueba · SUB`) con `addInitScript`; en el estado de carga se retrasa la resolución para medir el overlay. **Indicado en el modo.**
+
+| ancho | chip w×h | right | bottom | opacidad base | overflowH | solape controles | solape caja central |
+|---:|---:|---:|---:|---:|---:|:--:|:--:|
+| 360 | 146,19×44 | 17 | 61 | 1 | 0 | no | sí (se reporta) |
+| 390 | 146,19×44 | 17 | 61 | 1 | 0 | no | sí (se reporta) |
+| 768 | 146,19×44 | 17 | 61 | 1 | 0 | no | no |
+| 1280 | 146,19×44 | 17 | 61 | 1 | 0 | no | no |
+
+- **59 / 59 comprobaciones OK**. `right`/`bottom` miden 17/61 por el borde de 1 px del marco (16/60 de layout; Δ1 px). El chip no tapa el centro del vídeo en ningún ancho y no pisa la franja de controles nativos (últimos 44 px).
+- **Overlay**: a 360 y 390 el overlay visible cubre el centro del chip (`elementFromPoint` → `.cargando-overlay`, `enChip: false`), el chip queda con `opacity: 0` y **sigue enfocable**; al terminar la carga el punto vuelve al `BUTTON` y el chip reaparece. En 360/390 el **rectángulo** del chip sí intersecta la caja central de 44×44 (146,19 px de ancho, posición fija; el vídeo mide 186,5/203,38 px de alto): no cabe sin romper `bottom: calc(--tap + --sp-4)`. Se oculta bajo el overlay y se reporta como **aviso geométrico**, no como solape visible.
+- **Discreto ratón**: `opacity 0.15`, `filter blur(2px)`, hover y foco a `1`/`none`. **Táctil** (`hasTouch`, `pointer: coarse`): `opacity 0.6`, `filter: none`. **`disabled`**: `0.55`.
+- **Resaltado**: `linear-gradient(90deg, rgb(16,185,129), rgb(45,212,191))`, texto `rgb(2,6,23)` = `--on-brand`, borde `rgb(52,211,153)` = `--brand-400`; `animationName` con sufijo `-pulso-siguiente`; con `reduced-motion` → `none` y transición `0s`.
+- **Clic y tecla N**: clic Ep. 1 → Ep. 2 sin forzar (el chip recibe el punto), N Ep. 2 → Ep. 3. **Cero** `rgba(74, 222, 128` y cero hex en `BotonSiguiente.svelte`.
+- **Regresión T83** (modo `reproductor`): **54 / 54 OK**, sin cambios; la comprobación de altura del chip se actualiza de `<44` a `≥44` porque T84 la cambia a propósito.
+
+**Desviaciones / notas (documentadas):**
+- **Solape geométrico a 360/390**: con el `bottom` fijado por T84 y el ancho real del chip (146,19 px), el rectángulo del chip intersecta la caja central de 44×44. El vídeo es demasiado bajo en esos anchos; se reporta la medida y se evita el solape **visible** ocultando el chip bajo el overlay (`opacity: 0`), que sigue enfocable. No se toca la posición ni el tamaño pedidos.
+- **Fuente falsa en el arnés**: se usa una fuente iframe `about:blank` (`addInitScript` sobre `App.GetVideoSources`) porque el proxy de Docker no sirve HLS en el navegador; no se modifica código de producto. El estado de carga se provoca retrasando esa promesa.
+- **Tecla N durante la carga**: el chip queda enfocable con el overlay visible, pero `alPulsarSiguiente` sigue ignorando N mientras `cargando` es true (comportamiento previo intacto). La navegación con N se verifica después de la carga (Ep. 2 → Ep. 3).
+- **`siguiente_360_cargado.png`** es una captura extra (chip tras la carga); las cinco pedidas están presentes.
+- **Modo nuevo del arnés**: `MEDIR_SIGUIENTE` + `siguiente()` + dispatch; `rg` no está en el host, se usó `grep`/lectura. No toca código de producto.
+
+**Comprobaciones finales:** `npm run check` **0 errores / 0 avisos** · `npm run build` **OK** · tests `.ts` **32 / 48 / 13** OK (`etiquetas`, `ventana`, `views`) · `gofmt -l .` **sin salida** · `go vet ./...` y `go vet -tags integration ./...` **OK** · `go build ./...` **OK** · `go test -race -count=1 -v ./...` **435 `--- PASS`** de nivel superior, **0 FAIL** (`*.go` intactos) · `grep -rn wailsjs frontend/src` **solo `api.ts`**.
+
+**Capturas** en `docs/img/v1.4/siguiente/`: `siguiente_360_normal.png`, `siguiente_360_tactil.png`, `siguiente_360_resaltado.png`, `siguiente_360_cargando.png`, `siguiente_360_cargado.png`, `siguiente_1280.png` (+ `siguiente.json`).
+
+**Archivos tocados:** `frontend/src/BotonSiguiente.svelte` (**solo `<style>`**), `frontend/src/VistaReproductor.svelte` (**solo `<style>`**: `z-index` de `.cargando-overlay`), `docs/investigacion/ui/verificar_ui.mjs` (modo `siguiente` + altura T83), `docs/img/v1.4/siguiente/**` y `PROGRESO.md`. **Nada fuera de "Puedes tocar"** (regla 7 no se activó): `*.go`, `frontend/wailsjs/**`, `api.ts`, `stores.ts`, `views.ts`, `ui.ts`, `<script>`/markup de `BotonSiguiente` y `VistaReproductor`, `SelectorFuente`, `CabeceraVista` e `index.html` intactos. **Sin tag ni release** (los hace el humano); **T85 no iniciada**.
