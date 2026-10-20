@@ -132,5 +132,11 @@
         transition: none;
       }
     }
+    /* T87: sin soporte de blur, la cabecera fija usa fondo opaco. */
+    @supports not (backdrop-filter: blur(1px)) {
+      .cabecera.fija {
+        background: var(--bg-1);
+      }
+    }
   }
 </style>

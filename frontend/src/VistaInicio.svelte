@@ -338,6 +338,12 @@
       animation: brillar 1.4s linear infinite;
     }
   }
+  /* T87: rama local explícita (la global de style.css ya lo cubre). */
+  @media (prefers-reduced-motion: reduce) {
+    .esqueleto {
+      animation: none;
+    }
+  }
   @keyframes brillar {
     from {
       background-position: 130% 0;

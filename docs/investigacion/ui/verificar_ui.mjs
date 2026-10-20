@@ -12,6 +12,7 @@
 //   NODE_PATH=... node docs/investigacion/ui/verificar_ui.mjs filas [dirOut]
 //   NODE_PATH=... node docs/investigacion/ui/verificar_ui.mjs favoritos [dirOut]
 //   NODE_PATH=... node docs/investigacion/ui/verificar_ui.mjs estados [dirOut]
+//   NODE_PATH=... node docs/investigacion/ui/verificar_ui.mjs rendimiento [antes|despues]
 //
 // `capturar` deja los PNG en <dirOut> (por defecto
 // `docs/investigacion/ui/verif`) y un `resumen.json` con `overflowH` por vista.
@@ -6024,13 +6025,16 @@ async function estados() {
     await gotoForzado('home');
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.waitForSelector('.error-proveedor .btn', { timeout: 15000 });
-    const trans = await page.evaluate(() => getComputedStyle(document.querySelector('.error-proveedor .btn')).transitionDuration);
+    const trans = await page.evaluate(() => {
+      const s = getComputedStyle(document.querySelector('.error-proveedor .btn'));
+      return { duracion: s.transitionDuration, propiedad: s.transitionProperty };
+    });
     await gotoForzado('historial-lento');
     await abrirCajonEstado(page);
     await page.waitForSelector('.barra.cajon .esqueleto', { timeout: 15000 });
     const anim = await page.evaluate(() => getComputedStyle(document.querySelector('.barra.cajon .esqueleto .esqueleto')).animationName);
-    rep.reduced = { trans, anim };
-    check('reduced-motion: Btn sin transición', trans === '0s', trans);
+    rep.reduced = { ...trans, anim };
+    check('reduced-motion: Btn sin transición', trans.duracion === '0s' || trans.propiedad === 'none', `${trans.duracion} / ${trans.propiedad}`);
     check('reduced-motion: esqueleto sin animación', anim === 'none', anim);
     await page.emulateMedia({ reducedMotion: null });
   });
@@ -6053,6 +6057,438 @@ async function estados() {
 
   writeFileSync(join(dirOut, 'estados.json'), JSON.stringify(rep, null, 2));
   await browser.close();
+  return rep;
+}
+
+// ---------------------------------------------------------------------------
+// Modo rendimiento (T87): scroll real, reduced-motion y reduced-transparency
+// ---------------------------------------------------------------------------
+
+const INICIAR_MONITOR = () => {
+  const r = { deltas: [], longtasks: [], loaves: [], parar: false, raf: 0 };
+  window.__rend = r;
+  r.inicio = performance.now();
+  let ultimo = performance.now();
+  const tick = (t) => {
+    const d = t - ultimo;
+    ultimo = t;
+    if (d > 0 && d < 10000) r.deltas.push(d);
+    if (!r.parar) r.raf = requestAnimationFrame(tick);
+  };
+  r.raf = requestAnimationFrame(tick);
+  try {
+    r.poLong = new PerformanceObserver((l) => {
+      for (const e of l.getEntries()) {
+        if (e.startTime >= r.inicio) r.longtasks.push({ start: Math.round(e.startTime), dur: Math.round(e.duration) });
+      }
+    });
+    r.poLong.observe({ type: 'longtask', buffered: false });
+  } catch {}
+  try {
+    r.poLoaf = new PerformanceObserver((l) => {
+      for (const e of l.getEntries()) {
+        if (e.startTime >= r.inicio) r.loaves.push({ start: Math.round(e.startTime), dur: Math.round(e.duration) });
+      }
+    });
+    r.poLoaf.observe({ type: 'long-animation-frame', buffered: false });
+  } catch {}
+};
+
+const TERMINAR_MONITOR = () => {
+  const r = window.__rend || {};
+  r.parar = true;
+  cancelAnimationFrame(r.raf);
+  try { r.poLong?.disconnect(); } catch {}
+  try { r.poLoaf?.disconnect(); } catch {}
+  const red = (v) => (v === null || v === undefined ? null : Math.round(v * 10) / 10);
+  const deltas = (r.deltas || []).filter((d) => d > 0).sort((a, b) => a - b);
+  const media = deltas.length ? deltas.reduce((a, b) => a + b, 0) / deltas.length : null;
+  const p = (q) => (deltas.length ? deltas[Math.min(deltas.length - 1, Math.floor(deltas.length * q))] : null);
+  const longtasks = r.longtasks || [];
+  const loaves = r.loaves || [];
+  return {
+    frames: deltas.length,
+    frameMedio: red(media),
+    frameP95: red(p(0.95)),
+    frameMax: red(deltas.length ? deltas[deltas.length - 1] : null),
+    framesLargos: deltas.filter((d) => d > 50).length,
+    longtasks: longtasks.length,
+    longtaskMax: red(longtasks.reduce((m, e) => Math.max(m, e.dur), 0)),
+    loaf: loaves.filter((e) => e.dur > 50).length,
+    loafMax: red(loaves.reduce((m, e) => Math.max(m, e.dur), 0)),
+  };
+};
+
+async function metricasCDP(cdp) {
+  const r = await cdp.send('Performance.getMetrics');
+  const m = {};
+  for (const x of r.metrics) m[x.name] = x.value;
+  return m;
+}
+
+async function abrirCDP(page) {
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Performance.enable');
+  return cdp;
+}
+
+async function medirScroll(page, cdp) {
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(400);
+  const antes = await metricasCDP(cdp);
+  const nodos = await page.evaluate(() => document.getElementsByTagName('*').length);
+  const alto = await page.evaluate(() => document.documentElement.scrollHeight);
+  const visor = await page.evaluate(() => window.innerHeight);
+  const max = Math.max(0, alto - visor);
+  const pasos = Math.max(1, Math.ceil(max / 1000));
+  await page.evaluate(INICIAR_MONITOR);
+  for (let i = 1; i <= pasos; i++) {
+    await page.evaluate((y) => window.scrollTo(0, y), Math.min(max, i * 1000));
+    await page.waitForTimeout(120);
+  }
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await page.waitForTimeout(350);
+  const mon = await page.evaluate(TERMINAR_MONITOR);
+  const despues = await metricasCDP(cdp);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(150);
+  const delta = (k) => Math.round((((despues[k] ?? 0) - (antes[k] ?? 0)) * 1000) * 10) / 10;
+  return {
+    alto,
+    pasos,
+    nodos,
+    scripting: delta('ScriptDuration'),
+    tarea: delta('TaskDuration'),
+    layout: delta('LayoutDuration'),
+    estilo: delta('RecalcStyleDuration'),
+    ...mon,
+  };
+}
+
+async function esperarImagenesVisibles(page) {
+  await page
+    .evaluate(async () => {
+      const enVista = (img) => {
+        const r = img.getBoundingClientRect();
+        return r.bottom > 0 && r.top < window.innerHeight && r.right > 0 && r.left < window.innerWidth;
+      };
+      const pendientes = [...document.images].filter((i) => enVista(i) && !i.complete);
+      await Promise.all(
+        pendientes.map(
+          (i) =>
+            new Promise((r) => {
+              i.addEventListener('load', r, { once: true });
+              i.addEventListener('error', r, { once: true });
+              setTimeout(r, 3000);
+            })
+        )
+      );
+    })
+    .catch(() => {});
+  await page.waitForTimeout(250);
+}
+
+const MEDIR_GEOMETRIA = () => {
+  const alto = (sel) => {
+    const el = document.querySelector(sel);
+    if (!el) return null;
+    return Math.round(el.getBoundingClientRect().height * 100) / 100;
+  };
+  return {
+    tarjetaHome: alto('.fila .carrusel .tarjeta'),
+    tarjetaEpisodio: alto('.rejilla .celda .tarjeta'),
+    docNodes: document.getElementsByTagName('*').length,
+    overflowH: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  };
+};
+
+async function abrirHome(page) {
+  await gotoApp(page);
+  await page.waitForSelector('.fila .carrusel .tarjeta', { timeout: 60000 });
+  await page.waitForTimeout(800);
+}
+
+async function abrirDetalleLargoPerf(page) {
+  await buscar(page, 'bleach');
+  await abrirDetalle(page, 'animeav1');
+  await page
+    .waitForFunction(() => document.querySelectorAll('.rejilla .celda').length > 300, null, { timeout: 120000 })
+    .catch(() => {});
+  await page.waitForTimeout(900);
+  return page.evaluate(() => document.querySelectorAll('.rejilla .celda').length);
+}
+
+async function probarReducedMotion(browser, dirOut) {
+  const res = { anchos: [], t66t67: null, imagenes: [] };
+  for (const a of [
+    { w: 360, h: 740, nombre: '360' },
+    { w: 1280, h: 800, nombre: '1280' },
+  ]) {
+    const page = await browser.newPage();
+    try {
+      await page.setViewportSize({ width: a.w, height: a.h });
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await gotoApp(page);
+      await page.waitForSelector('.fila .carrusel .tarjeta', { timeout: 60000 }).catch(() => {});
+      const esqueletos = await page.evaluate(() => {
+        const esq = [...document.querySelectorAll('.esqueleto')];
+        return {
+          total: esq.length,
+          animados: esq.filter((e) => getComputedStyle(e).animationName !== 'none').length,
+        };
+      });
+      const eps = await abrirDetalleLargoPerf(page);
+      const r = await page.evaluate(() => {
+        const conDuracion = document.getAnimations().filter((x) => {
+          try {
+            const t = x.effect?.getTiming?.();
+            return t && Number(t.duration) > 0;
+          } catch {
+            return false;
+          }
+        });
+        const celdas = [...document.querySelectorAll('.rejilla .celda')];
+        const visibles = celdas.filter((c) => {
+          const s = getComputedStyle(c);
+          const b = c.getBoundingClientRect();
+          return b.width > 0 && b.height > 0 && s.display !== 'none' && s.visibility !== 'hidden' && parseFloat(s.opacity) > 0.5;
+        }).length;
+        return {
+          animaciones: document.getAnimations().length,
+          conDuracion: conDuracion.length,
+          detalles: conDuracion.slice(0, 5).map((x) => ({
+            tipo: x.constructor.name,
+            nombre: x.animationName ?? x.transitionProperty ?? '',
+            duracion: x.effect?.getTiming?.().duration ?? null,
+          })),
+          celdas: celdas.length,
+          visibles,
+          pendientes: celdas.filter((c) => c.classList.contains('pendiente')).length,
+          entra: celdas.filter((c) => c.classList.contains('entra')).length,
+        };
+      });
+      await esperarImagenesVisibles(page).catch(() => {});
+      const archivo = join(dirOut, `reduced_motion_${a.nombre}.png`);
+      await page.screenshot({ path: archivo }).catch(() => {});
+      res.anchos.push({ ancho: a.nombre, episodios: eps, esqueletos, ...r });
+      res.imagenes.push(`${a.nombre}.png`);
+    } catch (e) {
+      res.anchos.push({ ancho: a.nombre, error: e.message });
+    } finally {
+      await page.close();
+    }
+  }
+
+  const page = await browser.newPage();
+  let parcial = null;
+  try {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await gotoApp(page);
+    const eps = await abrirDetalleLargoPerf(page);
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await page.waitForTimeout(500);
+    const yAntes = await page.evaluate(() => Math.round(window.scrollY));
+    parcial = { episodios: eps, yAntes };
+    const hay = await page.evaluate(() => document.querySelectorAll('.rejilla .celda .tarjeta').length);
+    if (hay) {
+      await page.evaluate(() => {
+        const cs = document.querySelectorAll('.rejilla .celda .tarjeta');
+        cs[cs.length - 1].click();
+      });
+      await page.waitForSelector('.marco', { timeout: 30000 }).catch(() => {});
+      await page.waitForTimeout(1200);
+      await page.locator('.cabecera .atras').first().click().catch(() => {});
+      await page.waitForTimeout(1300);
+    }
+    const yDespues = await page.evaluate(() => Math.round(window.scrollY));
+    res.t66t67 = {
+      episodios: eps,
+      yAntes,
+      yDespues,
+      ok: hay > 0 && yAntes > 0 && Math.abs(yDespues - yAntes) <= 5,
+    };
+  } catch (e) {
+    res.t66t67 = { ...(parcial ?? {}), error: e.message };
+  } finally {
+    await page.close();
+  }
+  return res;
+}
+
+async function probarReducedTransparency(browser, dirOut) {
+  const page = await browser.newPage();
+  const res = { superficies: null, soportes: 0, imagenes: [] };
+  try {
+    await page.setViewportSize({ width: 360, height: 740 });
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Emulation.setEmulatedMedia', {
+      features: [{ name: 'prefers-reduced-transparency', value: 'reduce' }],
+    });
+    await gotoApp(page);
+    await page.waitForSelector('.fila .carrusel .tarjeta', { timeout: 60000 }).catch(() => {});
+    await buscar(page, 'bleach');
+    await abrirDetalle(page, 'animeav1').catch(() => {});
+    await page.waitForTimeout(700);
+    res.superficies = await page.evaluate(() => {
+      const leer = (sel) => {
+        const el = document.querySelector(sel);
+        if (!el) return null;
+        const s = getComputedStyle(el);
+        return {
+          bg: s.backgroundColor,
+          backdrop: s.backdropFilter || s.webkitBackdropFilter || 'none',
+        };
+      };
+      return {
+        barraInferior: leer('.barra-inferior'),
+        barraAccion: leer('.barra-accion'),
+        cabeceraFija: leer('.cabecera.fija'),
+      };
+    });
+    res.soportes = await page.evaluate(() => {
+      let n = 0;
+      const recorrer = (reglas) => {
+        for (const r of reglas) {
+          if (typeof CSSSupportsRule !== 'undefined' && r instanceof CSSSupportsRule) {
+            if (/backdrop-filter/.test(r.conditionText)) n++;
+          }
+          if (r.cssRules) {
+            try { recorrer(r.cssRules); } catch {}
+          }
+        }
+      };
+      for (const hoja of document.styleSheets) {
+        try { recorrer(hoja.cssRules); } catch {}
+      }
+      return n;
+    });
+    await esperarImagenesVisibles(page).catch(() => {});
+    const archivo = join(dirOut, 'reduced_transparency_360.png');
+    await page.screenshot({ path: archivo }).catch(() => {});
+    res.imagenes.push('360.png');
+  } catch (e) {
+    res.error = e.message;
+  } finally {
+    await page.close();
+  }
+  return res;
+}
+
+async function rendimiento() {
+  const etiqueta = process.argv[3] ?? 'antes';
+  const dirOut = join('docs/img/v1.4/rendimiento', etiqueta);
+  mkdirSync(dirOut, { recursive: true });
+  const browser = await chromium.launch({ args: ['--enable-precise-memory-info'] });
+  const rep = { etiqueta, medidas: [], geometria: [], reducedMotion: null, reducedTransparency: null, errores: [] };
+  const captura = async (page, nombre) => {
+    await esperarImagenesVisibles(page).catch(() => {});
+    try {
+      await page.screenshot({ path: join(dirOut, `${nombre}.png`) });
+    } catch (e) {
+      rep.errores.push(`${nombre}: ${e.message}`);
+    }
+  };
+
+  const page = await browser.newPage();
+  const cdp = await abrirCDP(page);
+  try {
+    // Home a 360 y 1280.
+    for (const a of [
+      { w: 360, h: 740, nombre: '360' },
+      { w: 1280, h: 800, nombre: '1280' },
+    ]) {
+      await page.setViewportSize({ width: a.w, height: a.h });
+      await abrirHome(page);
+      await captura(page, `home_${a.nombre}`);
+      rep.geometria.push({ vista: 'home', ancho: a.nombre, ...(await page.evaluate(MEDIR_GEOMETRIA)) });
+      const m = await medirScroll(page, cdp);
+      rep.medidas.push({ vista: 'home', ancho: a.nombre, ...m });
+      log('rendimiento home', a.nombre, 'frames>50=', m.framesLargos, 'scripting=', m.scripting);
+    }
+
+    // Búsqueda a 360 (misma consulta que el resto de la serie).
+    await page.setViewportSize({ width: 360, height: 740 });
+    await abrirHome(page);
+    await buscar(page, 'bleach');
+    const resultados = await page.locator('main .rejilla > .tarjeta').count();
+    await captura(page, 'busqueda_360');
+    rep.geometria.push({ vista: 'busqueda', ancho: '360', resultados, ...(await page.evaluate(MEDIR_GEOMETRIA)) });
+    const mb = await medirScroll(page, cdp);
+    rep.medidas.push({ vista: 'busqueda', ancho: '360', resultados, ...mb });
+    log('rendimiento busqueda 360', 'resultados=', resultados, 'frames>50=', mb.framesLargos, 'scripting=', mb.scripting);
+
+    // Detalle de Bleach (366 episodios) a 360.
+    await abrirHome(page);
+    const eps360 = await abrirDetalleLargoPerf(page);
+    await captura(page, 'detalle_360');
+    const g360 = await page.evaluate(MEDIR_GEOMETRIA);
+    rep.geometria.push({ vista: 'detalle', ancho: '360', episodios: eps360, ...g360 });
+    const md = await medirScroll(page, cdp);
+    rep.medidas.push({ vista: 'detalle', ancho: '360', episodios: eps360, ...md });
+    log('rendimiento detalle 360', 'episodios=', eps360, 'frames>50=', md.framesLargos, 'scripting=', md.scripting);
+
+    // Geometría a 768 (179 px de tarjeta de episodio).
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await abrirHome(page);
+    await captura(page, 'home_768');
+    rep.geometria.push({ vista: 'home', ancho: '768', ...(await page.evaluate(MEDIR_GEOMETRIA)) });
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await buscar(page, 'bleach');
+    await abrirDetalle(page, 'animeav1');
+    await page.waitForTimeout(800);
+    await captura(page, 'detalle_768');
+    rep.geometria.push({ vista: 'detalle', ancho: '768', ...(await page.evaluate(MEDIR_GEOMETRIA)) });
+
+    // Detalle a 1280.
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await abrirHome(page);
+    const eps1280 = await abrirDetalleLargoPerf(page);
+    await captura(page, 'detalle_1280');
+    const g1280 = await page.evaluate(MEDIR_GEOMETRIA);
+    rep.geometria.push({ vista: 'detalle', ancho: '1280', episodios: eps1280, ...g1280 });
+    const md2 = await medirScroll(page, cdp);
+    rep.medidas.push({ vista: 'detalle', ancho: '1280', episodios: eps1280, ...md2 });
+    log('rendimiento detalle 1280', 'episodios=', eps1280, 'frames>50=', md2.framesLargos, 'scripting=', md2.scripting);
+  } catch (e) {
+    rep.errores.push(e.message);
+  } finally {
+    await page.close();
+  }
+
+  rep.reducedMotion = await probarReducedMotion(browser, dirOut);
+  rep.reducedTransparency = await probarReducedTransparency(browser, dirOut);
+  await browser.close();
+
+  console.log(`## Modo rendimiento (T87) — ${etiqueta}\n`);
+  console.log('| vista | ancho | frames | >50 ms | p95 (ms) | máx (ms) | scripting (ms) | tarea (ms) | layout (ms) | nodos DOM | alto (px) | pasos |');
+  console.log('|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|');
+  for (const m of rep.medidas) {
+    console.log(
+      `| ${m.vista} | ${m.ancho} | ${m.frames} | ${m.framesLargos} | ${m.frameP95} | ${m.frameMax} | ${m.scripting} | ${m.tarea} | ${m.layout} | ${m.nodos} | ${m.alto} | ${m.pasos} |`
+    );
+  }
+  console.log('\n| vista | ancho | tarjeta Home | tarjeta episodio | overflowH | nodos |');
+  console.log('|---|---:|---:|---:|---:|---:|');
+  for (const g of rep.geometria) {
+    console.log(`| ${g.vista} | ${g.ancho} | ${g.tarjetaHome ?? '—'} | ${g.tarjetaEpisodio ?? '—'} | ${g.overflowH ?? '—'} | ${g.docNodes ?? '—'} |`);
+  }
+  console.log('\n### reduced-motion: reduce\n');
+  console.log('| ancho | animaciones | con duración | celdas | visibles | pendientes | esqueletos animados |');
+  console.log('|---:|---:|---:|---:|---:|---:|---:|');
+  for (const r of rep.reducedMotion.anchos) {
+    console.log(`| ${r.ancho} | ${r.animaciones ?? '—'} | ${r.conDuracion ?? '—'} | ${r.celdas ?? '—'} | ${r.visibles ?? '—'} | ${r.pendientes ?? '—'} | ${r.esqueletos?.animados ?? '—'} |`);
+  }
+  const t = rep.reducedMotion.t66t67;
+  console.log(`\nT66/T67 con reduce (360): ${t?.ok ? 'OK' : 'FALLO'} (y ${t?.yAntes} → ${t?.yDespues}${t?.error ? `; error: ${t.error}` : ''})\n`);
+  console.log('### reduced-transparency: reduce\n');
+  console.log('| superficie | background-color | backdrop-filter |');
+  console.log('|---|---|---|');
+  for (const [k, v] of Object.entries(rep.reducedTransparency.superficies ?? {})) {
+    console.log(`| ${k} | ${v ? v.bg : '—'} | ${v ? v.backdrop : '—'} |`);
+  }
+  console.log(`\nReglas @supports not (backdrop-filter) encontradas: ${rep.reducedTransparency.soportes}`);
+  if (rep.errores.length) console.log(`\nErrores: ${rep.errores.join(' · ')}`);
   return rep;
 }
 
@@ -6521,6 +6957,8 @@ if (modo === 'comparar') {
   if (rep.errores.length) console.log('\nErrores:', rep.errores);
   console.log(`\nCapturas (${dirOut}): ${rep.capturas.join(', ') || 'ninguna'}`);
   console.log(`Resumen JSON: ${join(dirOut, 'favoritos.json')}`);
+} else if (modo === 'rendimiento') {
+  await rendimiento();
 } else {
   const dirOut = process.argv[3] ?? DIR_DEF;
   const res = await capturar(dirOut);

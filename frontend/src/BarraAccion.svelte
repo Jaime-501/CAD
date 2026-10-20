@@ -59,4 +59,10 @@
       transition: none;
     }
   }
+  /* T87: sin soporte de blur, la barra usa fondo opaco (sin transparencia). */
+  @supports not (backdrop-filter: blur(1px)) {
+    .barra-accion {
+      background: var(--bg-1);
+    }
+  }
 </style>

@@ -274,3 +274,30 @@ input {
     height: 100vh;
     text-align: center;
 }
+
+/* T87: con movimiento reducido, cualquier animación o transición dura lo
+   mínimo y termina una sola vez. `scroll-behavior` vuelve a `auto` para que
+   la restauración de scroll (T66/T67) sea instantánea. */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        transition-property: none !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* T87: con transparencia reducida, las barras fijas usan el fondo opaco
+   `--bg-1` y pierden el blur. Por defecto no cambia nada. */
+@media (prefers-reduced-transparency: reduce) {
+    .barra-accion,
+    .barra-inferior,
+    .cabecera.fija {
+        background: var(--bg-1) !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+}

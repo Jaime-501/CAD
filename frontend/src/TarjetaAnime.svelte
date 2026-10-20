@@ -22,7 +22,7 @@
 </script>
 
 <button type="button" class="tarjeta" title={anime.title} on:click={() => onAbrir(anime)}>
-  <img src={anime.cover_url} alt={anime.title} loading="lazy" />
+  <img src={anime.cover_url} alt={anime.title} loading="lazy" decoding="async" />
   {#if etiqueta !== undefined && etiqueta !== ''}
     <span class="etiqueta">{etiqueta}</span>
   {/if}

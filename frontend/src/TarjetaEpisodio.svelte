@@ -36,6 +36,7 @@
         src={episodio.thumbnail}
         alt={titulo}
         loading="lazy"
+        decoding="async"
         on:error={() => (falloMiniatura = true)}
       />
     {:else}

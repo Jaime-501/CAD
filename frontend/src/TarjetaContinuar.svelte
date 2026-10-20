@@ -57,6 +57,7 @@
       src={item.cover_url}
       alt=""
       loading="lazy"
+      decoding="async"
       on:error={() => (falloPortada = true)}
     />
   {:else}
