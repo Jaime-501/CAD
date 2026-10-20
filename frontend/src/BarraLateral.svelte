@@ -41,6 +41,9 @@
   import type { RetomarResultado } from './retomar';
   import { drawerOpen, isNarrow, sidebarCollapsed } from './ui';
   import TarjetaHistorial from './TarjetaHistorial.svelte';
+  import Btn from './Btn.svelte';
+  import Esqueleto from './Esqueleto.svelte';
+  import EstadoVista from './EstadoVista.svelte';
   import type { models } from './api';
 
   /** Resolución del clic: la cablea `App.svelte` con `retomar` (T50). */
@@ -233,23 +236,22 @@
     <div class="cuerpo">
       {#if $isNarrow || !$sidebarCollapsed}
         {#if $historialEstado === 'error'}
-          <p class="vacio">No se pudo cargar el historial.</p>
-          <button type="button" class="reintentar" on:click={() => void cargarHistorial()}>
-            Reintentar
-          </button>
+          <EstadoVista variante="error" titulo="No se pudo cargar el historial">
+            <Btn variante="secundario" onClick={() => void cargarHistorial()}>Reintentar</Btn>
+          </EstadoVista>
         {:else if ($historialEstado === 'idle' || $historialEstado === 'loading') && $historial.length === 0}
           {#each [0, 1, 2] as indice (indice)}
             <div class="esqueleto" aria-hidden="true">
-              <span class="esqueleto-portada"></span>
-              <span class="esqueleto-datos">
-                <span class="esqueleto-linea ancha"></span>
-                <span class="esqueleto-linea estrecha"></span>
-                <span class="esqueleto-barra"></span>
-              </span>
+              <Esqueleto alto="68px" ancho="48px" radio="var(--r-md)" />
+              <div class="esqueleto-datos">
+                <Esqueleto alto="12px" ancho="80%" radio="var(--r-sm)" />
+                <Esqueleto alto="10px" ancho="50%" radio="var(--r-sm)" />
+                <Esqueleto alto="4px" ancho="100%" radio="var(--r-sm)" />
+              </div>
             </div>
           {/each}
         {:else if $historial.length === 0}
-          <p class="vacio">Aún no hay nada que retomar.</p>
+          <EstadoVista variante="vacio" titulo="Aún no hay nada que retomar." />
         {:else}
           {#each agruparPorProveedor($historial) as grupo (grupo.provider)}
             <section class="grupo" aria-label="Historial de {grupo.nombre}">
@@ -333,8 +335,8 @@
     box-sizing: border-box;
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 12px;
+    gap: var(--sp-2);
+    padding: var(--sp-3);
     border-bottom: 1px solid var(--border);
   }
   .titulo {
@@ -367,26 +369,7 @@
     flex: 1;
     box-sizing: border-box;
     overflow-y: auto;
-    padding: 12px;
-  }
-  .vacio {
-    margin: 0;
-    color: var(--text-3);
-  }
-  .reintentar {
-    box-sizing: border-box;
-    padding: 6px 12px;
-    background: transparent;
-    border: 1px solid var(--border);
-    border-radius: var(--r-md);
-    color: var(--brand-400);
-    font-family: inherit;
-    font-weight: bold;
-    cursor: pointer;
-  }
-  .reintentar:focus-visible {
-    outline: 2px solid var(--brand-400);
-    outline-offset: 2px;
+    padding: var(--sp-3);
   }
   .grupo {
     margin: 0 0 14px;
@@ -394,9 +377,9 @@
   .grupo-titulo {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin: 0 0 8px;
-    font-size: 12px;
+    gap: var(--sp-2);
+    margin: 0 0 var(--sp-2);
+    font-size: var(--fs-xs);
     font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -413,7 +396,7 @@
     justify-content: center;
     flex-shrink: 0;
     margin-left: auto;
-    padding: 4px;
+    padding: var(--sp-1);
     background: transparent;
     border: 1px solid var(--border);
     border-radius: var(--r-md);
@@ -439,7 +422,7 @@
   .borrar-todo {
     box-sizing: border-box;
     width: 100%;
-    padding: 6px 12px;
+    padding: 6px var(--sp-3);
     background: transparent;
     border: 1px solid var(--border);
     border-radius: var(--r-md);
@@ -457,19 +440,19 @@
     outline-offset: 2px;
   }
   .confirmar-texto {
-    margin: 0 0 8px;
+    margin: 0 0 var(--sp-2);
     font-size: 13px;
     color: var(--text-1);
   }
   .confirmar-acciones {
     display: flex;
-    gap: 8px;
+    gap: var(--sp-2);
   }
   .si-borrar {
     box-sizing: border-box;
     flex: 1;
     min-width: 0;
-    padding: 6px 8px;
+    padding: 6px var(--sp-2);
     background: transparent;
     border: 1px solid var(--danger);
     border-radius: var(--r-md);
@@ -482,7 +465,7 @@
     box-sizing: border-box;
     flex: 1;
     min-width: 0;
-    padding: 6px 8px;
+    padding: 6px var(--sp-2);
     background: transparent;
     border: 1px solid var(--border);
     border-radius: var(--r-md);
@@ -502,15 +485,8 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 8px;
+    padding: var(--sp-2);
     margin: 0 0 6px;
-  }
-  .esqueleto-portada {
-    flex-shrink: 0;
-    width: 48px;
-    height: 68px;
-    border-radius: var(--r-md);
-    background: var(--border-strong);
   }
   .esqueleto-datos {
     flex: 1;
@@ -518,40 +494,6 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
-  }
-  .esqueleto-linea,
-  .esqueleto-barra {
-    display: block;
-    border-radius: var(--r-sm);
-    background: var(--border-strong);
-  }
-  .esqueleto-linea.ancha {
-    width: 80%;
-    height: 12px;
-  }
-  .esqueleto-linea.estrecha {
-    width: 50%;
-    height: 10px;
-  }
-  .esqueleto-barra {
-    width: 100%;
-    height: 4px;
-  }
-  @media (prefers-reduced-motion: no-preference) {
-    .esqueleto-linea,
-    .esqueleto-barra,
-    .esqueleto-portada {
-      animation: pulsar 1.4s ease-in-out infinite;
-    }
-  }
-  @keyframes pulsar {
-    0%,
-    100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.45;
-    }
   }
   /* Modo estrecho: cajón fijo sobre el contenido (el ancho colapsado se ignora). */
   .barra.cajon {
@@ -572,7 +514,6 @@
   .barra.cajon .alternar,
   .barra.cajon .papelera,
   .barra.cajon .borrar-todo,
-  .barra.cajon .reintentar,
   .barra.cajon .si-borrar,
   .barra.cajon .cancelar {
     min-width: var(--tap);
@@ -585,9 +526,8 @@
     padding: 0;
     border: none;
     cursor: pointer;
-    /* Mismo fondo oscuro semitransparente que las superposiciones existentes
-       (TarjetaEpisodio.svelte: rgba(0,0,0,0.75)). */
-    background: rgba(0, 0, 0, 0.75);
+    /* Mismo velo oscuro semitransparente que las superposiciones existentes. */
+    background: var(--scrim-strong);
   }
   .fondo-cajon:focus-visible {
     outline: 2px solid var(--brand-400);

@@ -105,12 +105,12 @@
     display: block;
     color: var(--text-3);
     font-size: 13px;
-    margin-bottom: 8px;
+    margin-bottom: var(--sp-2);
   }
   .botones {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: var(--sp-2);
   }
   .botones button {
     padding: 7px 14px;
@@ -136,7 +136,7 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    margin-top: 12px;
+    margin-top: var(--sp-3);
     padding: 6px 10px;
     border-radius: var(--r-md);
     border: 1px solid transparent;
@@ -154,7 +154,7 @@
     align-items: center;
   }
   .botones.extras {
-    margin-top: 8px;
+    margin-top: var(--sp-2);
   }
   @media (hover: hover) and (pointer: fine) {
     .botones button:hover {

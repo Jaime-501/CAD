@@ -26,6 +26,8 @@
   import FilaAnimes from './FilaAnimes.svelte';
   import FilaContinuar from './FilaContinuar.svelte';
   import GridFavoritos from './GridFavoritos.svelte';
+  import Btn from './Btn.svelte';
+  import EstadoVista from './EstadoVista.svelte';
   import { favoritos, cargarFavoritos } from './favoritos';
   import { cargarProveedor, cargarTodo, home, PROVEEDORES_HOME } from './home';
   import { isNarrow, pestanaHome } from './ui';
@@ -148,15 +150,15 @@
         </section>
       {:else if estado.estado === 'error'}
         <div class="error-proveedor">
-          <p class="error-texto">No se pudo cargar {proveedor.nombre}.</p>
-          <p class="error-detalle">{estado.error}</p>
-          <button
-            type="button"
-            class="reintentar"
-            on:click={() => void cargarProveedor(proveedor.id, true)}
+          <EstadoVista
+            variante="error"
+            titulo={`No se pudo cargar ${proveedor.nombre}`}
+            texto={estado.error}
           >
-            Reintentar
-          </button>
+            <Btn variante="secundario" onClick={() => void cargarProveedor(proveedor.id, true)}>
+              Reintentar
+            </Btn>
+          </EstadoVista>
         </div>
       {:else}
         {#each estado.secciones as seccion (seccion.id)}
@@ -201,12 +203,12 @@
   }
   .pestanas {
     display: flex;
-    gap: 4px;
+    gap: var(--sp-1);
     border-bottom: 1px solid var(--border);
     margin-bottom: 1.5rem;
   }
   .pestana {
-    padding: 8px 14px;
+    padding: var(--sp-2) 14px;
     /* Cubre el borde de la fila con el indicador de 2 px. */
     margin-bottom: -1px;
     background: transparent;
@@ -233,7 +235,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: var(--sp-3);
     margin-bottom: 1.5rem;
   }
   h2 {
@@ -241,7 +243,7 @@
     text-align: left;
   }
   .actualizar {
-    padding: 8px 16px;
+    padding: var(--sp-2) var(--sp-4);
     border-radius: var(--r-md);
     border: none;
     background: var(--brand-500);
@@ -260,36 +262,38 @@
     outline-offset: 2px;
   }
   .error-proveedor {
-    margin: 0 0 28px;
-    padding: 12px;
+    margin: 0 0 var(--sp-7);
     background: var(--surface-card);
     border: 1px solid var(--border);
     border-radius: var(--r-md);
+    overflow: hidden;
   }
-  .error-texto {
-    margin: 0 0 4px;
-    color: var(--text-1);
+  /* Variante compacta: icono, título/texto y acción en una rejilla horizontal. */
+  .error-proveedor :global(.estado-vista) {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      'icono titulo accion'
+      'icono texto accion';
+    align-items: center;
+    gap: var(--sp-1) var(--sp-2);
+    padding: var(--sp-3);
+    text-align: left;
   }
-  .error-detalle {
-    margin: 0 0 10px;
-    font-size: 13px;
-    color: var(--text-3);
+  .error-proveedor :global(.estado-vista .icono) {
+    grid-area: icono;
+  }
+  .error-proveedor :global(.estado-vista .titulo) {
+    grid-area: titulo;
+    font-size: var(--fs-md);
+  }
+  .error-proveedor :global(.estado-vista .texto) {
+    grid-area: texto;
+    max-width: none;
     overflow-wrap: anywhere;
   }
-  .reintentar {
-    box-sizing: border-box;
-    padding: 6px 12px;
-    background: transparent;
-    border: 1px solid var(--border);
-    border-radius: var(--r-md);
-    color: var(--brand-400);
-    font-family: inherit;
-    font-weight: bold;
-    cursor: pointer;
-  }
-  .reintentar:focus-visible {
-    outline: 2px solid var(--brand-400);
-    outline-offset: 2px;
+  .error-proveedor :global(.estado-vista .accion) {
+    grid-area: accion;
   }
   .vacio {
     color: var(--text-3);
@@ -298,22 +302,22 @@
   /* Fila de carga (T53b): mismas medidas que la fila real (8 tarjetas
      140×264: portada 210 + bloque de título de 2 líneas). */
   .fila-fantasma {
-    margin: 0 0 28px;
+    margin: 0 0 var(--sp-7);
   }
   .cabecera-fantasma {
     display: flex;
     align-items: baseline;
-    gap: 8px;
+    gap: var(--sp-2);
     margin: 0 0 10px;
     min-height: 22px;
   }
   .proveedor-fantasma {
-    font-size: 12px;
+    font-size: var(--fs-xs);
     color: var(--text-3);
   }
   .carrusel-fantasma {
     display: flex;
-    gap: 12px;
+    gap: var(--sp-3);
     overflow: hidden;
   }
   .esqueleto {
@@ -344,8 +348,7 @@
   }
   /* T75: en modo estrecho los botones del Home alcanzan el objetivo táctil. */
   @media (max-width: 899px) {
-    .actualizar,
-    .reintentar {
+    .actualizar {
       min-height: var(--tap);
     }
     /* T76: el carrusel fantasma sangra igual que el real (mismos márgenes y

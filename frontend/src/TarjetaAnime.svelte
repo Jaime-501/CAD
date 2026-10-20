@@ -104,7 +104,7 @@
     overflow: hidden;
     box-sizing: content-box;
     height: calc(1.3em * 2);
-    padding: 8px 8px 0;
+    padding: var(--sp-2) var(--sp-2) 0;
     margin-bottom: 10px;
     font-size: 13px;
     line-height: 1.3;

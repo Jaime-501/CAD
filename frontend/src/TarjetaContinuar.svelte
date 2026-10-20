@@ -99,7 +99,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 8px;
+    padding: var(--sp-2);
     background: var(--bg-1);
     border: 1px solid var(--border-subtle);
     border-radius: var(--r-lg);
@@ -147,7 +147,7 @@
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--sp-1);
   }
   .titulo {
     font-size: var(--fs-sm);

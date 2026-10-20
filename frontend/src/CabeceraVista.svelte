@@ -41,7 +41,7 @@
   .cabecera {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: var(--sp-4);
     margin-bottom: 1.5rem;
   }
   .titulos {
@@ -53,9 +53,9 @@
     font-family: var(--font-display);
   }
   .subtitulo {
-    margin: 4px 0 0;
+    margin: var(--sp-1) 0 0;
     color: var(--text-3);
-    font-size: 14px;
+    font-size: var(--fs-sm);
   }
   .acciones {
     display: flex;
@@ -69,7 +69,7 @@
     display: inline-flex;
     align-items: center;
     flex-shrink: 0;
-    padding: 8px 14.27px;
+    padding: var(--sp-2) 14.27px;
     border-radius: var(--r-md);
     border: none;
     background: var(--brand-500);

@@ -60,6 +60,10 @@
     --fav: #fbbf24;
     --indigo: #6366f1;
 
+    /* Velos */
+    --scrim: rgba(0, 0, 0, 0.65);
+    --scrim-strong: rgba(0, 0, 0, 0.75);
+
     /* Radios */
     --r-sm: 6px;
     --r-md: 12px;

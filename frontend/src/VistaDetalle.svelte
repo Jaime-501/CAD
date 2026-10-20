@@ -22,6 +22,7 @@
   import BarraAccion from './BarraAccion.svelte';
   import BotonFavorito from './BotonFavorito.svelte';
   import CabeceraVista from './CabeceraVista.svelte';
+  import EstadoVista from './EstadoVista.svelte';
   import Insignia from './Insignia.svelte';
   import Icono from './Icono.svelte';
   import TarjetaEpisodio from './TarjetaEpisodio.svelte';
@@ -290,9 +291,9 @@
   </CabeceraVista>
 
   {#if error}
-    <p class="error">{error}</p>
+    <EstadoVista variante="error" titulo="No se pudo cargar el detalle" texto={error} />
   {:else if cargando && !$currentDetail}
-    <p class="estado">Cargando detalle…</p>
+    <EstadoVista variante="cargando" titulo="Cargando detalle…" />
   {:else if $currentDetail}
     <section class="ficha">
       {#if $currentDetail.cover !== ''}
@@ -392,12 +393,12 @@
     {/if}
 
     {#if !$episodesComplete}
-      <p class="cargando">Cargando más episodios…</p>
+      <p class="cargando" aria-live="polite">Cargando más episodios…</p>
     {:else if episodios.length === 0}
-      <p class="estado">No hay episodios disponibles.</p>
+      <EstadoVista variante="vacio" titulo="No hay episodios disponibles." />
     {/if}
   {:else}
-    <p class="estado">Sin detalle disponible.</p>
+    <EstadoVista variante="vacio" titulo="Sin detalle disponible." />
   {/if}
 </main>
 
@@ -421,13 +422,13 @@
   }
   .ficha {
     display: flex;
-    gap: 24px;
+    gap: var(--sp-5);
     margin-bottom: 2rem;
     background: var(--surface-card);
     border: 1px solid var(--border-subtle);
     border-radius: var(--r-xl);
     box-shadow: var(--sh-card);
-    padding: 20px;
+    padding: var(--sp-4);
   }
   .portada-marco {
     box-sizing: border-box;
@@ -506,7 +507,7 @@
     cursor: pointer;
   }
   .continuar {
-    padding: 10px 20px;
+    padding: 10px var(--sp-4);
     border-radius: var(--r-md);
     border: none;
     background: var(--brand-500);
@@ -626,12 +627,6 @@
       animation: none;
     }
   }
-  .estado {
-    color: var(--text-3);
-  }
-  .error {
-    color: var(--danger);
-  }
   .aviso {
     color: var(--fav);
     background: var(--bg-2);
@@ -641,6 +636,7 @@
   }
   .cargando {
     color: var(--text-3);
+    font-size: var(--fs-sm);
     text-align: center;
     padding: 1rem 0;
   }

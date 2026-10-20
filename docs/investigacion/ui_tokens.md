@@ -59,6 +59,8 @@ A partir de 768 px se recupera `--blur-lg: 28px` (por debajo, `14px`).
 | `--danger` | `#f87171` | Error/peligro |
 | `--fav` | `#fbbf24` | Favorito (estrella) |
 | `--indigo` | `#6366f1` | Acento indigo auxiliar |
+| `--scrim` | `rgba(0,0,0,.65)` | Velo de superposición (overlay de carga) |
+| `--scrim-strong` | `rgba(0,0,0,.75)` | Velo fuerte (fondo del cajón) |
 | `--r-sm` | `6px` | Radio pequeño (chips) |
 | `--r-md` | `12px` | Radio medio (inputs, botones) |
 | `--r-lg` | `16px` | Radio grande (tarjetas) |

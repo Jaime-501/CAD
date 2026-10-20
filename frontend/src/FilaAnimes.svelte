@@ -109,22 +109,22 @@
 
 <style>
   .fila {
-    margin: 0 0 28px;
+    margin: 0 0 var(--sp-7);
     text-align: left;
   }
   .cabecera {
     display: flex;
     align-items: baseline;
-    gap: 8px;
+    gap: var(--sp-2);
     margin: 0 0 10px;
   }
   .proveedor {
-    font-size: 12px;
+    font-size: var(--fs-xs);
     color: var(--text-3);
   }
   .titulo-fila {
     margin: 0;
-    font-size: 16px;
+    font-size: var(--fs-md);
     font-weight: bold;
     color: var(--text-1);
   }
@@ -165,7 +165,7 @@
   }
   .carrusel {
     display: flex;
-    gap: 12px;
+    gap: var(--sp-3);
     overflow-x: auto;
     scroll-snap-type: x proximity;
     /* El snap debe alinearse con el borde de la fila, no con el padding box

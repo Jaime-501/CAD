@@ -95,13 +95,13 @@
 
 <style>
   .fila-continuar {
-    margin: 0 0 28px;
+    margin: 0 0 var(--sp-7);
     text-align: left;
   }
   /* Mismo estilo que `.titulo-fila` de FilaAnimes (T76). */
   .titulo-fila {
     margin: 0 0 10px;
-    font-size: 16px;
+    font-size: var(--fs-md);
     font-weight: bold;
     color: var(--text-1);
     min-width: 0;
@@ -113,7 +113,7 @@
      desplazamiento es por gesto/rueda. */
   .carrusel {
     display: flex;
-    gap: 12px;
+    gap: var(--sp-3);
     overflow-x: auto;
     scroll-snap-type: x proximity;
     margin: -6px calc(-1 * var(--gutter)) -14px;

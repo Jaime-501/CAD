@@ -118,7 +118,7 @@
     align-items: center;
     gap: 10px;
     /* Margen derecho para que el texto no quede bajo el ✕ (T51). */
-    padding: 8px 36px 8px 8px;
+    padding: var(--sp-2) 36px var(--sp-2) var(--sp-2);
     background: transparent;
     border: none;
     border-radius: var(--r-md);
@@ -160,7 +160,7 @@
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--sp-1);
   }
   .titulo {
     font-size: 13px;
@@ -173,7 +173,7 @@
     overflow: hidden;
   }
   .secundaria {
-    font-size: 12px;
+    font-size: var(--fs-xs);
     color: var(--text-3);
     white-space: nowrap;
     overflow: hidden;
@@ -200,7 +200,7 @@
      orden de tabulación y de los clics mientras está oculto. */
   .borrar {
     position: absolute;
-    right: 8px;
+    right: var(--sp-2);
     top: 50%;
     transform: translateY(-50%);
     box-sizing: border-box;

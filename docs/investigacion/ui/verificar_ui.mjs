@@ -11,6 +11,7 @@
 //   NODE_PATH=... node docs/investigacion/ui/verificar_ui.mjs pixel <png> <x> <y>
 //   NODE_PATH=... node docs/investigacion/ui/verificar_ui.mjs filas [dirOut]
 //   NODE_PATH=... node docs/investigacion/ui/verificar_ui.mjs favoritos [dirOut]
+//   NODE_PATH=... node docs/investigacion/ui/verificar_ui.mjs estados [dirOut]
 //
 // `capturar` deja los PNG en <dirOut> (por defecto
 // `docs/investigacion/ui/verif`) y un `resumen.json` con `overflowH` por vista.
@@ -5562,6 +5563,500 @@ async function favoritos() {
 }
 
 // ---------------------------------------------------------------------------
+// Modo estados (T86): estados unificados, tokens de velo y regresión
+// ---------------------------------------------------------------------------
+
+const ANCHOS_ESTADOS = [
+  { w: 360, h: 740, nombre: '360' },
+  { w: 390, h: 844, nombre: '390' },
+  { w: 768, h: 1024, nombre: '768' },
+  { w: 1280, h: 800, nombre: '1280' },
+];
+
+const ALTO_EPISODIOS_ESTADOS = { 360: 146, 390: 146, 768: 179, 1280: 170.39 };
+
+const MEDIR_ESTADO = (selector) => {
+  const d = document.documentElement;
+  const caja = document.querySelector(selector);
+  const estado = caja ? caja.querySelector('.estado-vista') ?? caja : null;
+  const rect = (el) => {
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return {
+      x: Math.round(r.x),
+      y: Math.round(r.y),
+      w: Math.round(r.width * 100) / 100,
+      h: Math.round(r.height * 100) / 100,
+      bottom: Math.round(r.bottom * 100) / 100,
+    };
+  };
+  const botones = estado ? [...estado.querySelectorAll('.btn')] : [];
+  const cs = estado ? getComputedStyle(estado) : null;
+  return {
+    overflowH: d.scrollWidth - d.clientWidth,
+    caja: rect(caja),
+    estado: rect(estado),
+    variante: estado ? [...estado.classList].find((c) => c.startsWith('variante-')) ?? null : null,
+    role: estado ? estado.getAttribute('role') : null,
+    titulo: estado && estado.querySelector(':scope > .titulo') ? (estado.querySelector(':scope > .titulo').textContent || '').trim() : null,
+    texto: estado && estado.querySelector(':scope > .texto') ? (estado.querySelector(':scope > .texto').textContent || '').trim() : null,
+    icono: rect(estado ? estado.querySelector('.icono') : null),
+    display: cs ? cs.display : null,
+    areas: cs ? cs.gridTemplateAreas : null,
+    botones: botones.map((b) => ({ ...rect(b), texto: (b.textContent || '').trim() })),
+  };
+};
+
+const MEDIR_ERROR_HOME = () => {
+  const caja = document.querySelector('.error-proveedor');
+  if (!caja) return { err: 'sin .error-proveedor' };
+  const error = ((caja.querySelector('.texto') || {}).textContent || '').trim();
+  const ancho = caja.getBoundingClientRect().width;
+  const host = document.createElement('div');
+  host.style.cssText = `position:absolute;left:-9999px;top:0;visibility:hidden;width:${ancho}px;box-sizing:border-box;`;
+  host.innerHTML =
+    `<div class="legacy-error-proveedor">` +
+    `<p class="legacy-error-texto">No se pudo cargar JKAnime.</p>` +
+    `<p class="legacy-error-detalle"></p>` +
+    `<button type="button" class="legacy-reintentar">Reintentar</button>` +
+    `</div>`;
+  host.querySelector('.legacy-error-detalle').textContent = error;
+  const estilo = document.createElement('style');
+  estilo.textContent = `
+    .legacy-error-proveedor { margin: 0 0 28px; padding: 12px; background: var(--surface-card); border: 1px solid var(--border); border-radius: var(--r-md); }
+    .legacy-error-texto { margin: 0 0 4px; color: var(--text-1); }
+    .legacy-error-detalle { margin: 0 0 10px; font-size: 13px; color: var(--text-3); overflow-wrap: anywhere; }
+    .legacy-reintentar { box-sizing: border-box; padding: 6px 12px; background: transparent; border: 1px solid var(--border); border-radius: var(--r-md); color: var(--brand-400); font-family: inherit; font-weight: bold; cursor: pointer; }
+  `;
+  document.head.appendChild(estilo);
+  document.body.appendChild(host);
+  const nuevo = caja.getBoundingClientRect();
+  const viejo = host.querySelector('.legacy-error-proveedor').getBoundingClientRect();
+  const r = {
+    nuevo: Math.round(nuevo.height * 100) / 100,
+    viejo: Math.round(viejo.height * 100) / 100,
+    ancho: Math.round(nuevo.width * 100) / 100,
+    compacto: getComputedStyle(caja.querySelector('.estado-vista')).display === 'grid',
+  };
+  host.remove();
+  estilo.remove();
+  return r;
+};
+
+const MEDIR_CAJON_CARGANDO = () => {
+  const cuerpo = document.querySelector('.barra .cuerpo');
+  if (!cuerpo) return { err: 'sin cajón' };
+  const wrappers = [...cuerpo.querySelectorAll(':scope > .esqueleto')];
+  const piezas = wrappers.map((w) =>
+    [...w.querySelectorAll('.esqueleto')].map((el) => {
+      const r = el.getBoundingClientRect();
+      return { w: Math.round(r.width * 100) / 100, h: Math.round(r.height * 100) / 100 };
+    })
+  );
+  return { wrappers: wrappers.length, piezas };
+};
+
+const MEDIR_VELO = (selector) => {
+  const el = document.querySelector(selector);
+  return el ? getComputedStyle(el).backgroundColor : null;
+};
+
+async function abrirDetalleEstado(page) {
+  const tarjetas = page.locator('main .rejilla > .tarjeta');
+  const n = await tarjetas.count();
+  for (let i = 0; i < n; i++) {
+    const t = tarjetas.nth(i);
+    const prov = ((await t.locator('.etiqueta').first().textContent().catch(() => '')) ?? '').trim();
+    if (prov.toLowerCase() === 'animeav1') {
+      await t.click();
+      break;
+    }
+  }
+  await page.waitForSelector('.ficha, .estado-vista', { timeout: 45000 });
+  await page.waitForTimeout(700);
+}
+
+async function abrirCajonEstado(page) {
+  await page.locator('.barra-inferior .destino', { hasText: 'Historial' }).click();
+  await page.waitForSelector('.barra.cajon', { timeout: 15000 });
+  await page.waitForTimeout(250);
+}
+
+async function estados() {
+  const dirOut = process.argv[3] ?? 'docs/img/v1.4/estados';
+  mkdirSync(dirOut, { recursive: true });
+  const browser = await chromium.launch();
+  const rep = {
+    geometria: [],
+    homeError: [],
+    detalleError: null,
+    reproductorError: null,
+    cajon: {},
+    velos: {},
+    reduced: null,
+    literales: null,
+    funciones: [],
+    capturas: [],
+    errores: [],
+  };
+  const check = (nombre, ok, detalle) =>
+    rep.funciones.push({ nombre, ok: !!ok, detalle: detalle === undefined ? null : detalle });
+  const paso = async (nombre, fn) => {
+    try {
+      await fn();
+    } catch (e) {
+      rep.errores.push(`${nombre}: ${e.message}`);
+    }
+  };
+
+  const contextoReal = await browser.newContext();
+  const pageReal = await contextoReal.newPage();
+  const captura = async (nombre) => {
+    try {
+      await pageReal.screenshot({ path: join(dirOut, `${nombre}.png`) });
+      rep.capturas.push(`${nombre}.png`);
+    } catch (e) {
+      rep.errores.push(`${nombre}: ${e.message}`);
+    }
+  };
+
+  // A. Regresión de geometría con el puente real.
+  await paso('A', async () => {
+    for (const a of ANCHOS_ESTADOS) {
+      await pageReal.setViewportSize({ width: a.w, height: a.h });
+      await gotoApp(pageReal);
+      await pageReal.waitForSelector('.fila .carrusel .tarjeta', { timeout: 60000 }).catch(() => {});
+      const home = {
+        filas: await pageReal.evaluate(MEDIR_FILAS),
+        shell: await pageReal.evaluate(MEDIR_SHELL),
+      };
+      await buscar(pageReal, 'bleach');
+      await abrirDetalle(pageReal, 'animeav1');
+      const detalle = {
+        cabecera: await pageReal.evaluate(MEDIR_CABECERA),
+        cta: await pageReal.evaluate(MEDIR_CTA),
+        episodios: await pageReal.evaluate(MEDIR_EPISODIOS),
+        reveladas: await pageReal.evaluate(() => document.querySelectorAll('.rejilla .celda.entra').length),
+      };
+      const abierto = await abrirReproductor(pageReal);
+      await pageReal.waitForSelector('.selector', { timeout: 20000 }).catch(() => {});
+      const reproductor = abierto
+        ? await pageReal.evaluate(MEDIR_REPRODUCTOR)
+        : { err: 'sin tarjetas de episodio' };
+      rep.geometria.push({ ancho: a.nombre, home, detalle, reproductor });
+
+      check(`${a.nombre}: Home sin overflow`, home.shell.overflowH === 0 && home.filas.overflowH === 0, {
+        shell: home.shell.overflowH,
+        filas: home.filas.overflowH,
+      });
+      check(`${a.nombre}: tarjeta Home 263,8`, Math.abs(home.filas.tarjetaHomeH - 263.8) <= 1, home.filas.tarjetaHomeH);
+      check(`${a.nombre}: portada 140×210`, home.filas.portada && Math.abs(home.filas.portada.w - 140) <= 1 && Math.abs(home.filas.portada.h - 210) <= 1, home.filas.portada);
+      if (a.w >= 900) {
+        check(`${a.nombre}: pestaña 38`, Math.abs(home.shell.alturas.pestana - 38) <= 1, home.shell.alturas.pestana);
+      }
+      const barra = home.shell.barra;
+      if (a.w < 900) {
+        check(`${a.nombre}: barra inferior visible y pegada`, barra.visible && barra.rect && Math.abs(barra.rect.bottom - a.h) <= 1, barra.rect);
+      } else {
+        check(`${a.nombre}: sin barra inferior`, !barra.visible, barra.visible);
+      }
+      const eps = detalle.episodios;
+      const esperado = ALTO_EPISODIOS_ESTADOS[a.w];
+      check(`${a.nombre}: tarjeta de episodio ${esperado}`, Math.abs(eps.hMin - esperado) <= 1 && Math.abs(eps.hMax - esperado) <= 1, { min: eps.hMin, max: eps.hMax });
+      check(`${a.nombre}: contain-intrinsic-size coherente`, a.w >= 900 ? eps.muestra?.parcial?.csi === 'auto 170px' : eps.muestra?.parcial?.csi === `auto ${Math.round(eps.hMin)}px`, eps.muestra?.parcial?.csi);
+      check(`${a.nombre}: cabecera ${a.w < 900 ? 61 : 32}`, detalle.cabecera.cabecera && Math.abs(detalle.cabecera.cabecera.h - (a.w < 900 ? 61 : 32)) <= 1, detalle.cabecera.cabecera?.h);
+      check(`${a.nombre}: CTA ${a.w < 900 ? 'presente a 61' : 'ausente'}`, a.w < 900 ? !!detalle.cta.cta && Math.abs(detalle.cta.cta.h - 61) <= 1 : !detalle.cta.cta, detalle.cta.cta?.h ?? null);
+      check(`${a.nombre}: detalle sin overflow`, detalle.cabecera.overflowH === 0 && detalle.cta.overflowH === 0 && eps.overflowH === 0, { cab: detalle.cabecera.overflowH, cta: detalle.cta.overflowH, eps: eps.overflowH });
+      check(`${a.nombre}: T65 revelado activo`, detalle.reveladas > 0, detalle.reveladas);
+      if (reproductor.err) {
+        check(`${a.nombre}: reproductor abierto`, false, reproductor.err);
+      } else {
+        check(`${a.nombre}: chips del reproductor`, reproductor.fila?.botones.length > 0, reproductor.fila?.botones.length ?? 0);
+        check(`${a.nombre}: alto de chip ${a.w < 900 ? 44 : 31}`, reproductor.chip && Math.abs(reproductor.chip.h - (a.w < 900 ? 44 : 31)) <= 2, reproductor.chip?.h);
+        check(`${a.nombre}: reproductor sin overflow`, reproductor.overflowH === 0, reproductor.overflowH);
+      }
+      await captura(`regresion_${a.nombre}`);
+      log('estados geometría', a.nombre, 'home=', home.filas.tarjetaHomeH, 'ep=', eps.hMin, 'chip=', reproductor.chip?.h);
+    }
+  });
+
+  // B. T66/T67: scroll del detalle al volver del reproductor (360).
+  await paso('B', async () => {
+    await pageReal.setViewportSize({ width: 360, height: 740 });
+    await gotoApp(pageReal);
+    await buscar(pageReal, 'bleach');
+    await abrirDetalle(pageReal, 'animeav1');
+    await pageReal.waitForTimeout(900);
+    await pageReal.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await pageReal.waitForTimeout(500);
+    const yAntes = await pageReal.evaluate(() => Math.round(window.scrollY));
+    const ultima = pageReal.locator('.rejilla .celda .tarjeta').last();
+    if ((await ultima.count()) && yAntes > 0) {
+      await ultima.click();
+      await pageReal.waitForSelector('.marco', { timeout: 30000 }).catch(() => {});
+      await pageReal.waitForTimeout(1500);
+      await pageReal.locator('.cabecera .atras').first().click();
+      await pageReal.waitForTimeout(1200);
+      const yDespues = await pageReal.evaluate(() => Math.round(window.scrollY));
+      check('360: T66/T67 scroll restaurado', Math.abs(yDespues - yAntes) <= 5, { yAntes, yDespues });
+    } else {
+      check('360: T66/T67 scroll restaurado', false, { yAntes });
+    }
+  });
+  await contextoReal.close();
+
+  // C. Home en error por proveedor a todos los anchos.
+  const contextoForzado = await browser.newContext();
+  await contextoForzado.addInitScript(() => {
+    const escenario = new URLSearchParams(location.search).get('forzar') ?? '';
+    const cuenta = {};
+    window.__forzadoCuenta = cuenta;
+    const stubs = {};
+    const fallo = (nombre) => async () => {
+      cuenta[nombre] = (cuenta[nombre] ?? 0) + 1;
+      throw new Error(`Fallo forzado de ${nombre}`);
+    };
+    if (escenario === 'home') {
+      stubs.GetHomeSection = fallo('GetHomeSection');
+    } else if (escenario === 'detalle') {
+      stubs.GetAnimeDetails = fallo('GetAnimeDetails');
+    } else if (escenario === 'video') {
+      stubs.GetVideoSources = async () => {
+        cuenta.GetVideoSources = (cuenta.GetVideoSources ?? 0) + 1;
+        await new Promise((r) => setTimeout(r, 1200));
+        throw new Error('Fallo forzado de GetVideoSources');
+      };
+    } else if (escenario === 'historial') {
+      stubs.GetRecentProgress = fallo('GetRecentProgress');
+    } else if (escenario === 'historial-vacio') {
+      stubs.GetRecentProgress = async () => {
+        cuenta.GetRecentProgress = (cuenta.GetRecentProgress ?? 0) + 1;
+        return [];
+      };
+    } else if (escenario === 'historial-lento') {
+      stubs.GetRecentProgress = async () => {
+        cuenta.GetRecentProgress = (cuenta.GetRecentProgress ?? 0) + 1;
+        return new Promise(() => {});
+      };
+    }
+    const app = new Proxy({}, {
+      get(t, p) {
+        if (p in stubs) return stubs[p];
+        return t[p];
+      },
+      set(t, p, v) {
+        if (p in stubs) return true;
+        t[p] = v;
+        return true;
+      },
+    });
+    const main = new Proxy({ App: app }, {
+      get(t, p) {
+        if (p === 'App') return app;
+        return t[p];
+      },
+      set(t, p, v) {
+        if (p === 'App') return true;
+        t[p] = v;
+        return true;
+      },
+    });
+    const go = new Proxy({ main }, {
+      get(t, p) {
+        if (p === 'main') return main;
+        return t[p];
+      },
+      set(t, p, v) {
+        if (p === 'main') return true;
+        t[p] = v;
+        return true;
+      },
+    });
+    Object.defineProperty(window, 'go', {
+      configurable: true,
+      get() {
+        return go;
+      },
+      set() {},
+    });
+  });
+
+  const page = await contextoForzado.newPage();
+  const capturaForzada = async (nombre) => {
+    try {
+      await page.screenshot({ path: join(dirOut, `${nombre}.png`) });
+      rep.capturas.push(`${nombre}.png`);
+    } catch (e) {
+      rep.errores.push(`${nombre}: ${e.message}`);
+    }
+  };
+  const gotoForzado = async (escenario) => {
+    await page.goto(`${BASE}?forzar=${escenario}`, { waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('.buscador input', { timeout: 20000 });
+  };
+
+  await paso('C', async () => {
+    for (const a of ANCHOS_ESTADOS) {
+      await page.setViewportSize({ width: a.w, height: a.h });
+      await gotoForzado('home');
+      await page.waitForSelector('.error-proveedor .estado-vista', { timeout: 15000 });
+      const med = await page.evaluate(MEDIR_ESTADO, '.error-proveedor');
+      const alturas = await page.evaluate(MEDIR_ERROR_HOME);
+      rep.homeError.push({ ancho: a.nombre, ...med, alturas });
+      check(`${a.nombre}: Home error con título`, med.titulo === 'No se pudo cargar JKAnime', med.titulo);
+      check(`${a.nombre}: Home error con mensaje`, (med.texto ?? '').includes('Fallo forzado de GetHomeSection'), med.texto);
+      check(`${a.nombre}: Home error compacto`, med.display === 'grid' && alturas.compacto, { display: med.display, compacto: alturas.compacto });
+      check(`${a.nombre}: Home error sin overflow`, med.overflowH === 0, med.overflowH);
+      check(`${a.nombre}: Home error no supera el bloque anterior +24 px`, alturas.nuevo <= alturas.viejo + 24, alturas);
+      if (a.w < 900) {
+        check(`${a.nombre}: Reintentar del Home ≥44 px`, med.botones[0] && med.botones[0].h >= 44, med.botones[0]);
+      }
+      if (a.w === 360) {
+        const antes = await page.evaluate(() => window.__forzadoCuenta.GetHomeSection ?? 0);
+        await page.locator('.error-proveedor .btn').first().click();
+        await page.waitForTimeout(400);
+        const despues = await page.evaluate(() => window.__forzadoCuenta.GetHomeSection ?? 0);
+        check('360: Reintentar del Home repite la carga', despues > antes, { antes, despues });
+        await capturaForzada('home_error_360');
+      }
+      if (a.w === 1280) await capturaForzada('home_error_1280');
+      log('estados home', a.nombre, 'nuevo=', alturas.nuevo, 'viejo=', alturas.viejo);
+    }
+  });
+
+  // D. Detalle en error (360 y 1280).
+  await paso('D', async () => {
+    for (const a of [{ w: 360, h: 740, nombre: '360' }, { w: 1280, h: 800, nombre: '1280' }]) {
+      await page.setViewportSize({ width: a.w, height: a.h });
+      await gotoForzado('detalle');
+      await buscar(page, 'bleach');
+      await abrirDetalleEstado(page);
+      await page.waitForSelector('.contenedor > .estado-vista.variante-error', { timeout: 15000 });
+      const med = await page.evaluate(MEDIR_ESTADO, '.contenedor');
+      if (a.nombre === '360') rep.detalleError = med;
+      check(`${a.nombre}: detalle error con título`, med.titulo === 'No se pudo cargar el detalle', med.titulo);
+      check(`${a.nombre}: detalle error con mensaje`, (med.texto ?? '').includes('Fallo forzado de GetAnimeDetails'), med.texto);
+      check(`${a.nombre}: detalle error sin overflow`, med.overflowH === 0, med.overflowH);
+      if (a.nombre === '360') await capturaForzada('detalle_error_360');
+    }
+  });
+
+  // E. Reproductor en error, overlay y reintento (360).
+  await paso('E', async () => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await gotoForzado('video');
+    await buscar(page, 'bleach');
+    await abrirDetalleEstado(page);
+    const ep = page.locator('.rejilla .celda .tarjeta').first();
+    if (!(await ep.count())) {
+      check('360: reproductor con episodios', false, 'sin tarjetas');
+      return;
+    }
+    await ep.click();
+    const overlayVisible = await page.waitForSelector('.cargando-overlay', { timeout: 3000 }).then(() => true).catch(() => false);
+    if (overlayVisible) {
+      rep.velos.overlay = await page.evaluate(MEDIR_VELO, '.cargando-overlay');
+      check('360: overlay de carga con --scrim', rep.velos.overlay === 'rgba(0, 0, 0, 0.65)', rep.velos.overlay);
+      await capturaForzada('reproductor_cargando_360');
+    } else {
+      check('360: overlay de carga visible', false, 'no apareció');
+    }
+    await page.waitForSelector('.error-caja .estado-vista', { timeout: 15000 });
+    const med = await page.evaluate(MEDIR_ESTADO, '.error-caja');
+    rep.reproductorError = med;
+    check('360: reproductor error con título', med.titulo === 'No se pudo reproducir', med.titulo);
+    check('360: reproductor error con mensaje', (med.texto ?? '').includes('Fallo forzado de GetVideoSources'), med.texto);
+    check('360: Reintentar del reproductor ≥44 px', med.botones[0] && med.botones[0].h >= 44, med.botones[0]);
+    check('360: reproductor error sin overflow', med.overflowH === 0, med.overflowH);
+    await capturaForzada('reproductor_error_360');
+    const antes = await page.evaluate(() => window.__forzadoCuenta.GetVideoSources ?? 0);
+    await page.locator('.error-caja .btn').click();
+    await page.waitForTimeout(400);
+    const despues = await page.evaluate(() => window.__forzadoCuenta.GetVideoSources ?? 0);
+    check('360: Reintentar del reproductor repite la carga', despues > antes, { antes, despues });
+    await page.waitForSelector('.error-caja .estado-vista', { timeout: 15000 });
+  });
+
+  // F. Cajón en error, vacío y cargando (360).
+  await paso('F', async () => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await gotoForzado('historial');
+    await abrirCajonEstado(page);
+    await page.waitForSelector('.barra.cajon .estado-vista.variante-error', { timeout: 15000 });
+    const med = await page.evaluate(MEDIR_ESTADO, '.barra.cajon .cuerpo');
+    rep.cajon.error = med;
+    rep.velos.cajon = await page.evaluate(MEDIR_VELO, '.fondo-cajon');
+    check('360: cajón error con título', med.titulo === 'No se pudo cargar el historial', med.titulo);
+    check('360: cajón error sin overflow', med.overflowH === 0, med.overflowH);
+    check('360: Reintentar del cajón ≥44 px', med.botones[0] && med.botones[0].h >= 44, med.botones[0]);
+    check('360: velo del cajón con --scrim-strong', rep.velos.cajon === 'rgba(0, 0, 0, 0.75)', rep.velos.cajon);
+    const antes = await page.evaluate(() => window.__forzadoCuenta.GetRecentProgress ?? 0);
+    await page.locator('.barra.cajon .btn').click();
+    await page.waitForTimeout(400);
+    const despues = await page.evaluate(() => window.__forzadoCuenta.GetRecentProgress ?? 0);
+    check('360: Reintentar del cajón repite la carga', despues > antes, { antes, despues });
+    await capturaForzada('cajon_error_360');
+
+    await gotoForzado('historial-vacio');
+    await abrirCajonEstado(page);
+    await page.waitForSelector('.barra.cajon .estado-vista.variante-vacio', { timeout: 15000 });
+    const vacio = await page.evaluate(MEDIR_ESTADO, '.barra.cajon .cuerpo');
+    rep.cajon.vacio = vacio;
+    check('360: cajón vacío con texto', vacio.titulo === 'Aún no hay nada que retomar.', vacio.titulo);
+    check('360: cajón vacío sin overflow', vacio.overflowH === 0, vacio.overflowH);
+    await capturaForzada('cajon_vacio_360');
+
+    await gotoForzado('historial-lento');
+    await abrirCajonEstado(page);
+    await page.waitForSelector('.barra.cajon .cuerpo > .esqueleto', { timeout: 15000 });
+    const cargando = await page.evaluate(MEDIR_CAJON_CARGANDO);
+    rep.cajon.cargando = cargando;
+    check('360: cajón con 3 esqueletos', cargando.wrappers === 3, cargando.wrappers);
+    const piezas = cargando.piezas?.[0] ?? [];
+    const medidas = piezas.map((p) => `${p.w}×${p.h}`);
+    check('360: esqueleto conserva 48×68 y líneas 12/10/4', piezas.length === 4 && piezas[0].w === 48 && piezas[0].h === 68 && piezas[1].h === 12 && piezas[2].h === 10 && piezas[3].h === 4, medidas);
+    await capturaForzada('cajon_cargando_360');
+  });
+
+  // G. prefers-reduced-motion: sin transiciones ni animación de esqueleto.
+  await paso('G', async () => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await gotoForzado('home');
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.waitForSelector('.error-proveedor .btn', { timeout: 15000 });
+    const trans = await page.evaluate(() => getComputedStyle(document.querySelector('.error-proveedor .btn')).transitionDuration);
+    await gotoForzado('historial-lento');
+    await abrirCajonEstado(page);
+    await page.waitForSelector('.barra.cajon .esqueleto', { timeout: 15000 });
+    const anim = await page.evaluate(() => getComputedStyle(document.querySelector('.barra.cajon .esqueleto .esqueleto')).animationName);
+    rep.reduced = { trans, anim };
+    check('reduced-motion: Btn sin transición', trans === '0s', trans);
+    check('reduced-motion: esqueleto sin animación', anim === 'none', anim);
+    await page.emulateMedia({ reducedMotion: null });
+  });
+  await contextoForzado.close();
+
+  // H. Literales de color en componentes Svelte.
+  await paso('H', async () => {
+    const cuenta = { hex: 0, rgb: 0, archivos: [] };
+    for (const f of readdirSync('frontend/src').filter((x) => x.endsWith('.svelte'))) {
+      const texto = readFileSync(join('frontend/src', f), 'utf8');
+      const hex = (texto.match(/#[0-9a-f]{3,8}\b/gi) ?? []).length;
+      const rgb = (texto.match(/\brgba?\(/gi) ?? []).length;
+      if (hex || rgb) cuenta.archivos.push({ f, hex, rgb });
+      cuenta.hex += hex;
+      cuenta.rgb += rgb;
+    }
+    rep.literales = cuenta;
+    check('0 literales de color en *.svelte', cuenta.hex === 0 && cuenta.rgb === 0, cuenta);
+  });
+
+  writeFileSync(join(dirOut, 'estados.json'), JSON.stringify(rep, null, 2));
+  await browser.close();
+  return rep;
+}
+
+// ---------------------------------------------------------------------------
 // CLI
 // ---------------------------------------------------------------------------
 
@@ -5956,6 +6451,44 @@ if (modo === 'comparar') {
   if (rep.errores.length) console.log('\nErrores:', rep.errores);
   console.log(`\nCapturas (${dirOut}): ${rep.capturas.join(', ') || 'ninguna'}`);
   console.log(`Resumen JSON: ${join(dirOut, 'siguiente.json')}`);
+} else if (modo === 'estados') {
+  const rep = await estados();
+  const dirOut = process.argv[3] ?? 'docs/img/v1.4/estados';
+  console.log('## Modo estados (T86) — estados unificados, velos y regresión\n');
+  console.log('| ancho | tarj.Home | pestaña | barra | tarj.ep | csi | cabecera | CTA | chip | overflow |');
+  console.log('|---:|---:|---:|---|---:|---|---:|---:|---:|---:|');
+  for (const m of rep.geometria) {
+    const r = m.reproductor;
+    console.log(
+      `| ${m.ancho} | ${m.home.filas.tarjetaHomeH} | ${m.home.shell.alturas.pestana} | ` +
+        `${m.home.shell.barra.visible ? `${m.home.shell.barra.rect.w}×${m.home.shell.barra.rect.h}` : 'no'} | ` +
+        `${m.detalle.episodios.hMin} | ${m.detalle.episodios.muestra?.parcial?.csi ?? '—'} | ` +
+        `${m.detalle.cabecera.cabecera?.h ?? '—'} | ${m.detalle.cta.cta?.h ?? 'no'} | ${r.err ? '—' : (r.chip?.h ?? '—')} | ` +
+        `${m.home.filas.overflowH + m.detalle.episodios.overflowH + (r.overflowH ?? 0)} |`
+    );
+  }
+  console.log('\nHome en error:');
+  for (const m of rep.homeError) {
+    console.log(
+      `- ${m.ancho}: título="${m.titulo}" botones=${m.botones.length} alto nuevo/viejo=${m.alturas.nuevo}/${m.alturas.viejo} ` +
+        `compacto=${m.alturas.compacto} overflow=${m.overflowH}`
+    );
+  }
+  console.log('\nDetalle en error:', JSON.stringify(rep.detalleError));
+  console.log('Reproductor en error:', JSON.stringify(rep.reproductorError));
+  console.log('Cajón:', JSON.stringify(rep.cajon));
+  console.log('Velos:', JSON.stringify(rep.velos));
+  console.log('Reduced-motion:', JSON.stringify(rep.reduced));
+  console.log('Literales:', JSON.stringify(rep.literales));
+  const fallos = rep.funciones.filter((f) => !f.ok);
+  console.log('\n| comprobación | ok | detalle |');
+  console.log('|---|:--:|---|');
+  for (const f of rep.funciones)
+    console.log(`| ${f.nombre} | ${f.ok ? 'sí' : 'NO'} | ${f.detalle === null ? '' : JSON.stringify(f.detalle)} |`);
+  console.log(`\nComprobaciones: ${rep.funciones.length - fallos.length}/${rep.funciones.length} OK`);
+  if (rep.errores.length) console.log('\nErrores:', rep.errores);
+  console.log(`\nCapturas (${dirOut}): ${rep.capturas.join(', ') || 'ninguna'}`);
+  console.log(`Resumen JSON: ${join(dirOut, 'estados.json')}`);
 } else if (modo === 'favoritos') {
   const rep = await favoritos();
   const dirOut = process.argv[3] ?? 'docs/img/v1.4/favoritos';

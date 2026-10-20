@@ -10,7 +10,9 @@
   import { atras, navegarA, seleccion, type SeleccionAnime } from './views';
   import BotonFavorito from './BotonFavorito.svelte';
   import BotonSiguiente from './BotonSiguiente.svelte';
+  import Btn from './Btn.svelte';
   import CabeceraVista from './CabeceraVista.svelte';
+  import EstadoVista from './EstadoVista.svelte';
   import SelectorFuente from './SelectorFuente.svelte';
 
   /** Throttle del guardado en `timeupdate` (T27: ~5 s). */
@@ -655,10 +657,11 @@
 
   {#if error !== ''}
     <div class="error-caja">
-      <p class="error">{error}</p>
-      {#if $seleccion?.episodeID}
-        <button type="button" class="reintentar" on:click={reintentar}>Reintentar</button>
-      {/if}
+      <EstadoVista variante="error" titulo="No se pudo reproducir" texto={error}>
+        {#if $seleccion?.episodeID}
+          <Btn variante="secundario" onClick={reintentar}>Reintentar</Btn>
+        {/if}
+      </EstadoVista>
     </div>
   {/if}
 
@@ -725,28 +728,9 @@
     background: var(--bg-2);
     border: 1px solid var(--danger);
     border-radius: var(--r-md);
-    padding: 12px 14px;
+    padding: var(--sp-3) 14px;
     margin: var(--sp-3) 0;
     font-size: var(--fs-sm);
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    flex-wrap: wrap;
-  }
-  .error {
-    margin: 0;
-    color: var(--danger);
-    flex: 1;
-    min-width: 220px;
-  }
-  .reintentar {
-    padding: 8px 16px;
-    border-radius: var(--r-md);
-    border: none;
-    background: var(--brand-500);
-    color: var(--on-brand);
-    font-weight: bold;
-    cursor: pointer;
   }
   .aviso {
     color: var(--fav);
@@ -801,7 +785,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(0, 0, 0, 0.65);
+    background: var(--scrim);
     color: var(--text-1);
     font-size: 15px;
     /* T84: por encima del chip "Siguiente" (z-index 3) durante la carga. */

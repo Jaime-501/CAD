@@ -193,10 +193,10 @@
     border: none;
     background: var(--surface-input);
     color: var(--text-1);
-    font-size: 16px;
+    font-size: var(--fs-md);
   }
   button {
-    padding: 10px 20px;
+    padding: 10px var(--sp-5);
     border-radius: var(--r-md);
     border: none;
     background: var(--brand-500);
@@ -258,7 +258,7 @@
     box-sizing: content-box;
     height: calc(1.3em * 2);
     margin-bottom: 10px;
-    padding: 8px 8px 0;
+    padding: var(--sp-2) var(--sp-2) 0;
   }
   /* T75: buscador de modo estrecho (< 900 px): lupa dentro del campo, botón
      limpiar, táctiles de `--tap` y padding con safe-area. En ≥ 900 px nada de

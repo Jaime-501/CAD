@@ -97,7 +97,7 @@
   .favorito {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--sp-2);
     flex-shrink: 0;
   }
   .estrella {

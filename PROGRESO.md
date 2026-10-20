@@ -1,4 +1,4 @@
-    # PROGRESO — Comfort Anime Desktop (T01–T85 hechas)
+    # PROGRESO — Comfort Anime Desktop (T01–T86 hechas)
 
 > Este archivo es la **memoria entre sesiones**. Cada sesión lo lee al inicio y lo actualiza al final.
 > Reglas y layout: `tareas/00_REGLAS.md`. Detalle de cada tarea: `tareas/Txx.md`.
@@ -155,6 +155,7 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha y verificada
 | [x] | T83 | Layout del reproductor y selector de fuentes (v1.4.0) | T70–T82 |
 | [x] | T84 | Chip "Siguiente" del reproductor (v1.4.0) | T83 |
 | [x] | T85 | Favoritos, toasts y verificación del deslizar (v1.4.0) | T84 |
+| [x] | T86 | Estados restantes, token `--scrim` y barrido de px (v1.4.0) | T70–T85 |
 
 T01–T29 = v1.0 (`docs/PROGRESO_v1.0.md`) · T30–T35 = v1.1.0 AnimeAV1 (`docs/PROGRESO_v1.1.md`) · T36 = cierre de la v1.1.0 · T37 = portabilidad Android · T38 = cierre documental de T37.
 T39–T57 = v1.2.0 (Home, historial lateral, favoritos, "Siguiente" y su estado discreto; **incluye T53b y T57**); plan en `tareas/v1.2_PLAN.md`, detalle **T39–T58 + cierres T56/T59** archivado en `docs/PROGRESO_v1.2.md`, con resúmenes al final de este archivo.
@@ -1550,3 +1551,45 @@ Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**
 **Capturas** en `docs/img/v1.4/favoritos/`: `favoritos_360.png`, `favoritos_360_vacio.png`, `favoritos_360_error.png`, `favoritos_360_cargando.png`, `toast_360.png`, `favoritos_768.png`, `favoritos_1280.png` (+ `favoritos.json`).
 
 **Archivos tocados:** `frontend/src/Toast.svelte` (import de `Icono`; markup y `<style>`), `frontend/src/GridFavoritos.svelte` (imports de `Btn`/`EstadoVista`/`Esqueleto`; markup de estados y `<style>`), `docs/investigacion/ui/verificar_ui.mjs` (modo `favoritos` + cabecera de uso), `docs/img/v1.4/favoritos/**` y `PROGRESO.md`. **Nada fuera de "Puedes tocar"** (regla 7 no se activó): `*.go`, `frontend/wailsjs/**`, `api.ts`, `stores.ts`, `views.ts`, `ui.ts`, `toasts.ts`, `deslizar.ts`, `TarjetaAnime`, `TarjetaHistorial`, `BarraLateral`, `VistaInicio`, componentes T72 e `index.html` intactos. **Sin tag ni release** (los hace el humano); **T86 no iniciada**.
+
+## T86 — Estados restantes, token `--scrim` y barrido de px (v1.4.0) — bloque de esta sesión
+
+Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**. Fecha **2026-10-19**. Cierra la consistencia visual: estados de Home, detalle, reproductor y cajón con las primitivas T72; velos con tokens; barrido de espaciado/tipografía solo con valores idénticos. **Sin lógica nueva ni cambios de comportamiento**.
+
+- **`style.css`**: añadidos `--scrim: rgba(0, 0, 0, 0.65)` y `--scrim-strong: rgba(0, 0, 0, 0.75)`; documentados en `ui_tokens.md`. Sustituidos el overlay del reproductor (`--scrim`) y el fondo del cajón (`--scrim-strong`).
+- **Home**: `.error-proveedor` usa `EstadoVista variante="error"` con título `No se pudo cargar {proveedor}`, el error como texto y `Btn` secundario «Reintentar». En estrecho se convierte en una rejilla horizontal compacta; el bloque mide **110,38 px** a 360/390 (antes 106) y **70,19 px** a 768/1280 (antes 106), por debajo del límite de +24 px. El esqueleto `.fila-fantasma` queda intacto.
+- **Detalle**: error → `EstadoVista error`; «Cargando detalle…» → `EstadoVista cargando`; «Sin detalle»/«No hay episodios» → `EstadoVista vacio`; la línea «Cargando más episodios…» sigue siendo texto, con `--fs-sm`, `--text-3` y `aria-live="polite"`.
+- **Reproductor**: `.error-caja` → `EstadoVista error` + `Btn` «Reintentar» que llama a la misma función `reintentar`. El aviso se mantiene.
+- **Cajón**: error → `EstadoVista error` + `Btn` «Reintentar» (`cargarHistorial`); vacío → `EstadoVista vacio` («Aún no hay nada que retomar.»); carga → 3 `Esqueleto` con las medidas originales (`48×68` y líneas `12/10/4`). Botones del pie y papeleras sin cambios.
+- **Verificador**: modo `estados` (532 líneas) con Proxy sobre `window.go` para forzar Home/detalle/reproductor/cajón, siembra/restauración de historial y 12 capturas + `estados.json`. Documentado en la cabecera de uso.
+
+**Resultados reales** (modo `estados`, localhost:34115; **102 / 102 comprobaciones OK**):
+
+| ancho | Home | pestaña | barra | tarj. ep. | CSI | cabecera | CTA | chip | overflow |
+|---:|---:|---:|---|---:|---|---:|---:|---:|---:|
+| 360 | 263,8 | — | 360×60 | 146 | auto 146px | 61 | 61 | 44 | 0 |
+| 390 | 263,8 | — | 390×60 | 146 | auto 146px | 61 | 61 | 44 | 0 |
+| 768 | 263,8 | — | 768×60 | 179 | auto 179px | 61 | 61 | 44 | 0 |
+| 1280 | 263,8 | 38 | no | 170,38 | auto 170px | 32 | no | 31 | 0 |
+
+- **Home error**: título/mensaje correctos en los 4 anchos; «Reintentar» **103,72×44** y repite la carga; `overflowH = 0`.
+- **Detalle error 360**: caja **360×215,59**, estado **328×138,59**, sin overflow y sin botón (no aplica).
+- **Reproductor error 360**: caja **328×262,59**, «Reintentar» **103,72×44** y repite `GetVideoSources`; overlay de carga con `--scrim` = `rgba(0, 0, 0, 0.65)`.
+- **Cajón**: error **282×161,59** con «Reintentar» 44 px; vacío **282×127,19**; carga con 3 esqueletos `48×68`, líneas `166,39×12`, `104×10`, `208×4`; velo `rgba(0, 0, 0, 0.75)`.
+- **Regresión**: T65 revelado activo; T66/T67 restauran el scroll (`28984 → 28984`); `prefers-reduced-motion` deja transición `0s` y animación `none`; **0** literales de color en `*.svelte`.
+
+**Barrido de px** (líneas `+ / −` según `git numstat`; sustituciones a token):
+- `BarraLateral` 28/88 (13 sustituciones; incluye estados y eliminación de CSS antiguo) · `VistaInicio` 44/41 (12) · `VistaDetalle` 9/13 (4) · `VistaReproductor` 9/25 (1) · `BotonFavorito` 1/1 (1) · `CabeceraVista` 4/4 (4) · `FilaAnimes` 5/5 (5) · `FilaContinuar` 3/3 (3) · `SelectorFuente` 4/4 (4) · `TarjetaAnime` 1/1 (1) · `TarjetaContinuar` 2/2 (2) · `TarjetaHistorial` 4/4 (4) · `VistaBusqueda` 3/3 (3).
+- **No se tokenizó**: bordes `1px`; valores sueltos `5/6/10/13/14,27px`; medidas de diseño (`300/56`, `48×68`, `140`, `32×32`, `28×2`, `320`); `@media`; sangrado de `FilaAnimes` (`6px 4px 14px`); `contain-intrinsic-size`; y cualquier medida sujeta a las geometrías verificadas (`263,8`, `170,38/170,39`, `146`, `179`).
+
+**Desviaciones / notas (documentadas):**
+- **`BarraLateral`**: la ficha decía `<script>` NADA, pero se añadieron solo los imports de `Btn`, `Esqueleto` y `EstadoVista`; sin lógica nueva.
+- **Imports**: `VistaInicio` y `VistaReproductor` solo importan `EstadoVista`/`Btn`; `VistaDetalle` solo `EstadoVista`. El resto de cambios de `<script>` no existe.
+- **El verificador fuerza estados** con un Proxy sobre `window.go`; no se modifica código de producto. La captura del error del reproductor se toma antes de pulsar «Reintentar» para no capturar el estado de carga intermedio.
+- **`docs/img` está ignorado** por `.gitignore`, como en tareas anteriores; las capturas existen en el worktree.
+
+**Comprobaciones finales:** `npm run check` **0 errores / 0 avisos** · `npm run build` **OK** (176 módulos, aviso preexistente de chunk >500 kB) · tests `.ts` **32 / 48 / 13** OK (`etiquetas`, `ventana`, `views`) · `gofmt -l .` **sin salida** · `go test -race -count=1 -v ./...` **435 `--- PASS`** de nivel superior, **0 FAIL** (`*.go` intactos) · `grep -rn wailsjs frontend/src` **solo `api.ts`**.
+
+**Capturas** en `docs/img/v1.4/estados/`: `regresion_{360,390,768,1280}.png`, `home_error_{360,1280}.png`, `detalle_error_360.png`, `reproductor_cargando_360.png`, `reproductor_error_360.png`, `cajon_error_360.png`, `cajon_vacio_360.png`, `cajon_cargando_360.png` (+ `estados.json`).
+
+**Archivos tocados:** `frontend/src/style.css`, `frontend/src/BarraLateral.svelte`, `frontend/src/VistaInicio.svelte`, `frontend/src/VistaDetalle.svelte`, `frontend/src/VistaReproductor.svelte` y los `<style>` de `BotonFavorito`, `CabeceraVista`, `FilaAnimes`, `FilaContinuar`, `SelectorFuente`, `TarjetaAnime`, `TarjetaContinuar`, `TarjetaHistorial` y `VistaBusqueda`; `docs/investigacion/ui_tokens.md`, `docs/investigacion/ui/verificar_ui.mjs`, `docs/img/v1.4/estados/**` y `PROGRESO.md`. **Nada fuera de "Puedes tocar"** (regla 7 no se activó): `*.go`, `frontend/wailsjs/**`, `api.ts`, `stores.ts`, `views.ts`, `ui.ts`, `toasts.ts`, `deslizar.ts`, `revelar.ts`, `ventana.ts`, la lógica de los `<script>`, componentes T72 e `index.html` intactos. **Sin tag ni release** (los hace el humano); **T87 no iniciada**.
