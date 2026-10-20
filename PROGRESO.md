@@ -1,4 +1,4 @@
-    # PROGRESO — Comfort Anime Desktop (T01–T83 hechas)
+    # PROGRESO — Comfort Anime Desktop (T01–T85 hechas)
 
 > Este archivo es la **memoria entre sesiones**. Cada sesión lo lee al inicio y lo actualiza al final.
 > Reglas y layout: `tareas/00_REGLAS.md`. Detalle de cada tarea: `tareas/Txx.md`.
@@ -153,6 +153,8 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha y verificada
 | [x] | T81 | Tarjeta de episodio y rejilla en modo estrecho (v1.4.0) | T72, T79, T80 |
 | [x] | T82 | Orden ascendente/descendente de episodios (v1.4.0) | T70–T81 |
 | [x] | T83 | Layout del reproductor y selector de fuentes (v1.4.0) | T70–T82 |
+| [x] | T84 | Chip "Siguiente" del reproductor (v1.4.0) | T83 |
+| [x] | T85 | Favoritos, toasts y verificación del deslizar (v1.4.0) | T84 |
 
 T01–T29 = v1.0 (`docs/PROGRESO_v1.0.md`) · T30–T35 = v1.1.0 AnimeAV1 (`docs/PROGRESO_v1.1.md`) · T36 = cierre de la v1.1.0 · T37 = portabilidad Android · T38 = cierre documental de T37.
 T39–T57 = v1.2.0 (Home, historial lateral, favoritos, "Siguiente" y su estado discreto; **incluye T53b y T57**); plan en `tareas/v1.2_PLAN.md`, detalle **T39–T58 + cierres T56/T59** archivado en `docs/PROGRESO_v1.2.md`, con resúmenes al final de este archivo.
@@ -1511,3 +1513,40 @@ Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**
 **Capturas** en `docs/img/v1.4/siguiente/`: `siguiente_360_normal.png`, `siguiente_360_tactil.png`, `siguiente_360_resaltado.png`, `siguiente_360_cargando.png`, `siguiente_360_cargado.png`, `siguiente_1280.png` (+ `siguiente.json`).
 
 **Archivos tocados:** `frontend/src/BotonSiguiente.svelte` (**solo `<style>`**), `frontend/src/VistaReproductor.svelte` (**solo `<style>`**: `z-index` de `.cargando-overlay`), `docs/investigacion/ui/verificar_ui.mjs` (modo `siguiente` + altura T83), `docs/img/v1.4/siguiente/**` y `PROGRESO.md`. **Nada fuera de "Puedes tocar"** (regla 7 no se activó): `*.go`, `frontend/wailsjs/**`, `api.ts`, `stores.ts`, `views.ts`, `ui.ts`, `<script>`/markup de `BotonSiguiente` y `VistaReproductor`, `SelectorFuente`, `CabeceraVista` e `index.html` intactos. **Sin tag ni release** (los hace el humano); **T85 no iniciada**.
+
+## T85 — Favoritos, toasts y verificación del deslizar (v1.4.0) — bloque de esta sesión
+
+Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**. Fecha **2026-10-19**. Rediseña el **toast** (opaco, accesible y por encima de la barra inferior) y la **cuadrícula de favoritos** con estados unificados (`EstadoVista`, `Btn`) y rejilla 2/3/auto-fill. **Sin cambios de lógica**: marcar/desmarcar, orden, apertura, destinos, deslizar y borrado siguen igual.
+
+- **`Toast.svelte`**: fondo opaco `--bg-2`, borde `--border`, `--r-lg`, `--sh-panel`, `--z-toast`, `--fs-sm`, padding/gap/bottom/max-width con tokens; ✕ con `Icono cerrar tam={16}`; botones de `--tap` en `<900 px`; `:hover` solo con puntero fino, `:active` 0,97, foco con `--ring`; entrada de opacidad con `--dur` y sin animación con `prefers-reduced-motion: reduce`.
+- **`GridFavoritos.svelte`**: error → `EstadoVista variante="error"` + `Btn` secundario «Reintentar»; vacío → `EstadoVista variante="vacio"`; carga → 6 `Esqueleto` dentro de una rejilla con `aria-busy="true"`; rejilla 2 columnas `<480`, 3 entre `480–899` y `repeat(auto-fill, minmax(150px, 1fr))` desde `900`; `gap: var(--sp-3)`.
+- **Verificador**: modo `favoritos` (768 líneas añadidas, 0 eliminadas) con medición de rejilla/estados/toast/deslizar, siembra y **restauración en `finally`** de favoritos e historial, 7 capturas y `favoritos.json`; la cabecera de uso documenta el modo nuevo.
+
+**Resultados reales** (modo `favoritos` en `http://localhost:34115`, **62 / 62 comprobaciones OK**, 0 errores):
+
+| ancho | columnas | gap | 1ª tarjeta w×h | alturas | overflowH |
+|---:|---:|---:|---:|---|---:|
+| 360 | 2 | 12 px | 158×290,8 | 290,8 ×7 | 0 |
+| 390 | 2 | 12 px | 173×313,3 | 313,3 ×7 | 0 |
+| 768 | 3 | 12 px | 232×401,8 | 401,8 ×7 | 0 |
+| 1280 | 5 | 12 px | 173,59×314,2 | 314,2/314,19 ×7 | 0 |
+
+- **Estados**: vacío con «Aún no tienes favoritos» + «Marca la ★ en el detalle de un anime.»; error con `role="alert"`, título exacto y «Reintentar» de **103,72×44** (llamadas 2→3 al pulsar); carga con `aria-busy="true"`, **6** esqueletos y alto 917,81. Revisadas las capturas de los tres estados: sin defectos visuales.
+- **Toast 360**: alto **205** (título largo), `bottom` **84** > barra **60** (`topBarra` 680), ancho **284,81** ≤ 328, fondo `rgb(30, 41, 59)` **alpha 1**, `z-index` **50** sobre cajón (**50**) y CTA (**30**); botones **83,42×44** y **44×44**. A 390: `bottom` 84, mismos botones. A 1280: `bottom` **24** exacto y ancho 420. Auto-cierre a 5 s y ✕ OK; Deshacer restaura (12→12). Con `reduced-motion`: animación `none` y transición 0 s.
+- **Home / detalle**: **263,8** y **170,38** a 1280 (sin cambios); a 360 el detalle mide **146**, valor preexistente de esa vista.
+- **Deslizar en cajón 360** (`hasTouch`): arrastre horizontal ≥96 px borra (12→11) y Deshacer restaura (12); vertical hace scroll (0→65) sin borrar (12→12, sin toast); 40 px vuelve a su sitio (`translateX` 0, opacidad 1) sin borrar.
+- **Literales de color** en `Toast`/`GridFavoritos`: **0** hex y **0** `rgba`.
+
+**Desviaciones / notas (documentadas):**
+- **Imports**: `Toast` añade `import Icono` (el ✕ lo exige) y `GridFavoritos` añade `Btn`, `EstadoVista` y `Esqueleto` (la ficha pedía solo los dos primeros, pero también exige 6 `Esqueleto`). Son los únicos cambios de `<script>`; no hay lógica nueva.
+- **Entrada del toast**: se implementó con `@keyframes` de opacidad (`--dur`), no con `transition`, porque el toast se monta condicionalmente; el resultado y `reduced-motion` cumplen lo pedido.
+- **Emulación táctil**: para que CDP no emitiera `pointercancel` al segundo `pointermove`, el arnés fija `touch-action: pan-y` antes del gesto. Es solo ayuda de verificación; **`deslizar.ts` no se tocó**.
+- **Toast alto a 360**: el título del historial usado en la prueba produce 205 px de alto; todas las comprobaciones pasan. La primera captura salió a mitad de animación y se regeneró tras esperar 350 ms (ahora opaca).
+- **Tabla de tareas**: se añadió también la fila **T84**, que faltaba aunque su bloque ya existía.
+- **Capturas**: `docs/img` está ignorado por `.gitignore` (igual que en tareas anteriores); las 7 capturas existen en el worktree.
+
+**Comprobaciones finales:** `npm run check` **0 errores / 0 avisos** · `npm run build` **OK** (176 módulos, 2,74 s; aviso preexistente de chunk >500 kB) · tests `.ts` **32 / 13 / 48** OK (`etiquetas`, `views`, `ventana`) · `gofmt -l .` **sin salida** · `go vet ./...`, `go vet -tags integration ./...` y `go build ./...` **OK** · `go test -race -count=1 -v ./...` **EXIT 0**, **435 `--- PASS`** de nivel superior (**716** con subtests), **0 FAIL** · `grep -rn wailsjs frontend/src` **solo `api.ts`** · `git diff --check` sin avisos.
+
+**Capturas** en `docs/img/v1.4/favoritos/`: `favoritos_360.png`, `favoritos_360_vacio.png`, `favoritos_360_error.png`, `favoritos_360_cargando.png`, `toast_360.png`, `favoritos_768.png`, `favoritos_1280.png` (+ `favoritos.json`).
+
+**Archivos tocados:** `frontend/src/Toast.svelte` (import de `Icono`; markup y `<style>`), `frontend/src/GridFavoritos.svelte` (imports de `Btn`/`EstadoVista`/`Esqueleto`; markup de estados y `<style>`), `docs/investigacion/ui/verificar_ui.mjs` (modo `favoritos` + cabecera de uso), `docs/img/v1.4/favoritos/**` y `PROGRESO.md`. **Nada fuera de "Puedes tocar"** (regla 7 no se activó): `*.go`, `frontend/wailsjs/**`, `api.ts`, `stores.ts`, `views.ts`, `ui.ts`, `toasts.ts`, `deslizar.ts`, `TarjetaAnime`, `TarjetaHistorial`, `BarraLateral`, `VistaInicio`, componentes T72 e `index.html` intactos. **Sin tag ni release** (los hace el humano); **T86 no iniciada**.

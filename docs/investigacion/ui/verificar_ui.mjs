@@ -10,6 +10,7 @@
 //   NODE_PATH=... node docs/investigacion/ui/verificar_ui.mjs comparar <dirBase> <dirActual> [tol]
 //   NODE_PATH=... node docs/investigacion/ui/verificar_ui.mjs pixel <png> <x> <y>
 //   NODE_PATH=... node docs/investigacion/ui/verificar_ui.mjs filas [dirOut]
+//   NODE_PATH=... node docs/investigacion/ui/verificar_ui.mjs favoritos [dirOut]
 //
 // `capturar` deja los PNG en <dirOut> (por defecto
 // `docs/investigacion/ui/verif`) y un `resumen.json` con `overflowH` por vista.
@@ -77,6 +78,14 @@ const ANCHOS_CONTINUAR = [
   { w: 390, h: 844, nombre: '390' },
   { w: 768, h: 1024, nombre: '768' },
   { w: 1024, h: 768, nombre: '1024' },
+  { w: 1280, h: 800, nombre: '1280' },
+];
+
+// T85: anchos del modo `favoritos` (toast, cuadrícula y deslizar).
+const ANCHOS_FAVORITOS = [
+  { w: 360, h: 740, nombre: '360' },
+  { w: 390, h: 844, nombre: '390' },
+  { w: 768, h: 1024, nombre: '768' },
   { w: 1280, h: 800, nombre: '1280' },
 ];
 
@@ -4825,6 +4834,734 @@ async function siguiente() {
 }
 
 // ---------------------------------------------------------------------------
+// Modo favoritos (T85): cuadrícula, estados, toast y deslizar del cajón
+// ---------------------------------------------------------------------------
+
+const MEDIR_FAVORITOS = () => {
+  const d = document.documentElement;
+  const panel = document.getElementById('panel-favoritos');
+  const grid = panel ? panel.querySelector('.cuadricula') : null;
+  const tarjetas = grid ? [...grid.querySelectorAll(':scope > .tarjeta')] : [];
+  const cs = grid ? getComputedStyle(grid) : null;
+  const rect = (el) => {
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return {
+      x: Math.round(r.x * 100) / 100,
+      y: Math.round(r.y * 100) / 100,
+      w: Math.round(r.width * 100) / 100,
+      h: Math.round(r.height * 100) / 100,
+    };
+  };
+  const columnas =
+    cs && cs.gridTemplateColumns && cs.gridTemplateColumns !== 'none'
+      ? cs.gridTemplateColumns.split(' ').filter(Boolean).length
+      : 0;
+  const vacio = panel ? panel.querySelector('.estado-vista.variante-vacio') : null;
+  const error = panel ? panel.querySelector('.estado-vista.variante-error') : null;
+  const cargando = panel ? panel.querySelector('.cuadricula[aria-busy="true"]') : null;
+  const reintentar = error ? error.querySelector('.btn') : null;
+  return {
+    overflowH: d.scrollWidth - d.clientWidth,
+    visible: !!(panel && panel.getClientRects().length > 0),
+    columnas,
+    gap: cs ? cs.columnGap : null,
+    tarjetas: tarjetas.length,
+    alturas: tarjetas.map((t) => rect(t).h),
+    primera: tarjetas.length ? rect(tarjetas[0]) : null,
+    minW: tarjetas.length ? Math.min(...tarjetas.map((t) => t.getBoundingClientRect().width)) : null,
+    minH: tarjetas.length ? Math.min(...tarjetas.map((t) => t.getBoundingClientRect().height)) : null,
+    anchoPanel: panel ? Math.round(panel.getBoundingClientRect().width) : null,
+    vacio: vacio
+      ? {
+          titulo: (vacio.querySelector('.titulo')?.textContent ?? '').trim(),
+          texto: (vacio.querySelector('.texto')?.textContent ?? '').trim(),
+        }
+      : null,
+    error: error
+      ? {
+          titulo: (error.querySelector('.titulo')?.textContent ?? '').trim(),
+          rol: error.getAttribute('role'),
+          reintentar: rect(reintentar),
+        }
+      : null,
+    cargando: cargando
+      ? {
+          ariaBusy: cargando.getAttribute('aria-busy'),
+          esqueletos: cargando.querySelectorAll('.esqueleto').length,
+          alto: rect(cargando)?.h ?? null,
+        }
+      : null,
+  };
+};
+
+const MEDIR_TOAST = () => {
+  const t = document.querySelector('.toast');
+  if (!t) return null;
+  const r = t.getBoundingClientRect();
+  const cs = getComputedStyle(t);
+  const d = document.documentElement;
+  const gutter = parseFloat(getComputedStyle(d).getPropertyValue('--gutter')) || 0;
+  const bar = document.querySelector('.barra-inferior');
+  const cajon = document.querySelector('.barra.cajon');
+  const cta = document.querySelector('.barra-accion');
+  const enPunto = (x, y) => {
+    const p = document.elementFromPoint(x, y);
+    if (!p) return null;
+    return {
+      tag: p.tagName,
+      enToast: !!p.closest('.toast'),
+      enCajon: !!p.closest('.barra.cajon'),
+      enCta: !!p.closest('.barra-accion'),
+    };
+  };
+  const botones = [...t.querySelectorAll('button')].map((b) => {
+    const br = b.getBoundingClientRect();
+    const bs = getComputedStyle(b);
+    return {
+      texto: (b.textContent ?? '').trim().slice(0, 24),
+      w: Math.round(br.width * 100) / 100,
+      h: Math.round(br.height * 100) / 100,
+      transitionDuration: bs.transitionDuration,
+    };
+  });
+  let solapeCta = null;
+  if (cta) {
+    const cr = cta.getBoundingClientRect();
+    const x0 = Math.max(r.left, cr.left);
+    const x1 = Math.min(r.right, cr.right);
+    const y0 = Math.max(r.top, cr.top);
+    const y1 = Math.min(r.bottom, cr.bottom);
+    if (x1 > x0 && y1 > y0) solapeCta = enPunto((x0 + x1) / 2, (y0 + y1) / 2);
+  }
+  const alpha = (() => {
+    const m = cs.backgroundColor.match(/rgba?\(([^)]+)\)/);
+    if (!m) return 1;
+    const partes = m[1].split(',').map((s) => Number(s.trim()));
+    return partes.length < 4 ? 1 : partes[3];
+  })();
+  const b = bar ? bar.getBoundingClientRect() : null;
+  return {
+    rect: {
+      x: Math.round(r.left * 100) / 100,
+      y: Math.round(r.top * 100) / 100,
+      w: Math.round(r.width * 100) / 100,
+      h: Math.round(r.height * 100) / 100,
+      bottom: Math.round(r.bottom * 100) / 100,
+      right: Math.round(r.right * 100) / 100,
+    },
+    altoBarra: b ? Math.round(b.height * 100) / 100 : null,
+    topBarra: b ? Math.round(b.top * 100) / 100 : null,
+    bottomCss: Math.round((window.innerHeight - r.bottom) * 100) / 100,
+    ancho: Math.round(r.width * 100) / 100,
+    gutter,
+    maxAncho: Math.round((window.innerWidth - 2 * gutter) * 100) / 100,
+    bg: cs.backgroundColor,
+    alpha,
+    opaco: alpha === 1,
+    zIndex: cs.zIndex,
+    cajonZ: cajon ? getComputedStyle(cajon).zIndex : null,
+    ctaZ: cta ? getComputedStyle(cta).zIndex : null,
+    cajonAbierto: !!(cajon && cajon.getClientRects().length > 0),
+    ctaVisible: !!(cta && cta.getClientRects().length > 0),
+    centroEnToast: enPunto(r.left + r.width / 2, r.top + r.height / 2),
+    solapeCta,
+    botones,
+    animationName: cs.animationName,
+    animationDuration: cs.animationDuration,
+  };
+};
+
+async function instalarListaFavoritos(contexto, modo, retardo = 0) {
+  await contexto.addInitScript(
+    ({ modoLista, espera }) => {
+      const instalar = () => {
+        const App = window.go && window.go.main && window.go.main.App;
+        if (!App || App.__t85Lista || typeof App.ListFavorites !== 'function') return false;
+        App.__t85Lista = true;
+        window.__t85Llamadas = 0;
+        if (modoLista === 'vacio') {
+          App.ListFavorites = () => {
+            window.__t85Llamadas += 1;
+            return Promise.resolve([]);
+          };
+        } else if (modoLista === 'error') {
+          App.ListFavorites = () => {
+            window.__t85Llamadas += 1;
+            return Promise.reject(new Error('fallo de prueba T85'));
+          };
+        } else if (modoLista === 'cargando') {
+          App.ListFavorites = () => {
+            window.__t85Llamadas += 1;
+            return new Promise((resolver) => setTimeout(() => resolver([]), espera));
+          };
+        }
+        return true;
+      };
+      try {
+        let valor = window.go;
+        Object.defineProperty(window, 'go', {
+          configurable: true,
+          enumerable: true,
+          get() {
+            return valor;
+          },
+          set(nuevo) {
+            valor = nuevo;
+            instalar();
+          },
+        });
+      } catch {
+        /* si no se puede interceptar, el intervalo lo intenta igualmente */
+      }
+      if (!instalar()) {
+        const id = setInterval(() => {
+          if (instalar()) clearInterval(id);
+        }, 2);
+        setTimeout(() => clearInterval(id), 15000);
+      }
+    },
+    { modoLista: modo, espera: retardo }
+  );
+}
+
+async function sembrarFavoritos(page, cantidad = 7) {
+  return page.evaluate(async (n) => {
+    const App = window.go.main.App;
+    const originales = await App.ListFavorites();
+    for (const f of originales) await App.RemoveFavorite(f.provider, f.anime_id);
+
+    const items = [];
+    for (const prov of ['animeav1', 'jkanime']) {
+      try {
+        const secciones = await App.GetHomeSection(prov, false);
+        for (const s of secciones ?? []) {
+          for (const a of s.items ?? []) items.push({ ...a, provider: a.provider || prov });
+        }
+      } catch (e) {
+        console.warn('[T85] Home', prov, String(e));
+      }
+    }
+    if (items.length < n) {
+      for (const q of ['bleach', 'naruto', 'one piece']) {
+        try {
+          const res = await App.SearchAnime(q);
+          for (const a of res ?? []) items.push(a);
+        } catch (e) {
+          console.warn('[T85] búsqueda', q, String(e));
+        }
+      }
+    }
+
+    const reserva = [
+      { id: 'bleach', title: 'Bleach', cover_url: 'https://cdn.animeav1.com/covers/bleach.jpg' },
+      { id: 'one-piece', title: 'One Piece', cover_url: 'https://cdn.animeav1.com/covers/one-piece.jpg' },
+      { id: 'naruto', title: 'Naruto', cover_url: 'https://cdn.animeav1.com/covers/naruto.jpg' },
+      { id: 'jujutsu-kaisen', title: 'Jujutsu Kaisen', cover_url: 'https://cdn.animeav1.com/covers/jujutsu-kaisen.jpg' },
+      { id: 'shingeki-no-kyojin', title: 'Shingeki no Kyojin', cover_url: 'https://cdn.animeav1.com/covers/shingeki-no-kyojin.jpg' },
+      { id: 'kimetsu-no-yaiba', title: 'Kimetsu no Yaiba', cover_url: 'https://cdn.animeav1.com/covers/kimetsu-no-yaiba.jpg' },
+      { id: 'boku-no-hero-academia', title: 'Boku no Hero Academia', cover_url: 'https://cdn.animeav1.com/covers/boku-no-hero-academia.jpg' },
+    ];
+    for (const a of reserva) items.push({ ...a, provider: 'animeav1' });
+
+    const vistos = new Set();
+    const elegidos = [];
+    for (const a of items) {
+      if (!a || !a.id) continue;
+      const prov = a.provider || 'animeav1';
+      const clave = prov + ':' + a.id;
+      if (vistos.has(clave)) continue;
+      vistos.add(clave);
+      elegidos.push({
+        provider: prov,
+        anime_id: a.id,
+        title: a.title || a.id,
+        cover_url: a.cover_url || '',
+        added_at: 0,
+      });
+      if (elegidos.length >= n) break;
+    }
+    for (const f of elegidos) await App.AddFavorite(f);
+    return { originales, elegidos };
+  }, cantidad);
+}
+
+async function restaurarFavoritos(page, originales) {
+  if (!originales) return;
+  await page.evaluate(async (orig) => {
+    const App = window.go.main.App;
+    const actuales = await App.ListFavorites();
+    for (const f of actuales) await App.RemoveFavorite(f.provider, f.anime_id);
+    for (const f of orig) await App.AddFavorite(f);
+  }, originales);
+}
+
+async function sembrarHistorial(page, cantidad = 12) {
+  return page.evaluate(async (n) => {
+    const App = window.go.main.App;
+    const originales = await App.GetProgress('');
+    await App.ClearProgress();
+
+    const items = [];
+    for (const prov of ['animeav1', 'jkanime']) {
+      try {
+        const secciones = await App.GetHomeSection(prov, false);
+        for (const s of secciones ?? []) {
+          for (const a of s.items ?? []) items.push({ ...a, provider: a.provider || prov });
+        }
+      } catch (e) {
+        console.warn('[T85] Home historial', prov, String(e));
+      }
+    }
+    if (items.length < n) {
+      try {
+        const res = await App.SearchAnime('bleach');
+        for (const a of res ?? []) items.push(a);
+      } catch (e) {
+        console.warn('[T85] búsqueda historial', String(e));
+      }
+    }
+    const reserva = [
+      'bleach', 'one-piece', 'naruto', 'jujutsu-kaisen', 'shingeki-no-kyojin', 'kimetsu-no-yaiba',
+      'boku-no-hero-academia', 'death-note', 'fullmetal-alchemist-brotherhood', 'tokyo-ghoul',
+      'chainsaw-man', 'spy-x-family',
+    ];
+    for (const id of reserva) items.push({ id, title: id, cover_url: '', provider: 'animeav1' });
+
+    const vistos = new Set();
+    const elegidos = [];
+    for (const a of items) {
+      if (!a || !a.id) continue;
+      const prov = a.provider || 'animeav1';
+      const clave = prov + ':' + a.id;
+      if (vistos.has(clave)) continue;
+      vistos.add(clave);
+      elegidos.push({ ...a, provider: prov });
+      if (elegidos.length >= n) break;
+    }
+    const base = Math.floor(Date.now() / 1000) - elegidos.length * 60;
+    for (let i = 0; i < elegidos.length; i++) {
+      const a = elegidos[i];
+      await App.SaveProgress({
+        anime_id: a.id,
+        episode_id: `${a.provider}:${a.id}:episode:1`,
+        current_time: 1200,
+        total_duration: 1440,
+        is_watched: false,
+        provider: a.provider,
+        anime_title: a.title || a.id,
+        cover_url: a.cover_url || '',
+        episode_number: 1,
+        updated_at: base + i,
+      });
+    }
+    return originales;
+  }, cantidad);
+}
+
+async function restaurarHistorial(page, originales) {
+  if (!originales) return;
+  await page.evaluate(async (orig) => {
+    const App = window.go.main.App;
+    await App.ClearProgress();
+    for (const r of orig) await App.SaveProgress(r);
+  }, originales);
+}
+
+async function irAFavoritos(page, ancho) {
+  if (ancho < 900) {
+    await page.locator('.barra-inferior .destino', { hasText: 'Favoritos' }).click();
+  } else {
+    await page.locator('#pestana-favoritos').click();
+  }
+  await page.waitForTimeout(400);
+}
+
+async function prepararToqueDeslizar(page) {
+  // `deslizar.ts` pone `touch-action: pan-y` en `pointerdown`, pero Chromium
+  // congela el valor al iniciar el toque; sin fijarlo antes, el gesto táctil
+  // emulado por CDP recibe `pointercancel` al segundo move.
+  await page.evaluate(() => {
+    document.querySelectorAll('.barra.cajon .envoltorio').forEach((el) => {
+      el.style.touchAction = 'pan-y';
+    });
+  });
+}
+
+async function arrastrarTactil(page, rect, dx, dy, pasos = 10) {
+  const cdp = await page.context().newCDPSession(page);
+  const x0 = rect.x + rect.width / 2;
+  const y0 = rect.y + rect.height / 2;
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: x0, y: y0 }] });
+  for (let i = 1; i <= pasos; i++) {
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [{ x: x0 + (dx * i) / pasos, y: y0 + (dy * i) / pasos }],
+    });
+    await page.waitForTimeout(20);
+  }
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await page.waitForTimeout(350);
+}
+
+async function abrirCajon(page) {
+  await page.locator('.barra-inferior .destino', { hasText: 'Historial' }).click();
+  await page.waitForSelector('.barra.cajon .envoltorio', { timeout: 15000 });
+  await page.waitForTimeout(250);
+}
+
+async function contarHistorial(page) {
+  return page.evaluate(() => document.querySelectorAll('.barra.cajon .envoltorio').length);
+}
+
+async function favoritos() {
+  const dirOut = process.argv[3] ?? 'docs/img/v1.4/favoritos';
+  mkdirSync(dirOut, { recursive: true });
+  const browser = await chromium.launch();
+  const rep = {
+    anchos: [],
+    home: null,
+    detalle: null,
+    estados: {},
+    toast: {},
+    deslizar: {},
+    literales: null,
+    funciones: [],
+    capturas: [],
+    errores: [],
+  };
+  const check = (nombre, ok, detalle) =>
+    rep.funciones.push({ nombre, ok: !!ok, detalle: detalle === undefined ? null : detalle });
+  const paso = async (nombre, fn) => {
+    try {
+      await fn();
+    } catch (e) {
+      rep.errores.push(`${nombre}: ${e.message}`);
+    }
+  };
+  const captura = async (p, nombre) => {
+    try {
+      await p.screenshot({ path: join(dirOut, `${nombre}.png`) });
+      rep.capturas.push(`${nombre}.png`);
+    } catch (e) {
+      rep.errores.push(`${nombre}: ${e.message}`);
+    }
+  };
+
+  const control = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  await gotoApp(control);
+
+  let favoritosOriginales = null;
+  let historialOriginal = null;
+  try {
+    await paso('A', async () => {
+      const semilla = await sembrarFavoritos(control, 7);
+      favoritosOriginales = semilla.originales;
+      rep.favoritosSembrados = semilla.elegidos.map((f) => `${f.provider}:${f.anime_id}`);
+
+      for (const a of ANCHOS_FAVORITOS) {
+        await control.setViewportSize({ width: a.w, height: a.h });
+        await gotoApp(control);
+        await control.waitForSelector('.fila .carrusel .tarjeta', { timeout: 60000 }).catch(() => {});
+        if (a.nombre === '360') {
+          rep.home = await control.evaluate(() => {
+            const t = document.querySelector('.fila .carrusel .tarjeta');
+            return t ? Math.round(t.getBoundingClientRect().height * 100) / 100 : null;
+          });
+        }
+        await irAFavoritos(control, a.w);
+        await control.waitForSelector('#panel-favoritos .cuadricula > .tarjeta', { timeout: 20000 });
+        await control.waitForTimeout(300);
+        const m = await control.evaluate(MEDIR_FAVORITOS);
+        rep.anchos.push({ ancho: a.nombre, ...m });
+        check(`${a.nombre}: 7 favoritos`, m.tarjetas === 7, m.tarjetas);
+        check(`${a.nombre}: overflowH = 0`, m.overflowH === 0, m.overflowH);
+        check(`${a.nombre}: tarjetas ≥44 px`, m.primera && m.primera.w >= 44 && m.primera.h >= 44, m.primera);
+        check(`${a.nombre}: alturas reales`, m.alturas.length === 7 && m.alturas.every((h) => h > 0), m.alturas);
+        check(`${a.nombre}: gap = 12 px`, m.gap === '12px', m.gap);
+        if (a.nombre === '360' || a.nombre === '390') {
+          check(`${a.nombre}: 2 columnas`, m.columnas === 2, m.columnas);
+        } else if (a.nombre === '768') {
+          check('768: 3 columnas', m.columnas === 3, m.columnas);
+        } else {
+          check('1280: auto-fill (≥4 columnas)', m.columnas >= 4, m.columnas);
+        }
+        if (a.nombre === '360' || a.nombre === '768' || a.nombre === '1280') {
+          await captura(control, `favoritos_${a.nombre}`);
+        }
+        log('favoritos', a.nombre, 'columnas=', m.columnas, 'alturas=', JSON.stringify(m.alturas));
+
+        if (a.nombre === '1280') {
+          await buscar(control, 'bleach');
+          await abrirDetalle(control, 'animeav1');
+          await control.waitForTimeout(1200);
+          rep.detalle = await control.evaluate(() => {
+            const t = document.querySelector('.rejilla .celda .tarjeta');
+            return t ? Math.round(t.getBoundingClientRect().height * 100) / 100 : null;
+          });
+        }
+      }
+      check('Home: tarjeta 263,8 px', rep.home !== null && Math.abs(rep.home - 263.8) <= 0.5, rep.home);
+      check(
+        'detalle 1280: tarjeta de episodio 170,39 px',
+        rep.detalle !== null && Math.abs(rep.detalle - 170.39) <= 0.5,
+        rep.detalle
+      );
+    });
+
+    await paso('B', async () => {
+      for (const estado of ['vacio', 'error', 'cargando']) {
+        const ctx = await browser.newContext({ viewport: { width: 360, height: 740 } });
+        await instalarListaFavoritos(ctx, estado, estado === 'cargando' ? 15000 : 0);
+        const p = await ctx.newPage();
+        await gotoApp(p);
+        await irAFavoritos(p, 360);
+        if (estado === 'vacio') {
+          await p.waitForSelector('#panel-favoritos .estado-vista.variante-vacio', { timeout: 15000 });
+          const m = await p.evaluate(MEDIR_FAVORITOS);
+          rep.estados.vacio = m.vacio;
+          check('vacío: título', m.vacio?.titulo === 'Aún no tienes favoritos', m.vacio?.titulo);
+          check(
+            'vacío: texto',
+            m.vacio?.texto === 'Marca la ★ en el detalle de un anime.',
+            m.vacio?.texto
+          );
+          await captura(p, 'favoritos_360_vacio');
+        } else if (estado === 'error') {
+          await p.waitForSelector('#panel-favoritos .estado-vista.variante-error', { timeout: 15000 });
+          const m = await p.evaluate(MEDIR_FAVORITOS);
+          rep.estados.error = m.error;
+          check('error: título', m.error?.titulo === 'No se pudieron cargar tus favoritos', m.error?.titulo);
+          check('error: role alert', m.error?.rol === 'alert', m.error?.rol);
+          check(
+            'error: Reintentar ≥44×44',
+            m.error?.reintentar && m.error.reintentar.w >= 44 && m.error.reintentar.h >= 44,
+            m.error?.reintentar
+          );
+          await captura(p, 'favoritos_360_error');
+          const antes = await p.evaluate(() => window.__t85Llamadas ?? 0);
+          await p.locator('#panel-favoritos .variante-error .btn').click();
+          await p.waitForFunction((n) => (window.__t85Llamadas ?? 0) > n, antes, { timeout: 5000 });
+          await p.waitForSelector('#panel-favoritos .estado-vista.variante-error', { timeout: 10000 });
+          const despues = await p.evaluate(() => window.__t85Llamadas ?? 0);
+          rep.estados.reintentar = { antes, despues };
+          check('error: Reintentar repite la carga', despues > antes, { antes, despues });
+        } else {
+          await p.waitForSelector('#panel-favoritos .cuadricula[aria-busy="true"]', { timeout: 15000 });
+          const m = await p.evaluate(MEDIR_FAVORITOS);
+          rep.estados.cargando = m.cargando;
+          check('cargando: aria-busy=true', m.cargando?.ariaBusy === 'true', m.cargando?.ariaBusy);
+          check('cargando: 6 esqueletos', m.cargando?.esqueletos === 6, m.cargando?.esqueletos);
+          await captura(p, 'favoritos_360_cargando');
+        }
+        await ctx.close();
+      }
+    });
+  } finally {
+    await restaurarFavoritos(control, favoritosOriginales).catch((e) => rep.errores.push(`restaurar favoritos: ${e.message}`));
+  }
+
+  try {
+    await paso('C', async () => {
+      historialOriginal = await sembrarHistorial(control, 12);
+      const ctx = await browser.newContext({
+        viewport: { width: 360, height: 740 },
+        hasTouch: true,
+        isMobile: true,
+        deviceScaleFactor: 1,
+      });
+      const p = await ctx.newPage();
+      await gotoApp(p);
+      await p.waitForSelector('.fila .carrusel .tarjeta', { timeout: 60000 }).catch(() => {});
+      rep.home = rep.home ?? (await p.evaluate(() => {
+        const t = document.querySelector('.fila .carrusel .tarjeta');
+        return t ? Math.round(t.getBoundingClientRect().height * 100) / 100 : null;
+      }));
+      await buscar(p, 'bleach');
+      await abrirDetalle(p, 'animeav1');
+      rep.detalle360 = await p.evaluate(() => {
+        const t = document.querySelector('.rejilla .celda .tarjeta');
+        return t ? Math.round(t.getBoundingClientRect().height * 100) / 100 : null;
+      });
+
+      await abrirCajon(p);
+      const n0 = await contarHistorial(p);
+      check('cajón: historial sembrado', n0 >= 10, n0);
+      rep.deslizar.inicial = n0;
+
+      await prepararToqueDeslizar(p);
+      const primera = await p.locator('.barra.cajon .envoltorio').first().boundingBox();
+      await arrastrarTactil(p, primera, -120, 0);
+      await p.waitForSelector('.toast', { timeout: 5000 });
+      const n1 = await contarHistorial(p);
+      rep.deslizar.horizontal = { antes: n0, despues: n1 };
+      check('deslizar horizontal ≥96: borra', n1 === n0 - 1, { antes: n0, despues: n1 });
+      await p.locator('.toast .accion').click();
+      await p.waitForFunction(() => !document.querySelector('.toast'), null, { timeout: 5000 });
+      await p.waitForTimeout(400);
+      const n2 = await contarHistorial(p);
+      rep.deslizar.deshacer = n2;
+      check('deslizar: Deshacer restaura', n2 === n0, { antes: n0, despues: n2 });
+
+      await p.evaluate(() => {
+        const c = document.querySelector('.barra.cajon .cuerpo');
+        if (c) c.scrollTop = 0;
+      });
+      await p.waitForTimeout(200);
+      const cuerpoAntes = await p.evaluate(() => document.querySelector('.barra.cajon .cuerpo').scrollTop);
+      await prepararToqueDeslizar(p);
+      const vertical = await p.locator('.barra.cajon .envoltorio').first().boundingBox();
+      await arrastrarTactil(p, vertical, 0, -80);
+      await p.waitForTimeout(450);
+      const cuerpoDespues = await p.evaluate(() => document.querySelector('.barra.cajon .cuerpo').scrollTop);
+      const n3 = await contarHistorial(p);
+      const hayToastVertical = await p.locator('.toast').count();
+      rep.deslizar.vertical = { scrollTop: [cuerpoAntes, cuerpoDespues], antes: n0, despues: n3, toast: hayToastVertical };
+      check('deslizar vertical: hace scroll', cuerpoDespues > cuerpoAntes, [cuerpoAntes, cuerpoDespues]);
+      check('deslizar vertical: no borra', n3 === n0 && hayToastVertical === 0, { antes: n0, despues: n3, toast: hayToastVertical });
+
+      await p.evaluate(() => {
+        const c = document.querySelector('.barra.cajon .cuerpo');
+        if (c) c.scrollTop = 0;
+      });
+      await p.waitForTimeout(200);
+      await prepararToqueDeslizar(p);
+      const corta = await p.locator('.barra.cajon .envoltorio').first().boundingBox();
+      await arrastrarTactil(p, corta, -40, 0);
+      await p.waitForTimeout(350);
+      const n4 = await contarHistorial(p);
+      const vuelta = await p.evaluate(() => {
+        const el = document.querySelector('.barra.cajon .envoltorio');
+        if (!el) return null;
+        const r = el.getBoundingClientRect();
+        return { x: Math.round(r.x * 100) / 100, transform: getComputedStyle(el).transform, opacity: getComputedStyle(el).opacity };
+      });
+      const hayToastCorto = await p.locator('.toast').count();
+      rep.deslizar.corto = { antes: n0, despues: n4, vuelta, toast: hayToastCorto };
+      check('deslizar 40 px: no borra', n4 === n0 && hayToastCorto === 0, { antes: n0, despues: n4, toast: hayToastCorto });
+      check(
+        'deslizar 40 px: vuelve a su sitio',
+        vuelta !== null && Math.abs(vuelta.x - corta.x) <= 1 && vuelta.opacity === '1',
+        vuelta
+      );
+
+      const nAntesToast = await contarHistorial(p);
+      await p.evaluate(() => document.querySelector('.barra.cajon .envoltorio .borrar').click());
+      await p.waitForSelector('.toast', { timeout: 5000 });
+      const m = await p.evaluate(MEDIR_TOAST);
+      const nTrasToast = await contarHistorial(p);
+      rep.toast['360'] = m;
+      check('toast 360: bottom ≥ alto de la barra', m.bottomCss >= m.altoBarra, { bottom: m.bottomCss, barra: m.altoBarra });
+      check('toast 360: no tapa la barra', m.rect.bottom <= m.topBarra + 1, { bottom: m.rect.bottom, topBarra: m.topBarra });
+      check('toast 360: botones ≥44×44', m.botones.length === 2 && m.botones.every((b) => b.w >= 44 && b.h >= 44), m.botones);
+      check('toast 360: fondo opaco', m.opaco === true && m.alpha === 1, { bg: m.bg, alpha: m.alpha });
+      check('toast 360: ancho ≤ viewport − 2·gutter', m.ancho <= m.maxAncho + 1, { ancho: m.ancho, max: m.maxAncho });
+      check('toast 360: sobre el cajón abierto', m.cajonAbierto && m.centroEnToast?.enToast === true, m.centroEnToast);
+      check(
+        'toast 360: z-index sobre cajón y CTA',
+        Number(m.zIndex) >= Number(m.cajonZ) && m.ctaVisible && m.solapeCta?.enToast === true,
+        { z: m.zIndex, cajonZ: m.cajonZ, ctaZ: m.ctaZ, solape: m.solapeCta }
+      );
+      check('toast: borrar descuenta historial', nTrasToast === nAntesToast - 1, { antes: nAntesToast, despues: nTrasToast });
+      await p.waitForTimeout(350);
+      await captura(p, 'toast_360');
+
+      await p.keyboard.press('Escape');
+      await p.waitForTimeout(350);
+      const mCerrado = await p.evaluate(MEDIR_TOAST);
+      check('toast 360: sigue sobre la CTA al cerrar el cajón', mCerrado?.ctaVisible && mCerrado?.centroEnToast?.enToast === true, mCerrado?.centroEnToast);
+      await p.locator('.toast .accion').click();
+      await p.waitForFunction(() => !document.querySelector('.toast'), null, { timeout: 5000 });
+      await p.waitForTimeout(400);
+      await abrirCajon(p);
+      const nDeshacer = await contarHistorial(p);
+      check('toast 360: Deshacer restaura', nDeshacer === nAntesToast, { antes: nAntesToast, despues: nDeshacer });
+
+      await p.evaluate(() => document.querySelector('.barra.cajon .envoltorio .borrar').click());
+      await p.waitForSelector('.toast', { timeout: 5000 });
+      const nAuto = await contarHistorial(p);
+      await p.waitForTimeout(5400);
+      const toastAuto = await p.locator('.toast').count();
+      rep.toast.autoCierre = { tras5s: toastAuto, historial: nAuto };
+      check('toast: se cierra solo a los 5 s', toastAuto === 0, toastAuto);
+
+      await p.evaluate(() => document.querySelector('.barra.cajon .envoltorio .borrar').click());
+      await p.waitForSelector('.toast', { timeout: 5000 });
+      const nCerrar = await contarHistorial(p);
+      await p.locator('.toast .cerrar').click();
+      await p.waitForFunction(() => !document.querySelector('.toast'), null, { timeout: 5000 });
+      rep.toast.cerrar = { historial: nCerrar };
+      check('toast: ✕ lo cierra', (await p.locator('.toast').count()) === 0, nCerrar);
+
+      await p.emulateMedia({ reducedMotion: 'reduce' });
+      await p.evaluate(() => document.querySelector('.barra.cajon .envoltorio .borrar').click());
+      await p.waitForSelector('.toast', { timeout: 5000 });
+      const mReduced = await p.evaluate(MEDIR_TOAST);
+      rep.toast.reduced = mReduced;
+      check('reduced-motion: sin animación de entrada', mReduced.animationName === 'none', mReduced.animationName);
+      check('reduced-motion: botones sin transición', mReduced.botones.every((b) => b.transitionDuration === '0s'), mReduced.botones);
+      await p.locator('.toast .cerrar').click();
+      await ctx.close();
+    });
+
+    await paso('D', async () => {
+      const ctx = await browser.newContext({
+        viewport: { width: 390, height: 844 },
+        hasTouch: true,
+        isMobile: true,
+        deviceScaleFactor: 1,
+      });
+      const p = await ctx.newPage();
+      await gotoApp(p);
+      await abrirCajon(p);
+      await p.evaluate(() => document.querySelector('.barra.cajon .envoltorio .borrar').click());
+      await p.waitForSelector('.toast', { timeout: 5000 });
+      const m = await p.evaluate(MEDIR_TOAST);
+      rep.toast['390'] = m;
+      check('toast 390: bottom ≥ alto de la barra', m.bottomCss >= m.altoBarra, { bottom: m.bottomCss, barra: m.altoBarra });
+      check('toast 390: botones ≥44×44', m.botones.length === 2 && m.botones.every((b) => b.w >= 44 && b.h >= 44), m.botones);
+      check('toast 390: fondo opaco', m.opaco === true && m.alpha === 1, { bg: m.bg, alpha: m.alpha });
+      check('toast 390: ancho ≤ viewport − 2·gutter', m.ancho <= m.maxAncho + 1, { ancho: m.ancho, max: m.maxAncho });
+      await ctx.close();
+    });
+
+    await paso('E', async () => {
+      const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+      const p = await ctx.newPage();
+      await gotoApp(p);
+      await p.waitForSelector('#barra-historial .envoltorio', { timeout: 15000 });
+      await p.locator('#barra-historial .envoltorio').first().hover();
+      await p.evaluate(() => document.querySelector('#barra-historial .envoltorio .borrar').click());
+      await p.waitForSelector('.toast', { timeout: 5000 });
+      const m = await p.evaluate(MEDIR_TOAST);
+      rep.toast['1280'] = m;
+      check('toast 1280: bottom = 24 px (--sp-6)', Math.abs(m.bottomCss - 24) <= 1, m.bottomCss);
+      check('toast 1280: ancho dentro del máximo', m.ancho <= m.maxAncho + 1, { ancho: m.ancho, max: m.maxAncho });
+      rep.diferenciaBottom1280 = m.bottomCss - 24;
+      await ctx.close();
+    });
+  } finally {
+    await restaurarHistorial(control, historialOriginal).catch((e) => rep.errores.push(`restaurar historial: ${e.message}`));
+  }
+
+  await paso('F', async () => {
+    const textos = ['frontend/src/Toast.svelte', 'frontend/src/GridFavoritos.svelte'];
+    const cuenta = { hex: 0, rgb: 0 };
+    for (const ruta of textos) {
+      const texto = readFileSync(ruta, 'utf8');
+      cuenta.hex += (texto.match(/#[0-9a-f]{3,8}\b/gi) ?? []).length;
+      cuenta.rgb += (texto.match(/\brgba?\(/gi) ?? []).length;
+    }
+    rep.literales = cuenta;
+    check('0 literales de color en Toast/GridFavoritos', cuenta.hex === 0 && cuenta.rgb === 0, cuenta);
+  });
+
+  writeFileSync(join(dirOut, 'favoritos.json'), JSON.stringify(rep, null, 2));
+  await browser.close();
+  return rep;
+}
+
+// ---------------------------------------------------------------------------
 // CLI
 // ---------------------------------------------------------------------------
 
@@ -5219,6 +5956,38 @@ if (modo === 'comparar') {
   if (rep.errores.length) console.log('\nErrores:', rep.errores);
   console.log(`\nCapturas (${dirOut}): ${rep.capturas.join(', ') || 'ninguna'}`);
   console.log(`Resumen JSON: ${join(dirOut, 'siguiente.json')}`);
+} else if (modo === 'favoritos') {
+  const rep = await favoritos();
+  const dirOut = process.argv[3] ?? 'docs/img/v1.4/favoritos';
+  console.log('## Modo favoritos (T85) — cuadrícula, estados, toast y deslizar\n');
+  console.log('| ancho | columnas | gap | tarjetas | altura mín..máx | 1ª w×h | overflowH |');
+  console.log('|---:|---:|---|---:|---|---|---:|');
+  for (const m of rep.anchos) {
+    const h = m.alturas ?? [];
+    const rango = h.length ? `${Math.min(...h)}..${Math.max(...h)}` : '—';
+    const fmt = (r) => (r ? `${r.w}×${r.h}` : '—');
+    console.log(
+      `| ${m.ancho} | ${m.columnas} | ${m.gap ?? '—'} | ${m.tarjetas} | ${rango} | ${fmt(m.primera)} | ${m.overflowH} |`
+    );
+  }
+  console.log('\nFavoritos por ancho:', JSON.stringify(rep.anchos.map((m) => ({ ancho: m.ancho, alturas: m.alturas }))));
+  console.log('Home / detalle:', JSON.stringify({ home: rep.home, detalle: rep.detalle }));
+  console.log('Estados:', JSON.stringify(rep.estados));
+  console.log('Toast 360:', JSON.stringify(rep.toast['360']));
+  console.log('Toast 390:', JSON.stringify(rep.toast['390']));
+  console.log('Toast 1280:', JSON.stringify(rep.toast['1280']));
+  console.log('Diferencia de bottom a 1280 respecto a 24 px:', rep.diferenciaBottom1280);
+  console.log('Deslizar:', JSON.stringify(rep.deslizar));
+  console.log('Literales:', JSON.stringify(rep.literales));
+  const fallos = rep.funciones.filter((f) => !f.ok);
+  console.log('\n| comprobación | ok | detalle |');
+  console.log('|---|:--:|---|');
+  for (const f of rep.funciones)
+    console.log(`| ${f.nombre} | ${f.ok ? 'sí' : 'NO'} | ${f.detalle === null ? '' : JSON.stringify(f.detalle)} |`);
+  console.log(`\nComprobaciones: ${rep.funciones.length - fallos.length}/${rep.funciones.length} OK`);
+  if (rep.errores.length) console.log('\nErrores:', rep.errores);
+  console.log(`\nCapturas (${dirOut}): ${rep.capturas.join(', ') || 'ninguna'}`);
+  console.log(`Resumen JSON: ${join(dirOut, 'favoritos.json')}`);
 } else {
   const dirOut = process.argv[3] ?? DIR_DEF;
   const res = await capturar(dirOut);
