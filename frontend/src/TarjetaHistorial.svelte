@@ -128,7 +128,8 @@
     cursor: pointer;
   }
   .tarjeta:hover:not(:disabled) {
-    background: var(--border-strong);
+    /* T88: `--border-strong` dejaba el texto secundario en 3,72:1. */
+    background: var(--surface-chip-hover);
   }
   .tarjeta:focus-visible {
     outline: 2px solid var(--brand-400);

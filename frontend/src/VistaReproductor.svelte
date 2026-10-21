@@ -639,6 +639,7 @@
 
 <main class="contenedor">
   <CabeceraVista
+    nivel={1}
     titulo={$seleccion?.title ?? 'Reproductor'}
     subtitulo={lineaEpisodio}
     onAtras={atras}

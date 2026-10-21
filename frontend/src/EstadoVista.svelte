@@ -22,7 +22,7 @@
   $: rol = variante === 'error' ? 'alert' : variante === 'cargando' ? 'status' : undefined;
 </script>
 
-<section class="estado-vista variante-{variante}" role={rol}>
+<section class="estado-vista variante-{variante}" role={rol} aria-busy={variante === 'cargando' ? 'true' : undefined}>
   <span class="icono">
     <Icono nombre={nombreIcono} tam={24} />
   </span>

@@ -233,7 +233,7 @@
         {/if}
       </button>
     </div>
-    <div class="cuerpo">
+    <div class="cuerpo" aria-busy={$historialEstado === 'loading'}>
       {#if $isNarrow || !$sidebarCollapsed}
         {#if $historialEstado === 'error'}
           <EstadoVista variante="error" titulo="No se pudo cargar el historial">

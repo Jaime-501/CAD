@@ -79,7 +79,7 @@
     aria-label="Continuar viendo"
     aria-busy={$historialEstado === 'loading'}
   >
-    <h3 class="titulo-fila">Continuar viendo</h3>
+    <h2 class="titulo-fila">Continuar viendo</h2>
     <div class="carrusel">
       {#each $historial.slice(0, MAX) as item (claveDe(item))}
         <TarjetaContinuar

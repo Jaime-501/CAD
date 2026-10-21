@@ -275,6 +275,7 @@
 <main class="contenedor" class:con-cta={$isNarrow && $currentDetail && episodios.length > 0}>
   <CabeceraVista
     fija
+    nivel={1}
     titulo={$currentDetail?.title ?? $seleccion?.title ?? 'Detalle'}
     onAtras={atras}
   >
@@ -311,7 +312,10 @@
             <Insignia tono="neutro">
               <span
                 class="punto"
-                class:emision={$currentDetail.status === 'En emisión'}
+                class:emision={$currentDetail.status
+                  .normalize('NFD')
+                  .replace(/[\u0300-\u036f]/g, '')
+                  .toLowerCase() === 'en emision'}
                 aria-hidden="true"
               ></span>
               {$currentDetail.status}
@@ -361,7 +365,7 @@
     </section>
 
     <div class="fila-titular">
-      <h3 class="titular">Episodios {#if episodios.length > 0}({episodios.length}){/if}</h3>
+      <h2 class="titular">Episodios {#if episodios.length > 0}({episodios.length}){/if}</h2>
       {#if episodios.length > 1}
         <button
           type="button"
@@ -529,6 +533,8 @@
   }
   .titular {
     margin: 0;
+    /* Conserva el tamaño del h3 anterior (T88). */
+    font-size: 1.17em;
   }
   .orden {
     display: inline-flex;

@@ -91,7 +91,7 @@
 </script>
 
 <main class="contenedor">
-  <h2>Buscador de anime</h2>
+  <h1>Buscador de anime</h1>
 
   <div class="buscador">
     <div class="campo">
@@ -171,9 +171,11 @@
     max-width: 1100px;
     margin: 0 auto;
   }
-  h2 {
+  h1 {
     text-align: center;
     margin-top: 0;
+    /* Conserva el tamaño del h2 anterior (T88). */
+    font-size: 1.5em;
   }
   .buscador {
     display: flex;
@@ -267,7 +269,7 @@
     .contenedor {
       padding: calc(var(--sat) + var(--sp-4)) var(--gutter) var(--sp-4);
     }
-    h2 {
+    h1 {
       font-size: var(--fs-xl);
       margin: 0 0 var(--sp-3);
       text-align: left;

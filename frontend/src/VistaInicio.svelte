@@ -138,7 +138,7 @@
     {#each PROVEEDORES_HOME as proveedor (proveedor.id)}
       {@const estado = $home[proveedor.id]}
       {#if estado === undefined || estado.estado === 'loading'}
-        <section class="fila-fantasma" aria-label="{proveedor.nombre} · cargando">
+        <section class="fila-fantasma" aria-label="{proveedor.nombre} · cargando" aria-busy="true">
           <div class="cabecera-fantasma">
             <span class="proveedor-fantasma">{proveedor.nombre}</span>
           </div>

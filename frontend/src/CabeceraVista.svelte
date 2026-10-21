@@ -2,8 +2,10 @@
   /**
    * T74: cabecera compacta y única de las vistas de detalle y reproductor.
    *
-   * "← Atrás" (icono `flecha-izq` + texto), bloque de título (`h2`) y subtítulo
-   * opcional, con un slot `acciones` a la derecha (la estrella de favorito). En
+   * "← Atrás" (icono `flecha-izq` + texto), bloque de título (`h1` o `h2`
+   * según `nivel`) y subtítulo opcional, con un slot `acciones` a la derecha
+   * (la estrella de favorito). T88: detalle y reproductor son la vista
+   * principal, así que usan `nivel={1}`; el nivel 2 queda para usos anidados. En
    * modo estrecho (`< 900 px`, mismo corte que `isNarrow`) gana el objetivo
    * táctil de `--tap`, el título se recorta a una línea con elipsis y, con
    * `fija`, la cabecera queda pegada arriba con `--surface-panel` + blur.
@@ -14,6 +16,8 @@
 
   export let titulo: string;
   export let subtitulo = '';
+  /** Nivel del encabezado: 1 en detalle/reproductor (T88), 2 si va anidada. */
+  export let nivel: 1 | 2 = 2;
   /** `true` ⇒ cabecera pegajosa arriba en modo estrecho (detalle). */
   export let fija = false;
   export let onAtras: () => void = () => {};
@@ -26,7 +30,7 @@
   </button>
 
   <div class="titulos">
-    <h2>{titulo}</h2>
+    <svelte:element this={`h${nivel}`} class="titulo">{titulo}</svelte:element>
     {#if subtitulo !== ''}
       <p class="subtitulo">{subtitulo}</p>
     {/if}
@@ -47,10 +51,12 @@
   .titulos {
     min-width: 0;
   }
-  .cabecera h2 {
+  .cabecera .titulo {
     margin: 0;
     text-align: left;
     font-family: var(--font-display);
+    /* Conserva el tamaño por defecto del h2 aunque el nivel sea 1 (T88). */
+    font-size: 1.5em;
   }
   .subtitulo {
     margin: var(--sp-1) 0 0;
@@ -97,7 +103,7 @@
       min-width: var(--tap);
       min-height: var(--tap);
     }
-    .cabecera h2 {
+    .cabecera .titulo {
       font-size: var(--fs-lg);
       white-space: nowrap;
       overflow: hidden;
