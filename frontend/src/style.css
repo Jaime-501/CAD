@@ -1,21 +1,6 @@
-/* T48: tokens del shell (barra lateral/hamburguesa). Valores copiados de los
-   hex que YA usan las vistas existentes; solo los usan App.svelte y
-   BarraLateral.svelte. Los colores de las vistas NO cambian. */
-:root {
-    /* legado: se retira en T93 */
-    --cad-fondo: #151515;
-    --cad-superficie: #1e1e24;
-    --cad-borde: #3f3f46;
-    --cad-texto: #ffffff;
-    --cad-texto-suave: #a1a1aa;
-    --cad-acento: #4ade80;
-    --cad-peligro: #f87171;
-    --cad-radio: 8px;
-}
-
-/* T70: tokens del rediseño (v1.4.0). Solo definiciones: ningún componente los
-   usa todavía (eso llega con T72b y las tareas de vista). Convive con las
-   variables --cad-* legadas, que se retiran en T93. */
+/* T70: tokens del rediseño (v1.4.0). Única fuente de verdad de la paleta, la
+   tipografía, el espacio y el movimiento. T89 retiró las variables legadas
+   `--cad-*` (ya sin uso desde T72b). */
 :root {
     /* Fondos */
     --bg-0: #090d16;
@@ -224,8 +209,10 @@ body::before {
 }
 
 /* T71: fuentes locales, subconjunto latin con peso variable (cubre español).
-   El archivo de Nunito se deja en assets/ y su @font-face se conserva; deja de
-   usarse en body (se retira en T93). */
+   Inter y Outfit llegan de los paquetes npm `@fontsource-variable/inter` y
+   `@fontsource-variable/outfit`, ambos bajo SIL Open Font License 1.1 (la
+   licencia completa va en el LICENSE de cada paquete). T89 retiró el
+   `@font-face` de Nunito y sus archivos de `assets/fonts/`. */
 @font-face {
     font-family: "Inter Variable";
     font-style: normal;
@@ -242,14 +229,6 @@ body::before {
     font-display: swap;
     src: url("@fontsource-variable/outfit/files/outfit-latin-wght-normal.woff2") format("woff2-variations");
     unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-
-@font-face {
-    font-family: "Nunito";
-    font-style: normal;
-    font-weight: 400;
-    src: local(""),
-    url("assets/fonts/nunito-v16-latin-regular.woff2") format("woff2");
 }
 
 /* T71: base global táctil y de accesibilidad. */

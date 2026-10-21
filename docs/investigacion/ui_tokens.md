@@ -1,11 +1,25 @@
 # Tokens de diseño (T70, v1.4.0)
 
 > Sistema de tokens del rediseño móvil, definido en el bloque `:root` añadido a
-> `frontend/src/style.css` (T70). Es **solo la fuente de verdad**: ningún componente
-> los consume aún; eso llega en **T72b** y en las tareas de vista. Las variables
-> legadas `--cad-*` conviven con estos tokens y se retiran en **T93**
-> (`/* legado: se retira en T93 */`).
-> Fecha: **2026-10-17**.
+> `frontend/src/style.css` (T70). Es la **única fuente de verdad** de la paleta, la tipografía, el
+> espacio, los radios, las sombras y el movimiento: desde **T72b** ningún componente escribe
+> colores, radios ni sombras literales, y desde **T89** tampoco quedan variables legadas.
+> Fecha: **2026-10-17** (actualizado en **T89**, 2026-10-20).
+
+## Estado de las variables legadas (`--cad-*`)
+
+**RETIRADAS en T89.** Las 8 variables `--cad-*` (`--cad-fondo`, `--cad-superficie`, `--cad-borde`,
+`--cad-texto`, `--cad-texto-suave`, `--cad-acento`, `--cad-peligro`, `--cad-radio`) se definieron en
+T48 y dejaron de usarse en **T72b** (el puente de color); el `grep` de T89 dio **0 usos** fuera de
+sus propias definiciones, así que se borraron del `style.css` junto con el `@font-face "Nunito"` y
+los archivos de `frontend/src/assets/fonts/`. Eran el "T93" previsto en este documento: se anticipó
+a T89 al comprobar que ya no quedaban usos.
+
+Las **tipografías** que sí se usan (Inter y Outfit) llegan de los paquetes npm
+`@fontsource-variable/inter` y `@fontsource-variable/outfit` (ambos **SIL OFL 1.1**; el `LICENSE`
+completo va en cada paquete). El `@font-face` con el subconjunto **latin** y peso variable se declara
+a mano en `style.css` (los paquetes no traen CSS por subconjunto: importar `wght.css` metería todos
+los subsets, ~259 KB).
 
 ## Regla de uso
 

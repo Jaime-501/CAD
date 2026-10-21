@@ -51,16 +51,21 @@ docs/
   DESARROLLO.md           # guía de desarrollo
   PROGRESO_v1.0.md  PROGRESO_v1.1.md  PROGRESO_v1.2.md  # historiales por versión
 frontend/
-  index.html              # documento HTML (meta referrer no-referrer)
+  index.html              # documento HTML (meta referrer no-referrer, lang="es")
   src/
     api.ts                # ÚNICO punto de acceso al backend (P4)
     stores.ts  main.ts  views.ts  ui.ts  style.css
     favoritos.ts  historial.ts  home.ts  retomar.ts  toasts.ts
-    etiquetas.ts  deslizar.ts  vite-env.d.ts  (+ *.test.ts)
+    etiquetas.ts  deslizar.ts  ventana.ts  revelar.ts  vite-env.d.ts (+ *.test.ts)
     App.svelte  Vista*.svelte  Tarjeta*.svelte  Boton*.svelte
     BarraLateral.svelte  FilaAnimes.svelte  GridFavoritos.svelte
     SelectorFuente.svelte  Toast.svelte
-    assets/               # fuentes y logo
+    # nuevos en la serie v1.4.0 (T69–T89):
+    BarraInferior.svelte  CabeceraVista.svelte  BarraAccion.svelte
+    FilaContinuar.svelte  TarjetaContinuar.svelte
+    Icono.svelte  Btn.svelte  Chip.svelte  Insignia.svelte
+    Esqueleto.svelte  EstadoVista.svelte
+    assets/               # logo (las fuentes locales vienen de npm)
   wailsjs/                # bindings generados por Wails — NO EDITAR
 ```
 

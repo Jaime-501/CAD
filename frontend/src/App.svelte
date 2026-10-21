@@ -91,6 +91,15 @@
   $: barraVisible = $isNarrow && $vista !== 'reproductor';
 
   /**
+   * T89: con el cajón de historial abierto en modo estrecho, el contenido de
+   * fondo (área principal) y la barra inferior quedan `inert`: no son
+   * alcanzables con el teclado y el foco no se escapa del cajón. El cajón y su
+   * velo son HERMANOS de `.area-principal` (los renderiza `BarraLateral` dentro
+   * de `.app-shell`), así que no se inertizan a sí mismos.
+   */
+  $: cajonAbierto = $drawerOpen && $isNarrow;
+
+  /**
    * Destino resaltado (T73): en `busqueda` con consulta, "buscar"; en
    * `busqueda` sin consulta, la pestaña del Home (`descubrir`|`favoritos`);
    * en `detalle` —y en el reproductor, donde la barra no se ve—, ninguno.
@@ -158,7 +167,7 @@
       <BarraLateral onOpen={retomar} onCerrarCajon={enfocarHistorialBarra} />
     {/if}
 
-    <main class="area-principal" class:con-barra={barraVisible}>
+    <main class="area-principal" class:con-barra={barraVisible} inert={cajonAbierto}>
       {#if !puente}
         <p class="aviso-puente">{MENSAJE_PUENTE}</p>
       {/if}
@@ -174,14 +183,22 @@
   </div>
 
   {#if barraVisible}
-    <BarraInferior
-      bind:this={barraInferior}
-      activo={barraActiva}
-      onDescubrir={() => irAHome('descubrir')}
-      onBuscar={irABuscar}
-      onFavoritos={() => irAHome('favoritos')}
-      onHistorial={irAHistorial}
-    />
+    <!--
+      T89: Svelte 5 no reenvía atributos a un componente, así que el `inert`
+      va en un envoltorio sin caja (`display: contents`) que envuelve la barra
+      inferior. Con el cajón abierto, la barra deja de ser alcanzable con el
+      teclado.
+    -->
+    <div class="zona-barra-inferior" inert={cajonAbierto}>
+      <BarraInferior
+        bind:this={barraInferior}
+        activo={barraActiva}
+        onDescubrir={() => irAHome('descubrir')}
+        onBuscar={irABuscar}
+        onFavoritos={() => irAHome('favoritos')}
+        onHistorial={irAHistorial}
+      />
+    </div>
   {/if}
 
   <!-- Toast de una ranura (T51): montado una sola vez, fijo abajo-centro. -->
@@ -191,6 +208,11 @@
 <style>
   /* T73: contenedor sin caja (display: contents) para exponer --bar-offset. */
   .raiz {
+    display: contents;
+  }
+  /* T89: envoltorio sin caja para poder marcar la barra inferior como
+     `inert` mientras el cajón de historial está abierto. */
+  .zona-barra-inferior {
     display: contents;
   }
   .app-shell {
