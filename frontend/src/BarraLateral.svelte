@@ -193,7 +193,7 @@
 <svelte:window on:keydown={alTeclar} />
 
 {#if $isNarrow && $drawerOpen}
-  <button type="button" class="fondo-cajon" aria-label="Cerrar historial" on:click={cerrarCajon}></button>
+  <button type="button" class="fondo-cajon" aria-label="Cerrar historial" tabindex="-1" on:click={cerrarCajon}></button>
 {/if}
 
 {#if !$isNarrow || $drawerOpen}

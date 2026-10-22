@@ -130,14 +130,17 @@ por estos cambios.
 
 ## Deudas y notas
 
+- **Estado tras T89/T89b (2026-10-21)**: el cajón atrapa el foco con `inert` (T89) y solo queda
+  **1 fuga**, el `<body>` (respaldo del documento); el velo «Cerrar historial» ya no es tabulable
+  (`tabindex="-1"`, T89b), así que su fuga desaparece.
 - **`<html lang="en">`** en `frontend/index.html`: debe ser `es`. No se toca por la ficha;
-  queda para el cierre documental.
+  queda para el cierre documental. **Resuelto en T89** (`lang="es"`).
 - **Cajón sin trap de foco**: el fondo es alcanzable con `Tab` tras el último control. Se
-  reporta, no se rediseña.
+  reporta, no se rediseña. **Resuelto en T89/T89b** (ver la nota de estado de arriba).
 - **Deriva de scroll del detalle**: con la tarjeta intermedia enfocada y el scroll a
   **2743 px**, al volver del reproductor queda en **2795 px** → **+52 px** (la referencia
   histórica era ~35 px). No se tocó T65/T66/T67.
-- El `lang` y el trap son las únicas deudas abiertas de esta ficha; no hay fallos AA de
+- El `lang` y el trap quedaron resueltos en T89/T89b (ver la nota de estado); no hay fallos AA de
   contraste, nombres, `h1` ni anillo de foco.
 - `docs/img` está ignorado por `.gitignore`, como en las tareas anteriores.
 - **Falsos positivos del baseline**: `a11y_antes.json` marca 14 fallos de hover y 27 de foco;

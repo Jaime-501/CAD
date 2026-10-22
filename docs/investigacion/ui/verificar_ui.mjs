@@ -93,6 +93,19 @@ const ANCHOS_FAVORITOS = [
 
 function log(...a) { process.stderr.write(['[verificar_ui]', ...a].join(' ') + '\n'); }
 
+// T89b: la regla global de `prefers-reduced-motion` deja `transition-duration:
+// 0.01ms`, que el navegador serializa como `1e-05s` (no `0s`). Se acepta
+// cualquier duración ≤ 0,001 s, incluidas las listas `a, b`.
+function duracionCorta(valor) {
+  if (typeof valor !== 'string' || valor.trim() === '') return false;
+  return valor.split(',').every((parte) => {
+    const m = parte.trim().match(/^((?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?)(ms|s)$/i);
+    if (!m) return false;
+    const segundos = Number(m[1]) * (m[2].toLowerCase() === 'ms' ? 0.001 : 1);
+    return Number.isFinite(segundos) && segundos >= 0 && segundos <= 0.001;
+  });
+}
+
 // ---------------------------------------------------------------------------
 // PNG: decodificación mínima (8 bits, color type 2 RGB / 6 RGBA) para comparar.
 // ---------------------------------------------------------------------------
@@ -436,7 +449,7 @@ const MEDIR_CABECERA = () => {
   };
   const cab = document.querySelector('main .cabecera');
   const atras = document.querySelector('main .cabecera .atras');
-  const h2 = document.querySelector('main .cabecera h2');
+  const h2 = document.querySelector('main .cabecera h1, main .cabecera h2');
   const sub = document.querySelector('main .cabecera .subtitulo');
   const accion = document.querySelector('main .cabecera .acciones .favorito');
   const estrella = document.querySelector('main .cabecera .acciones .estrella');
@@ -761,7 +774,7 @@ async function shell() {
     await destino('Favoritos').click();
     await page.waitForTimeout(400);
     check('detalle → Favoritos', await panelActivo('panel-favoritos'));
-    check('detalle → Favoritos deja el Home', await page.locator('.pestanas').isVisible());
+    check('detalle → Favoritos deja el Home', await page.locator('#panel-favoritos').isVisible());
     await destino('Descubrir').click();
     await page.waitForTimeout(250);
 
@@ -873,10 +886,10 @@ async function shell() {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     check(
       'reduced-motion: sin transición en la barra',
-      (await page.evaluate(() => {
+      duracionCorta(await page.evaluate(() => {
         const el = document.querySelector('.destino');
         return el ? getComputedStyle(el).transitionDuration : null;
-      })) === '0s'
+      }))
     );
     await page.emulateMedia({ reducedMotion: null });
 
@@ -1086,10 +1099,10 @@ async function cabecera() {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     check(
       'reduced-motion: sin transición en la cabecera',
-      (await page.evaluate(() => {
+      duracionCorta(await page.evaluate(() => {
         const el = document.querySelector('main .cabecera');
         return el ? getComputedStyle(el).transitionDuration : null;
-      })) === '0s'
+      }))
     );
     await page.emulateMedia({ reducedMotion: null });
   });
@@ -1414,7 +1427,7 @@ async function buscador() {
       const el = document.querySelector('.buscador .limpiar');
       return el ? getComputedStyle(el).transitionDuration : null;
     });
-    check('reduced-motion: sin transición en el limpiar', td === '0s', td);
+    check('reduced-motion: sin transición en el limpiar', duracionCorta(td), td);
     await page.emulateMedia({ reducedMotion: null });
   });
 
@@ -1711,7 +1724,7 @@ async function filas() {
       const t = document.querySelector('.fila .carrusel .tarjeta');
       return t ? getComputedStyle(t).transitionDuration : null;
     });
-    check('reduced-motion: tarjeta sin transición', td === '0s', td);
+    check('reduced-motion: tarjeta sin transición', duracionCorta(td), td);
     await page.emulateMedia({ reducedMotion: null });
   });
 
@@ -1954,7 +1967,7 @@ async function continuar() {
       const t = document.querySelector('.fila-continuar .carrusel .tarjeta');
       return t ? getComputedStyle(t).transitionDuration : null;
     });
-    check('F: reduced-motion sin transición en la tarjeta', td === '0s', td);
+    check('F: reduced-motion sin transición en la tarjeta', duracionCorta(td), td);
     await page.emulateMedia({ reducedMotion: null });
   });
 
@@ -2310,7 +2323,7 @@ async function busqueda() {
       const t = document.querySelector('main .rejilla > .tarjeta');
       return t ? getComputedStyle(t).transitionDuration : null;
     });
-    check('G: reduced-motion sin transición en la tarjeta', td === '0s', td);
+    check('G: reduced-motion sin transición en la tarjeta', duracionCorta(td), td);
     await page.emulateMedia({ reducedMotion: null });
   });
 
@@ -2730,7 +2743,7 @@ async function ficha() {
       const el = document.querySelector('.ficha .ver-mas');
       return el ? getComputedStyle(el).transitionDuration : 'n/a';
     });
-    check('K: reduced-motion sin transición en "Ver más"', td === '0s' || td === 'n/a', td);
+    check('K: reduced-motion sin transición en "Ver más"', td === 'n/a' || duracionCorta(td), td);
     await page.emulateMedia({ reducedMotion: null });
   });
 
@@ -3057,7 +3070,7 @@ async function cta() {
       const el = document.querySelector('.barra-accion');
       return el ? getComputedStyle(el).transitionDuration : null;
     });
-    check('G: reduced-motion sin transición en la CTA', td === '0s' || td === '0s, 0s', td);
+    check('G: reduced-motion sin transición en la CTA', duracionCorta(td), td);
     await page.emulateMedia({ reducedMotion: null });
   });
 
@@ -3911,7 +3924,7 @@ async function orden() {
       return b ? getComputedStyle(b).transitionDuration : null;
     });
     rep.reduced = { transitionDuration: reduce };
-    check('F: reduced-motion sin transición en el botón', reduce === '0s', reduce);
+    check('F: reduced-motion sin transición en el botón', duracionCorta(reduce), reduce);
     await page.emulateMedia({ reducedMotion: null });
   });
 
@@ -4298,8 +4311,8 @@ async function reproductor() {
       };
     });
     rep.reduced = trans;
-    check('reduced-motion: chips sin transición', trans.chip === '0s', trans.chip);
-    check('reduced-motion: plegable sin transición', trans.plegable === '0s', trans.plegable);
+    check('reduced-motion: chips sin transición', duracionCorta(trans.chip), trans.chip);
+    check('reduced-motion: plegable sin transición', duracionCorta(trans.plegable), trans.plegable);
     await page.emulateMedia({ reducedMotion: null });
   });
 
@@ -4695,7 +4708,7 @@ async function siguiente() {
       transitionDuration: reduce.chip?.transitionDuration,
     };
     check('reduced-motion: sin pulso', reduce.chip?.animationName === 'none', reduce.chip?.animationName);
-    check('reduced-motion: sin transición', reduce.chip?.transitionDuration === '0s', reduce.chip?.transitionDuration);
+    check('reduced-motion: sin transición', duracionCorta(reduce.chip?.transitionDuration), reduce.chip?.transitionDuration);
     await page.emulateMedia({ reducedMotion: null });
     await page.evaluate(() => {
       const b = document.querySelector('.marco .boton-siguiente');
@@ -5501,7 +5514,7 @@ async function favoritos() {
       const mReduced = await p.evaluate(MEDIR_TOAST);
       rep.toast.reduced = mReduced;
       check('reduced-motion: sin animación de entrada', mReduced.animationName === 'none', mReduced.animationName);
-      check('reduced-motion: botones sin transición', mReduced.botones.every((b) => b.transitionDuration === '0s'), mReduced.botones);
+      check('reduced-motion: botones sin transición', mReduced.botones.every((b) => duracionCorta(b.transitionDuration)), mReduced.botones);
       await p.locator('.toast .cerrar').click();
       await ctx.close();
     });
@@ -6034,7 +6047,7 @@ async function estados() {
     await page.waitForSelector('.barra.cajon .esqueleto', { timeout: 15000 });
     const anim = await page.evaluate(() => getComputedStyle(document.querySelector('.barra.cajon .esqueleto .esqueleto')).animationName);
     rep.reduced = { ...trans, anim };
-    check('reduced-motion: Btn sin transición', trans.duracion === '0s' || trans.propiedad === 'none', `${trans.duracion} / ${trans.propiedad}`);
+    check('reduced-motion: Btn sin transición', duracionCorta(trans.duracion) || trans.propiedad === 'none', `${trans.duracion} / ${trans.propiedad}`);
     check('reduced-motion: esqueleto sin animación', anim === 'none', anim);
     await page.emulateMedia({ reducedMotion: null });
   });

@@ -1,4 +1,4 @@
-    # PROGRESO — Comfort Anime Desktop (T01–T89 hechas)
+    # PROGRESO — Comfort Anime Desktop (T01–T89 + T89b hechas)
 
 > Este archivo es la **memoria entre sesiones**. Cada sesión lo lee al inicio y lo actualiza al final.
 > Reglas y layout: `tareas/00_REGLAS.md`. Detalle de cada tarea: `tareas/Txx.md`.
@@ -159,6 +159,7 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha y verificada
 | [x] | T87 | Movimiento y rendimiento (v1.4.0) | T70–T86 |
 | [x] | T88 | Accesibilidad AA (v1.4.0) | T70–T87 |
 | [x] | T89 | Cierre de la v1.4.0 (lang, foco del cajón, limpieza del legado, versión) | T88 |
+| [x] | T89b | Corrección de fallos conocidos (verificador reduced-motion, expectativas obsoletas y velo del cajón) | T89 |
 
 T01–T29 = v1.0 (`docs/PROGRESO_v1.0.md`) · T30–T35 = v1.1.0 AnimeAV1 (`docs/PROGRESO_v1.1.md`) · T36 = cierre de la v1.1.0 · T37 = portabilidad Android · T38 = cierre documental de T37.
 T39–T57 = v1.2.0 (Home, historial lateral, favoritos, "Siguiente" y su estado discreto; **incluye T53b y T57**); plan en `tareas/v1.2_PLAN.md`, detalle **T39–T58 + cierres T56/T59** archivado en `docs/PROGRESO_v1.2.md`, con resúmenes al final de este archivo.
@@ -166,7 +167,7 @@ La **v1.2.0 está PUBLICADA** (prueba manual con el `.exe` y release hechas por 
 
 **v1.3.0 — episodios incrementales** (rama `feature/episodios-incrementales`): serie **T64–T69** para mostrar los episodios del detalle de forma incremental y con animación de entrada. **T64** (lógica pura de `ventana.ts` + tests), **T65** (revelado animado por visibilidad, sin paginar), **T66** (clave de scroll del detalle por proveedor + slug) y **T67** (restauración del scroll del detalle cuando la lista se recarga) hechas; **T68** (cierre documental de la v1.3.0) hecho: `productVersion` **1.3.0**, **sin tag ni release** (los hace el humano). Los **T66–T67 originales** (paginado / ventana client-side) quedan **descartados** por las mediciones de T65 (sin jank y con 0 saltos de scroll; el coste real es de red, ya cubierto por el mostrado por lotes); **T69 pendiente** de la serie. Notas largas de T64–T67 archivadas en `docs/PROGRESO_v1.3.md`.
 
-**v1.4.0 — rediseño y enfoque móvil** (rama `feature/rediseno-movil`): serie **T69–T89** que rediseña la interfaz para móvil y tableta **sin cambiar la geometría del escritorio** (≥ 900 px). **T69** (auditoría de UI base, solo lectura) → **T70** (tokens de diseño) → **T71** (base global: Inter/Outfit locales, safe-area, fondo corregido) → **T72/T72b** (primitivas e iconos, puente de color) → **T73/T73b** (barra inferior móvil y cajón opaco) → **T74–T82** (cabecera, buscador, filas del Home, «Continuar viendo», rejilla de resultados, ficha, CTA fija, tarjeta de episodio, orden) → **T83–T86** (reproductor, chip «Siguiente», favoritos/toasts, estados unificados) → **T87** (movimiento y rendimiento) → **T88** (accesibilidad AA) → **T89** (cierre: `lang="es"`, trampa de foco del cajón con `inert`, retirada de las `--cad-*` y de Nunito, `productVersion` 1.4.0 y cierre documental). **El detalle largo de T69–T88 está en `docs/PROGRESO_v1.4.md`** (con la tabla de correspondencia del plan inicial T83–T93) y el cierre en el bloque de T89 más abajo. `wails.json` → `productVersion` **1.4.0**: **sin tag ni release aún** (los hace el humano).
+**v1.4.0 — rediseño y enfoque móvil** (rama `feature/rediseno-movil`): serie **T69–T89** que rediseña la interfaz para móvil y tableta **sin cambiar la geometría del escritorio** (≥ 900 px). **T69** (auditoría de UI base, solo lectura) → **T70** (tokens de diseño) → **T71** (base global: Inter/Outfit locales, safe-area, fondo corregido) → **T72/T72b** (primitivas e iconos, puente de color) → **T73/T73b** (barra inferior móvil y cajón opaco) → **T74–T82** (cabecera, buscador, filas del Home, «Continuar viendo», rejilla de resultados, ficha, CTA fija, tarjeta de episodio, orden) → **T83–T86** (reproductor, chip «Siguiente», favoritos/toasts, estados unificados) → **T87** (movimiento y rendimiento) → **T88** (accesibilidad AA) → **T89** (cierre: `lang="es"`, trampa de foco del cajón con `inert`, retirada de las `--cad-*` y de Nunito, `productVersion` 1.4.0 y cierre documental) → **T89b** (corrección de los fallos conocidos: tolerancia de `reduced-motion` ≤ 0,001 s, expectativas obsoletas del verificador y velo del cajón fuera del orden de tabulación). **El detalle largo de T69–T88 está en `docs/PROGRESO_v1.4.md`** (con la tabla de correspondencia del plan inicial T83–T93) y el cierre en el bloque de T89 más abajo. `wails.json` → `productVersion` **1.4.0**: **sin tag ni release aún** (los hace el humano).
 
 ## Auditoría de portabilidad (T37)
 
@@ -299,7 +300,7 @@ Solo `.md`, sin tocar código. Contraste con `go doc ./internal/db`, `go doc ./i
 - **Prueba manual con el `.exe` de la v1.4.0** (la hace el humano): ventana **estrecha** (barra inferior móvil, cajón de historial con la trampa de foco, CTA fija, sinopsis plegable, orden de episodios), **reproducción HLS/MP4 real**, **chip «Siguiente»** y **pantalla completa**. El flujo de navegador no ejercita el vídeo real (el proxy local solo es alcanzable desde el `.exe`, ver AGENTS.md).
 - **Release de la v1.4.0** (tag + release): la hace el humano. `productVersion` está en **1.4.0** a la espera de tag/release. La **v1.2.1 ya está taggeada** (`v1.2.1`); la v1.3.0 sigue **sin tag**.
 - **Deriva de scroll T66/T67 del detalle** (`+52 px`, 2743 → 2795): medida en T89 con el código actual **y** con T87+T88 revertidos — **idéntica en los dos casos**, así que es previa a T87. No se corrige (T89 solo la midió). Queda por diagnosticar el asentamiento de la rejilla al recargar por lotes.
-- **Foco del cajón**: el `inert` de T89 ya impide que `Tab` alcance el contenido de fondo, pero quedan **2 fugas** en `a11y_auditoria.mjs`: el `<body>` (respaldo del documento) y el **velo** («Cerrar historial»), que es un `<button>` y que la ficha de T89 exigía **no** inertizar. Para llegar a 0 fugas habría que sacar el velo del orden de tabulación (`tabindex="-1"` en `frontend/src/BarraLateral.svelte`) o añadir una trampa de foco explícita: **tarea nueva**.
+- **Foco del cajón**: el `inert` de T89 impide que `Tab` alcance el contenido de fondo y, desde **T89b**, el velo «Cerrar historial» tampoco es tabulable (`tabindex="-1"` en `frontend/src/BarraLateral.svelte`). Queda **1 fuga**: el `<body>` (respaldo del documento al final de la lista de tabulables). Bajarla a 0 exigiría una trampa de foco explícita; es deuda de producto, no un fallo del cajón.
 - **«Episodios siguientes»** y **«pantalla completa»**: quedaron **FUERA** de la v1.4.0 (ver la tabla de correspondencia en `docs/PROGRESO_v1.4.md`). Son ideas de producto sin tarea.
 - **Extractores del informe de `adds`** (paquete `internal/scraper/embeds`): numerados **T94–T99** — Voe, Byse, UPNShare, Streamtape, purga de hosts muertos y `sandbox` por host.
 - **Verificación con el `.exe` de T65/T67** (revelado animado y restauración del scroll del detalle): el flujo navegador no ejercita el vídeo real (proxy local, AGENTS.md) ni todos los ciclos de recarga; T65 y T67 se verificaron con Playwright (8/8 y 6/6) y por lógica+log. Probar con el `.exe` en la próxima release. Los **fixes T58** (carátula al retomar y contador de favoritos) se dieron por cerrados con la **v1.2.1 publicada**.
@@ -832,3 +833,104 @@ visible), `cajon_1280.png` (a 1280 el historial es la barra lateral fija, no un 
 - **Los informes de `docs/investigacion/`** que sí son vivos (`ui_tokens.md`) se actualizan.
 - **`tareas/T89.md`** ya estaba en el árbol de trabajo sin trackear; no se creó aquí.
 - **`docs/img`** está ignorado por `.gitignore`, como en las tareas anteriores.
+
+---
+
+## T89b — Corrección de fallos conocidos antes del tag v1.4.0 — bloque de esta sesión
+
+Fecha **2026-10-21**. Micro-tarea sin cambios de diseño: tolerancias del verificador, dos
+expectativas obsoletas y el velo del cajón fuera del orden de tabulación. **Intactos** `*.go`,
+`frontend/wailsjs/**`, `api.ts`, `stores.ts`, `views.ts`, `ui.ts` y todos los `<script>` de producto.
+**Sin tag ni release.**
+
+### Clasificación de la tabla de T89
+
+La tabla de T89 tiene **16 filas con fallo** (la nota decía «15», pero la suma de la propia lista
+—shell 2, cabecera 3 y una en cada uno de los 10 modos restantes, con reproductor 2— da 16). Las 16
+se clasificaron una a una:
+
+| Modo | Comprobación exacta | Clase | Causa |
+|---|---|---|---|
+| `shell` | `detalle → Favoritos deja el Home` | **dato obsoleto** | La comprobación exigía `.pestanas` visible, pero en modo estrecho T73/T75 **no renderizan** las pestañas (las sustituye la barra inferior). Se pasó a exigir `#panel-favoritos` visible. |
+| `shell` | `reduced-motion: sin transición en la barra` | **falso negativo** | El verificador pedía `'0s'` literal; la regla global de T87 deja `0.01ms`, serializado como `1e-05s` (≤ 0,001 s). |
+| `cabecera` | `360: título largo en una línea` | **falso negativo** | `MEDIR_CABECERA` buscaba `h2`, pero desde T88 `CabeceraVista` usa `nivel=1` (`h1`); devolvía `null`. Selector corregido a `h1, h2`. |
+| `cabecera` | `360: título largo recortado` | **falso negativo** | Misma causa que la anterior (`null` por el `h2`). |
+| `cabecera` | `reduced-motion: sin transición en la cabecera` | **falso negativo** | `1e-05s` frente a `'0s'`. |
+| `buscador` | `reduced-motion: sin transición en el limpiar` | **falso negativo** | `1e-05s` frente a `'0s'`. |
+| `filas` | `reduced-motion: tarjeta sin transición` | **falso negativo** | `1e-05s` frente a `'0s'`. |
+| `continuar` | `F: reduced-motion sin transición en la tarjeta` | **falso negativo** | `1e-05s` frente a `'0s'`. |
+| `busqueda` | `G: reduced-motion sin transición en la tarjeta` | **falso negativo** | `1e-05s` frente a `'0s'`. |
+| `ficha` | `K: reduced-motion sin transición en "Ver más"` | **falso negativo** | `1e-05s` frente a `'0s'` (la alternativa `n/a` se conserva). |
+| `cta` | `G: reduced-motion sin transición en la CTA` | **falso negativo** | `1e-05s` frente a `'0s'` / `'0s, 0s'`. |
+| `orden` | `F: reduced-motion sin transición en el botón` | **falso negativo** | `1e-05s` frente a `'0s'`. |
+| `reproductor` | `reduced-motion: chips sin transición` | **falso negativo** | `1e-05s` frente a `'0s'`. |
+| `reproductor` | `reduced-motion: plegable sin transición` | **falso negativo** | `1e-05s` frente a `'0s'`. |
+| `siguiente` | `reduced-motion: sin transición` | **falso negativo** | `1e-05s` frente a `'0s'`. |
+| `favoritos` | `reduced-motion: botones sin transición` | **falso negativo** | Los dos botones del toast dan `1e-05s`; la comprobación exigía `'0s'` en todos. |
+
+**Ningún fallo real de la app.** No hubo que tocar `<style>` ni markup de producto (el único cambio
+de producto es el `tabindex` del velo, que pide la ficha).
+
+### Correcciones aplicadas
+
+- **Reduced-motion (13 falsos negativos)**: nuevo helper `duracionCorta()` en
+  `docs/investigacion/ui/verificar_ui.mjs` que parsea `0s`, `1e-05s`, `0.01ms` y listas `a, b`, y
+  acepta **cualquier duración ≤ 0,001 s** (no una comparación literal). Sustituye los `=== '0s'`
+  de los 13 modos; no se relajó ninguna otra comprobación (`n/a`, `transition-property: none` y el
+  resto de umbrales se conservan).
+- **Cabecera (2 falsos negativos)**: `MEDIR_CABECERA` mide `main .cabecera h1, main .cabecera h2`.
+- **Shell (1 dato obsoleto)**: la comprobación de «deja el Home» usa `#panel-favoritos` en lugar de
+  `.pestanas` (que no existe en estrecho por diseño).
+- **Velo del cajón**: `tabindex="-1"` en `.fondo-cajon` de `frontend/src/BarraLateral.svelte`. Con el
+  cajón abierto, `Tab` ya no llega al velo; **clic en el velo sigue cerrando** el cajón (probado) y
+  **Escape** también (shell y `a11y_auditoria.mjs`). `a11y_auditoria.mjs`: **2 fugas → 1**
+  (solo el `<body>`).
+- **`docs/investigacion/ui_a11y.md`**: nota de estado tras T89/T89b (cajón con `inert`; única fuga
+  el `<body>`).
+
+### Verificación — antes / después de todos los modos
+
+| Modo | Antes | Después |
+|---|---:|---:|
+| `shell` | 21 / 23 | **23 / 23** |
+| `cabecera` | 36 / 39 | **39 / 39** |
+| `buscador` | 60 / 61 | **61 / 61** |
+| `filas` | 62 / 63 | **63 / 63** |
+| `continuar` | 45 / 46 | **46 / 46** |
+| `busqueda` | 59 / 60 | **60 / 60** |
+| `ficha` | 105 / 106 | **106 / 106** |
+| `cta` | 58 / 59 | **59 / 59** |
+| `episodios` | 46 / 46 | **46 / 46** |
+| `orden` | 88 / 89 | **89 / 89** |
+| `reproductor` | 52 / 54 | **54 / 54** |
+| `siguiente` | 58 / 59 | **59 / 59** |
+| `favoritos` | 61 / 62 | **62 / 62** |
+| `estados` | 102 / 102 | **102 / 102** |
+| **Total** | **853 / 869** (16 fallos) | **869 / 869** (0 fallos) |
+
+`rendimiento` sigue **OK** después: **0 frames > 50 ms** en las 5 mediciones, geometría 263,8 /
+146 / 179 / 170,38 y `overflowH = 0`, reduced-motion **366/366** celdas y **T66/T67 con reduce
+28984 → 28984**. El modo utilitario `tactiles` (T72) no forma parte de la tabla de T89: depende de
+la **galería temporal** que se retiró al cerrar T72, así que sin `.btn` en el Home agota su espera
+de 20 s; no se tocó (misma precondición obsoleta antes y después, no es un fallo de la app).
+
+`a11y_auditoria.mjs` sigue **OK**: 0 fallos de contraste (normal/foco/hover), 0 interactivos sin
+nombre, 0 saltos, 1 `h1` por vista, 0 paradas sin anillo, `idiomas: ["es"]`; fugas del cajón
+**2 → 1** (solo `<body>`).
+
+### Compuerta completa (2026-10-21, todo en verde)
+
+| Comando | Resultado |
+|---|---|
+| `gofmt -l .` | **sin salida** |
+| `go vet ./...` · `go vet -tags integration ./...` | limpios |
+| `go build ./...` | **OK** |
+| `go test -race -count=1 -v ./...` | **12 paquetes `ok`**; **435 `--- PASS`** de nivel superior, **0 FAIL** |
+| `npm run check` | **0 errores / 0 avisos** |
+| `npm run build` | **OK** (176 módulos; aviso preexistente de chunk > 500 kB) |
+| tests `.ts` (esbuild + node) | **32 / 48 / 13** OK (`etiquetas`, `ventana`, `views`) |
+| `grep -rn wailsjs frontend/src` | **solo `api.ts`** |
+| `git diff --stat -- '*.go'` | **vacío** |
+| `git status --short` | solo `frontend/src/BarraLateral.svelte`, `docs/investigacion/ui/verificar_ui.mjs`, `docs/investigacion/ui_a11y.md`, `PROGRESO.md` (+ `tareas/T89b.md`, ya sin trackear antes de la sesión) |
+
+**No se creó tag ni release** (los hace el humano).
