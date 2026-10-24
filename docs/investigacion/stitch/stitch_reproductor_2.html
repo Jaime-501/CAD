@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Shinseiki Evangelion - Episodio 1 | Player</title>
+<!-- Tailwind CSS CDN with forms & container queries -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Google Fonts: Inter & Noto Serif JP for Japanese calligraphy title -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=Noto+Serif+JP:wght@600;900&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind Configuration -->
+<script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            kanji: ['Noto Serif JP', 'serif']
+          },
+          colors: {
+            brand: {
+              emerald: '#10b981',
+              emeraldGlow: '#059669',
+              neon: '#22c55e',
+              darkBg: '#090a0f',
+              cardBg: 'rgba(18, 20, 29, 0.75)'
+            }
+          },
+          boxShadow: {
+            'glow-emerald': '0 0 25px -4px rgba(34, 197, 94, 0.45)',
+            'glow-red': '0 0 45px -8px rgba(220, 38, 38, 0.35)',
+            'glass-inset': 'inset 0 1px 1px 0 rgba(255, 255, 255, 0.1)'
+          }
+        }
+      }
+    }
+  </script>
+<!-- BEGIN: Custom CSS Styling -->
+<style data-purpose="ambient-lighting">
+    /* Subtle background ambient backdrops */
+    .ambient-glow-left {
+      background: radial-gradient(circle at 15% 10%, rgba(34, 197, 94, 0.12) 0%, transparent 45%);
+    }
+    .ambient-glow-center {
+      background: radial-gradient(circle at 50% 40%, rgba(220, 38, 38, 0.14) 0%, transparent 60%);
+    }
+    .cinema-backdrop {
+      background-image: 
+        radial-gradient(ellipse at center, rgba(175, 12, 12, 0.95) 0%, rgba(98, 4, 4, 0.98) 55%, #180101 100%);
+    }
+  </style>
+<style data-purpose="glass-effects">
+    .glass-panel {
+      background: rgba(18, 21, 30, 0.65);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .glass-chip-active {
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.9) 0%, rgba(16, 185, 129, 0.95) 100%);
+      box-shadow: 0 0 20px rgba(34, 197, 94, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+    }
+    .glass-chip-inactive {
+      background: rgba(255, 255, 255, 0.04);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .glass-chip-inactive:hover {
+      background: rgba(255, 255, 255, 0.09);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    .nebula-particles {
+      background-image: radial-gradient(rgba(255, 210, 210, 0.25) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+  </style>
+<!-- END: Custom CSS Styling -->
+</head>
+<body class="bg-brand-darkBg text-slate-100 min-h-screen font-sans antialiased selection:bg-emerald-500 selection:text-black relative overflow-x-hidden">
+<!-- Ambient Light Bleeds -->
+<div class="fixed inset-0 pointer-events-none ambient-glow-left z-0"></div>
+<div class="fixed inset-0 pointer-events-none ambient-glow-center z-0"></div>
+<!-- BEGIN: MainContainer -->
+<div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col min-h-screen">
+<!-- BEGIN: TopHeader -->
+<header class="flex flex-wrap items-center justify-between gap-4 mb-6" data-purpose="navigation-header">
+<!-- Left: Back Button & Anime Title -->
+<div class="flex items-center space-x-4">
+<!-- Back Button -->
+<a class="group flex items-center space-x-2 px-4 py-2 rounded-full glass-chip-active text-black font-semibold text-sm transition-all duration-300 hover:scale-105 active:scale-95 shadow-glow-emerald" href="#back">
+<svg class="w-4 h-4 stroke-[2.5] transition-transform duration-200 group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M10 19l-7-7m0 0l7-7m-7 7h18" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span class="tracking-wide">Atrás</span>
+</a>
+<!-- Title Information -->
+<div class="border-l border-white/10 pl-4">
+<h1 class="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+            Shinseiki Evangelion
+            <span class="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 uppercase tracking-widest font-semibold">TV</span>
+</h1>
+<p class="text-xs sm:text-sm text-slate-400 font-normal">
+            Ep. 1 · <span class="text-slate-300">Shinseiki Evangelion - 1</span>
+</p>
+</div>
+</div>
+<!-- Right: Utility Controls (Actions) -->
+<div class="flex items-center gap-3">
+<!-- Bookmark / Favorite Button -->
+<button aria-label="Guardar episodio" class="p-2.5 rounded-full glass-panel text-slate-400 hover:text-white hover:border-emerald-500/40 transition-all duration-200" type="button">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+<!-- Share Button -->
+<button aria-label="Compartir" class="p-2.5 rounded-full glass-panel text-slate-400 hover:text-white hover:border-emerald-500/40 transition-all duration-200" type="button">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+<!-- Auto Play Next Indicator -->
+<div class="hidden sm:flex items-center space-x-2 text-xs text-slate-400 pl-2">
+<span>Auto-Next</span>
+<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+</div>
+</div>
+</header>
+<!-- END: TopHeader -->
+<!-- BEGIN: VideoPlayerSection -->
+<section class="relative w-full rounded-2xl overflow-hidden glass-panel border border-white/10 shadow-2xl shadow-black/80 ring-1 ring-white/5 transition-all duration-500" data-purpose="video-viewport">
+<!-- Video Frame (16:9 Aspect Ratio) -->
+<div class="relative w-full aspect-video cinema-backdrop flex items-center justify-center overflow-hidden">
+<!-- Cosmic Dust & Nebula Overlays (Visual Reproduction of Evangelion Intro) -->
+<div class="absolute inset-0 nebula-particles opacity-35 mix-blend-screen"></div>
+<div class="absolute inset-0 bg-[radial-gradient(circle_at_35%_55%,rgba(255,40,40,0.5)_0%,transparent_60%)] filter blur-md"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 pointer-events-none"></div>
+<!-- Watermark / Brand Logo on Top Right -->
+<div class="absolute top-5 right-6 z-10 pointer-events-none">
+<span class="text-sm font-semibold tracking-wider text-white/70 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] font-sans">
+            Anime<span class="text-rose-400">AV1</span><span class="text-xs text-white/50">.com</span>
+</span>
+</div>
+<!-- Center Opening Title Japanese Kanji Typography -->
+<div class="relative text-center px-4 select-none transform transition-transform duration-700 hover:scale-102">
+<div class="font-kanji text-2xl sm:text-4xl md:text-5xl lg:text-6xl text-white font-black tracking-[0.25em] drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)] mb-3 opacity-95">
+            企画・原作
+          </div>
+<div class="font-kanji text-3xl sm:text-5xl md:text-6xl lg:text-7xl text-white font-black tracking-[0.28em] drop-shadow-[0_4px_20px_rgba(0,0,0,0.95)]">
+            庵野秀明
+          </div>
+</div>
+<!-- Subtle Red Peripheral Glow Overlay -->
+<div class="absolute inset-0 ring-1 ring-inset ring-red-500/20 pointer-events-none"></div>
+<!-- Next Episode Floating Action (Hover or persistent quick action as seen in preview) -->
+<div class="absolute bottom-16 right-6 hidden md:block z-20">
+<button class="px-4 py-2 rounded-xl bg-black/40 hover:bg-black/70 backdrop-blur-md text-xs font-medium text-slate-300 hover:text-white border border-white/10 transition-all duration-200 flex items-center space-x-2">
+<span>Siguiente ▸ Ep 2</span>
+</button>
+</div>
+<!-- BEGIN: FloatingPlayerControls -->
+<div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent pt-10 pb-3 px-4 sm:px-6" data-purpose="playback-controls">
+<!-- Progress Bar Container -->
+<div class="relative group/progress mb-3 cursor-pointer py-1">
+<!-- Background Track -->
+<div class="w-full h-1 bg-white/20 rounded-full overflow-hidden group-hover/progress:h-1.5 transition-all duration-200">
+<!-- Buffer Bar -->
+<div class="w-1/4 h-full bg-white/30"></div>
+<!-- Played Progress (0:03 out of 23:37 is ~0.2%) -->
+<div class="w-[2%] h-full bg-emerald-500 rounded-full relative"></div>
+</div>
+<!-- Progress Scrubber Thumb -->
+<div class="absolute left-[2%] top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full bg-white shadow-lg opacity-0 group-hover/progress:opacity-100 transition-opacity duration-150 pointer-events-none"></div>
+</div>
+<!-- Bottom Control Bar -->
+<div class="flex items-center justify-between text-white text-xs sm:text-sm">
+<!-- Left Controls: Play/Pause, Timestamp -->
+<div class="flex items-center space-x-4">
+<!-- Pause/Play Toggle Button -->
+<button aria-label="Pausa" class="text-white hover:text-emerald-400 transition-colors p-1 rounded-lg" type="button">
+<svg class="w-5 h-5 fill-current" viewbox="0 0 24 24">
+<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"></path>
+</svg>
+</button>
+<!-- Time Counter -->
+<div class="font-mono text-xs text-slate-300 tracking-wider">
+<span class="text-white font-medium">0:03</span> <span class="text-slate-500">/</span> 23:37
+              </div>
+</div>
+<!-- Right Controls: Volume, Resolution, Fullscreen, More -->
+<div class="flex items-center space-x-4">
+<!-- Volume Control -->
+<button aria-label="Volumen" class="text-slate-300 hover:text-white transition-colors" type="button">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+<!-- Resolution / Badge -->
+<span class="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-white/10 text-slate-300 border border-white/10">
+                1080p
+              </span>
+<!-- Fullscreen Button -->
+<button aria-label="Pantalla completa" class="text-slate-300 hover:text-white transition-colors" type="button">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0 0l-5-5m-7 11l-5 5m0 0h4m-4 0v-4m16 4l-5-5m5 5v-4m0 4h-4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+<!-- Settings / More Options -->
+<button aria-label="Configuración" class="text-slate-300 hover:text-white transition-colors" type="button">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+</div>
+</div>
+</div>
+<!-- END: FloatingPlayerControls -->
+</div>
+</section>
+<!-- END: VideoPlayerSection -->
+<!-- BEGIN: ServerSelectionPanel -->
+<section class="mt-6" data-purpose="server-selection">
+<!-- Section Label -->
+<div class="flex items-center space-x-2 mb-3.5">
+<span class="text-xs font-semibold tracking-wider uppercase text-slate-400">Servidor · Idioma</span>
+<div class="h-px bg-white/10 flex-grow max-w-xs ml-2"></div>
+</div>
+<!-- Server Buttons / Chips Group -->
+<div class="flex flex-wrap items-center gap-2.5">
+<!-- Active Server: HLS · SUB -->
+<button class="group relative px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold tracking-wide text-black glass-chip-active transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0" type="button">
+<span class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+            HLS · SUB
+          </span>
+</button>
+<!-- Inactive Server: HLS · DUB -->
+<button class="glass-chip-inactive px-4 py-2 rounded-xl text-xs sm:text-sm font-medium text-slate-300 transition-all duration-200 hover:text-white transform hover:-translate-y-0.5 active:translate-y-0" type="button">
+          HLS · DUB
+        </button>
+<!-- Inactive Server: MP4Upload · SUB · directo -->
+<button class="glass-chip-inactive px-4 py-2 rounded-xl text-xs sm:text-sm font-medium text-slate-300 transition-all duration-200 hover:text-white transform hover:-translate-y-0.5 active:translate-y-0" type="button">
+          MP4Upload · SUB · directo
+        </button>
+<!-- Inactive Server: MP4Upload · DUB · directo -->
+<button class="glass-chip-inactive px-4 py-2 rounded-xl text-xs sm:text-sm font-medium text-slate-300 transition-all duration-200 hover:text-white transform hover:-translate-y-0.5 active:translate-y-0" type="button">
+          MP4Upload · DUB · directo
+        </button>
+</div>
+<!-- Collapsible Additional Sources Link -->
+<div class="mt-4">
+<details class="group">
+<summary class="list-none flex items-center cursor-pointer text-xs text-slate-400 hover:text-emerald-400 transition-colors w-fit select-none">
+<svg class="w-3.5 h-3.5 mr-1.5 transition-transform duration-200 group-open:rotate-90 text-slate-500 group-hover:text-emerald-400" fill="currentColor" viewbox="0 0 20 20">
+<path clip-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" fill-rule="evenodd"></path>
+</svg>
+<span>Otras fuentes (embebidas, pueden incluir publicidad)</span>
+</summary>
+<div class="mt-3 pl-5 grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-l border-white/10">
+<button class="text-left px-3 py-1.5 rounded-lg text-xs bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition" type="button">Streamwish · SUB</button>
+<button class="text-left px-3 py-1.5 rounded-lg text-xs bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition" type="button">Vidguard · SUB</button>
+<button class="text-left px-3 py-1.5 rounded-lg text-xs bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition" type="button">Filemoon · SUB</button>
+<button class="text-left px-3 py-1.5 rounded-lg text-xs bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition" type="button">Doodstream · SUB</button>
+</div>
+</details>
+</div>
+</section>
+<!-- END: ServerSelectionPanel -->
+</div>
+<!-- END: MainContainer -->
+<!-- BEGIN: Interactive Logic for Controls -->
+<script data-purpose="player-interactivity">
+    // Light interactive toggle for server chip active states
+    document.addEventListener('DOMContentLoaded', () => {
+      const serverButtons = document.querySelectorAll('[data-purpose="server-selection"] button');
+      serverButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          // Visual state update example
+          serverButtons.forEach(b => {
+            if(b.closest('details') === null) {
+              b.classList.remove('glass-chip-active', 'text-black', 'font-semibold');
+              b.classList.add('glass-chip-inactive', 'text-slate-300', 'font-medium');
+            }
+          });
+          if(btn.closest('details') === null) {
+            btn.classList.remove('glass-chip-inactive', 'text-slate-300', 'font-medium');
+            btn.classList.add('glass-chip-active', 'text-black', 'font-semibold');
+          }
+        });
+      });
+    });
+  </script>
+<!-- END: Interactive Logic for Controls -->
+</body></html>

@@ -6,6 +6,7 @@
    * `cerrarToast()`.
    */
   import { onDestroy } from 'svelte';
+  import Icono from './Icono.svelte';
   import { cerrarToast, toast } from './toasts';
 
   function alAccionar(): void {
@@ -23,9 +24,7 @@
       <button type="button" class="accion" on:click={alAccionar}>{$toast.accion.etiqueta}</button>
     {/if}
     <button type="button" class="cerrar" aria-label="Cerrar aviso" on:click={cerrarToast}>
-      <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">
-        <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" fill="none" />
-      </svg>
+      <Icono nombre="cerrar" tam={16} />
     </button>
   </div>
 {/if}
@@ -34,25 +33,27 @@
   .toast {
     position: fixed;
     left: 50%;
-    bottom: 24px;
+    bottom: calc(var(--sp-6) + var(--bar-offset, 0px));
     transform: translateX(-50%);
-    z-index: 100;
+    z-index: var(--z-toast);
     box-sizing: border-box;
     display: flex;
     align-items: center;
-    gap: 12px;
-    max-width: min(420px, calc(100vw - 32px));
-    padding: 10px 12px;
-    background: var(--cad-superficie);
-    color: var(--cad-texto);
-    border: 1px solid var(--cad-borde);
-    border-radius: var(--cad-radio);
+    gap: var(--sp-3);
+    max-width: min(420px, calc(100vw - 2 * var(--gutter)));
+    padding: var(--sp-2) var(--sp-3);
+    background: var(--bg-2);
+    color: var(--text-1);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    box-shadow: var(--sh-panel);
+    font-size: var(--fs-sm);
     text-align: left;
+    animation: toast-entrada var(--dur) var(--ease-out);
   }
   .mensaje {
     flex: 1;
     min-width: 0;
-    font-size: 13px;
   }
   .accion,
   .cerrar {
@@ -61,32 +62,67 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    padding: 4px 8px;
+    padding: var(--sp-1) var(--sp-2);
     background: transparent;
-    border: 1px solid var(--cad-borde);
-    border-radius: var(--cad-radio);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    color: inherit;
     font-family: inherit;
+    font-size: inherit;
     cursor: pointer;
   }
   .accion {
-    color: var(--cad-acento);
-    font-weight: bold;
+    color: var(--brand-400);
+    font-weight: var(--fw-bold);
   }
   .cerrar {
-    padding: 4px;
-    color: var(--cad-texto-suave);
+    padding: var(--sp-1);
+    color: var(--text-3);
   }
-  .accion:hover,
-  .cerrar:hover {
-    border-color: var(--cad-acento);
-  }
-  .cerrar:hover {
-    color: var(--cad-peligro);
-    border-color: var(--cad-peligro);
+  .accion:active,
+  .cerrar:active {
+    transform: scale(0.97);
   }
   .accion:focus-visible,
   .cerrar:focus-visible {
-    outline: 2px solid var(--cad-acento);
-    outline-offset: 2px;
+    outline: none;
+    box-shadow: var(--ring);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .accion:hover {
+      border-color: var(--brand-400);
+    }
+    .cerrar:hover {
+      color: var(--danger);
+      border-color: var(--danger);
+    }
+  }
+  @media (max-width: 899px) {
+    .accion,
+    .cerrar {
+      min-width: var(--tap);
+      min-height: var(--tap);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .toast {
+      animation: none;
+    }
+    .accion,
+    .cerrar {
+      transition: none;
+    }
+    .accion:active,
+    .cerrar:active {
+      transform: none;
+    }
+  }
+  @keyframes toast-entrada {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
 </style>

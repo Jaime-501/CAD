@@ -97,7 +97,7 @@
   .favorito {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--sp-2);
     flex-shrink: 0;
   }
   .estrella {
@@ -107,8 +107,8 @@
     padding: 6px;
     background: transparent;
     border: none;
-    border-radius: var(--cad-radio);
-    color: var(--cad-texto-suave);
+    border-radius: var(--r-md);
+    color: var(--text-3);
     cursor: pointer;
   }
   .estrella svg {
@@ -118,24 +118,48 @@
     stroke-linejoin: round;
   }
   .estrella.marcada {
-    color: var(--cad-acento);
+    color: var(--brand-400);
   }
   .estrella.marcada svg {
     fill: currentColor;
   }
-  .estrella:hover:not(:disabled) {
-    color: var(--cad-acento);
+  /* T74: el hover solo en punteros finos (no se queda pegado en táctil). */
+  @media (hover: hover) and (pointer: fine) {
+    .estrella:hover:not(:disabled) {
+      color: var(--brand-400);
+    }
   }
   .estrella:disabled {
     opacity: 0.6;
     cursor: default;
   }
   .estrella:focus-visible {
-    outline: 2px solid var(--cad-acento);
+    outline: 2px solid var(--brand-400);
     outline-offset: 2px;
   }
   .aviso {
     font-size: 13px;
-    color: var(--cad-peligro);
+    color: var(--danger);
+  }
+  /* T74: en modo estrecho, objetivo táctil de 44 px y aviso flotante que no
+     cambia la altura de la cabecera. */
+  @media (max-width: 899px) {
+    .favorito {
+      position: relative;
+    }
+    .estrella {
+      min-width: var(--tap);
+      min-height: var(--tap);
+    }
+    .aviso {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      z-index: var(--z-sticky);
+      background: var(--bg-2);
+      padding: var(--sp-1) var(--sp-2);
+      border-radius: var(--r-sm);
+      font-size: var(--fs-xs);
+    }
   }
 </style>

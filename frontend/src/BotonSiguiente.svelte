@@ -34,69 +34,95 @@
 {/if}
 
 <style>
-  /* right/bottom 16 px sobre los 56 px reservados para los controles nativos
-     del <video> (el marco es position:relative): el botón nunca los tapa. */
+  /* T84: chip de 44 px (--tap) sobre los controles nativos del <video> (el
+     marco es position:relative), sin los 72 px sueltos de antes. En escritorio
+     crece de ~34 a 44 px para ser un objetivo táctil legible. */
   .boton-siguiente {
     position: absolute;
-    right: 16px;
-    bottom: 72px;
+    right: var(--sp-4);
+    bottom: calc(var(--tap) + var(--sp-4));
     z-index: 3;
-    padding: 8px 16px;
-    border-radius: var(--cad-radio);
-    border: 1px solid var(--cad-borde);
-    background: var(--cad-superficie);
-    color: var(--cad-texto);
+    min-height: var(--tap);
+    padding: 0 var(--sp-4);
+    border-radius: var(--r-full);
+    border: 1px solid var(--border);
+    background: var(--surface-panel);
+    backdrop-filter: blur(var(--blur-sm));
+    color: var(--text-1);
     font-family: inherit;
-    font-weight: bold;
-    font-size: 14px;
+    font-weight: var(--fw-semibold);
+    font-size: var(--fs-sm);
     cursor: pointer;
   }
   .boton-siguiente:disabled {
     opacity: 0.55;
     cursor: default;
   }
+  /* T84: con el overlay de carga visible (z-index 4) el chip no debe asomar
+     tras el scrim; sigue en el DOM y enfocable, y reaparece al terminar. */
+  :global(.marco:has(.cargando-overlay)) .boton-siguiente {
+    opacity: 0;
+  }
   .boton-siguiente:focus-visible {
-    outline: 2px solid var(--cad-acento);
-    outline-offset: 2px;
+    outline: none;
+    box-shadow: var(--ring);
   }
-  .boton-siguiente:hover:not(:disabled) {
-    border-color: var(--cad-acento);
+  /* T84: el hover solo existe con puntero fino. */
+  @media (hover: hover) and (pointer: fine) {
+    .boton-siguiente:hover:not(:disabled) {
+      border-color: var(--brand-400);
+    }
   }
-  /* T57: discreto = atenuado y desenfocado mientras se reproduce; solo con
-     estado `listo` (la clase no se aplica en los demás). Clicable y con foco. */
-  .boton-siguiente.discreto {
-    opacity: 0.15;
-    filter: blur(2px);
-    transition: opacity 200ms, filter 200ms;
-  }
-  .boton-siguiente.discreto:hover:not(:disabled),
-  .boton-siguiente.discreto:focus-visible,
-  .boton-siguiente.discreto:focus-within {
-    opacity: 1;
-    filter: none;
-  }
-  @media (prefers-reduced-motion: reduce) {
+  /* T57/T84: discreto = atenuado y desenfocado mientras se reproduce; solo
+     con estado `listo` (la clase no se aplica en los demás). En puntero fino
+     se aclara con hover/foco; en táctil queda visible (opacidad 0,6), sin blur
+     y siempre clicable. */
+  @media (hover: hover) and (pointer: fine) {
     .boton-siguiente.discreto {
-      transition: none;
+      opacity: 0.15;
+      filter: blur(2px);
+      transition: opacity var(--dur), filter var(--dur);
+    }
+    .boton-siguiente.discreto:hover:not(:disabled),
+    .boton-siguiente.discreto:focus-visible,
+    .boton-siguiente.discreto:focus-within {
+      opacity: 1;
+      filter: none;
+    }
+  }
+  @media (hover: none), (pointer: coarse) {
+    .boton-siguiente.discreto {
+      opacity: 0.6;
+      filter: none;
+    }
+    .boton-siguiente.discreto:active:not(:disabled) {
+      opacity: 1;
     }
   }
   .boton-siguiente.resaltado {
-    border-color: var(--cad-acento);
-    background: var(--cad-acento);
-    color: #111;
+    border-color: var(--brand-400);
+    background: var(--grad-brand);
+    color: var(--on-brand);
   }
   @media (prefers-reduced-motion: no-preference) {
     .boton-siguiente.resaltado {
       animation: pulso-siguiente 2s ease-in-out infinite;
     }
   }
+  /* T84: pulso con el token de marca; cero literales de color. */
   @keyframes pulso-siguiente {
     0%,
     100% {
-      box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.55);
+      box-shadow: 0 0 0 0 var(--brand-glow);
     }
     50% {
-      box-shadow: 0 0 0 6px rgba(74, 222, 128, 0);
+      box-shadow: 0 0 0 var(--sp-2) transparent;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .boton-siguiente,
+    .boton-siguiente.discreto {
+      transition: none;
     }
   }
 </style>

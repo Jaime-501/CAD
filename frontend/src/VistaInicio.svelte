@@ -24,16 +24,24 @@
   import { get } from 'svelte/store';
   import type { models } from './api';
   import FilaAnimes from './FilaAnimes.svelte';
+  import FilaContinuar from './FilaContinuar.svelte';
   import GridFavoritos from './GridFavoritos.svelte';
+  import Btn from './Btn.svelte';
+  import EstadoVista from './EstadoVista.svelte';
   import { favoritos, cargarFavoritos } from './favoritos';
   import { cargarProveedor, cargarTodo, home, PROVEEDORES_HOME } from './home';
+  import { isNarrow, pestanaHome } from './ui';
 
   export let onAbrir: (a: models.Anime) => void;
 
   type Pestana = 'descubrir' | 'favoritos';
 
-  /** Pestaña visible: por defecto "Descubrir" (se reinicia al volver de una búsqueda). */
-  let pestana: Pestana = 'descubrir';
+  /**
+   * Pestaña visible: la comparte el store `pestanaHome` (T73), así que ya NO se
+   * reinicia a "Descubrir" al volver de una búsqueda: la selección persiste en
+   * la sesión (desviación anotada en PROGRESO.md).
+   */
+  $: pestana = $pestanaHome;
   let tabDescubrir: HTMLButtonElement;
   let tabFavoritos: HTMLButtonElement;
 
@@ -52,7 +60,7 @@
   });
 
   function seleccionar(destino: Pestana): void {
-    pestana = destino;
+    pestanaHome.set(destino);
     if (destino === 'favoritos') void cargarFavoritos();
   }
 
@@ -74,44 +82,47 @@
 </script>
 
 <section class="inicio">
-  <div class="pestanas" role="tablist" aria-label="Secciones del Home">
-    <button
-      type="button"
-      class="pestana"
-      role="tab"
-      id="pestana-descubrir"
-      aria-controls="panel-descubrir"
-      aria-selected={pestana === 'descubrir' ? 'true' : 'false'}
-      tabindex={pestana === 'descubrir' ? 0 : -1}
-      bind:this={tabDescubrir}
-      on:click={() => seleccionar('descubrir')}
-      on:keydown={(e) => alTeclar(e, 'descubrir')}
-    >
-      Descubrir
-    </button>
-    <button
-      type="button"
-      class="pestana"
-      role="tab"
-      id="pestana-favoritos"
-      aria-controls="panel-favoritos"
-      aria-selected={pestana === 'favoritos' ? 'true' : 'false'}
-      tabindex={pestana === 'favoritos' ? 0 : -1}
-      bind:this={tabFavoritos}
-      on:click={() => seleccionar('favoritos')}
-      on:keydown={(e) => alTeclar(e, 'favoritos')}
-    >
-      <span aria-hidden="true">★</span> Favoritos ({$favoritos.length})
-    </button>
-  </div>
+  {#if !$isNarrow}
+    <div class="pestanas" role="tablist" aria-label="Secciones del Home">
+      <button
+        type="button"
+        class="pestana"
+        role="tab"
+        id="pestana-descubrir"
+        aria-controls="panel-descubrir"
+        aria-selected={pestana === 'descubrir' ? 'true' : 'false'}
+        tabindex={pestana === 'descubrir' ? 0 : -1}
+        bind:this={tabDescubrir}
+        on:click={() => seleccionar('descubrir')}
+        on:keydown={(e) => alTeclar(e, 'descubrir')}
+      >
+        Descubrir
+      </button>
+      <button
+        type="button"
+        class="pestana"
+        role="tab"
+        id="pestana-favoritos"
+        aria-controls="panel-favoritos"
+        aria-selected={pestana === 'favoritos' ? 'true' : 'false'}
+        tabindex={pestana === 'favoritos' ? 0 : -1}
+        bind:this={tabFavoritos}
+        on:click={() => seleccionar('favoritos')}
+        on:keydown={(e) => alTeclar(e, 'favoritos')}
+      >
+        <span aria-hidden="true">★</span> Favoritos ({$favoritos.length})
+      </button>
+    </div>
+  {/if}
 
   <div
     id="panel-descubrir"
-    role="tabpanel"
-    aria-labelledby="pestana-descubrir"
+    role={$isNarrow ? undefined : 'tabpanel'}
+    aria-labelledby={$isNarrow ? undefined : 'pestana-descubrir'}
     class="panel"
     class:inactivo={pestana !== 'descubrir'}
   >
+    <FilaContinuar />
     <div class="cabecera">
       <h2>Novedades</h2>
       <button
@@ -127,7 +138,7 @@
     {#each PROVEEDORES_HOME as proveedor (proveedor.id)}
       {@const estado = $home[proveedor.id]}
       {#if estado === undefined || estado.estado === 'loading'}
-        <section class="fila-fantasma" aria-label="{proveedor.nombre} · cargando">
+        <section class="fila-fantasma" aria-label="{proveedor.nombre} · cargando" aria-busy="true">
           <div class="cabecera-fantasma">
             <span class="proveedor-fantasma">{proveedor.nombre}</span>
           </div>
@@ -139,15 +150,15 @@
         </section>
       {:else if estado.estado === 'error'}
         <div class="error-proveedor">
-          <p class="error-texto">No se pudo cargar {proveedor.nombre}.</p>
-          <p class="error-detalle">{estado.error}</p>
-          <button
-            type="button"
-            class="reintentar"
-            on:click={() => void cargarProveedor(proveedor.id, true)}
+          <EstadoVista
+            variante="error"
+            titulo={`No se pudo cargar ${proveedor.nombre}`}
+            texto={estado.error}
           >
-            Reintentar
-          </button>
+            <Btn variante="secundario" onClick={() => void cargarProveedor(proveedor.id, true)}>
+              Reintentar
+            </Btn>
+          </EstadoVista>
         </div>
       {:else}
         {#each estado.secciones as seccion (seccion.id)}
@@ -163,11 +174,14 @@
 
   <div
     id="panel-favoritos"
-    role="tabpanel"
-    aria-labelledby="pestana-favoritos"
+    role={$isNarrow ? undefined : 'tabpanel'}
+    aria-labelledby={$isNarrow ? undefined : 'pestana-favoritos'}
     class="panel"
     class:inactivo={pestana !== 'favoritos'}
   >
+    {#if $isNarrow}
+      <h2>Favoritos ({$favoritos.length})</h2>
+    {/if}
     <GridFavoritos {onAbrir} />
   </div>
 </section>
@@ -189,39 +203,39 @@
   }
   .pestanas {
     display: flex;
-    gap: 4px;
-    border-bottom: 1px solid var(--cad-borde);
+    gap: var(--sp-1);
+    border-bottom: 1px solid var(--border);
     margin-bottom: 1.5rem;
   }
   .pestana {
-    padding: 8px 14px;
+    padding: var(--sp-2) 14px;
     /* Cubre el borde de la fila con el indicador de 2 px. */
     margin-bottom: -1px;
     background: transparent;
     border: none;
     border-bottom: 2px solid transparent;
-    color: var(--cad-texto-suave);
+    color: var(--text-3);
     font-family: inherit;
     font-size: 15px;
     font-weight: bold;
     cursor: pointer;
   }
   .pestana:hover {
-    color: var(--cad-texto);
+    color: var(--text-1);
   }
   .pestana[aria-selected='true'] {
-    color: var(--cad-texto);
-    border-bottom-color: var(--cad-acento);
+    color: var(--text-1);
+    border-bottom-color: var(--brand-400);
   }
   .pestana:focus-visible {
-    outline: 2px solid var(--cad-acento);
+    outline: 2px solid var(--brand-400);
     outline-offset: -2px;
   }
   .cabecera {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: var(--sp-3);
     margin-bottom: 1.5rem;
   }
   h2 {
@@ -229,91 +243,93 @@
     text-align: left;
   }
   .actualizar {
-    padding: 8px 16px;
-    border-radius: var(--cad-radio);
+    padding: var(--sp-2) var(--sp-4);
+    border-radius: var(--r-md);
     border: none;
-    background: var(--cad-acento);
-    color: #111;
+    background: var(--brand-500);
+    color: var(--on-brand);
     font-weight: bold;
     font-family: inherit;
     cursor: pointer;
   }
   .actualizar:disabled {
-    background: #555;
-    color: #999;
+    background: var(--bg-2);
+    color: var(--text-3);
     cursor: not-allowed;
   }
   .actualizar:focus-visible {
-    outline: 2px solid var(--cad-acento);
+    outline: 2px solid var(--brand-400);
     outline-offset: 2px;
   }
   .error-proveedor {
-    margin: 0 0 28px;
-    padding: 12px;
-    background: var(--cad-superficie);
-    border: 1px solid var(--cad-borde);
-    border-radius: var(--cad-radio);
+    margin: 0 0 var(--sp-7);
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    overflow: hidden;
   }
-  .error-texto {
-    margin: 0 0 4px;
-    color: var(--cad-texto);
+  /* Variante compacta: icono, título/texto y acción en una rejilla horizontal. */
+  .error-proveedor :global(.estado-vista) {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      'icono titulo accion'
+      'icono texto accion';
+    align-items: center;
+    gap: var(--sp-1) var(--sp-2);
+    padding: var(--sp-3);
+    text-align: left;
   }
-  .error-detalle {
-    margin: 0 0 10px;
-    font-size: 13px;
-    color: var(--cad-texto-suave);
+  .error-proveedor :global(.estado-vista .icono) {
+    grid-area: icono;
+  }
+  .error-proveedor :global(.estado-vista .titulo) {
+    grid-area: titulo;
+    font-size: var(--fs-md);
+  }
+  .error-proveedor :global(.estado-vista .texto) {
+    grid-area: texto;
+    max-width: none;
     overflow-wrap: anywhere;
   }
-  .reintentar {
-    box-sizing: border-box;
-    padding: 6px 12px;
-    background: transparent;
-    border: 1px solid var(--cad-borde);
-    border-radius: var(--cad-radio);
-    color: var(--cad-acento);
-    font-family: inherit;
-    font-weight: bold;
-    cursor: pointer;
-  }
-  .reintentar:focus-visible {
-    outline: 2px solid var(--cad-acento);
-    outline-offset: 2px;
+  .error-proveedor :global(.estado-vista .accion) {
+    grid-area: accion;
   }
   .vacio {
-    color: var(--cad-texto-suave);
+    color: var(--text-3);
     text-align: center;
   }
   /* Fila de carga (T53b): mismas medidas que la fila real (8 tarjetas
      140×264: portada 210 + bloque de título de 2 líneas). */
   .fila-fantasma {
-    margin: 0 0 28px;
+    margin: 0 0 var(--sp-7);
   }
   .cabecera-fantasma {
     display: flex;
     align-items: baseline;
-    gap: 8px;
+    gap: var(--sp-2);
     margin: 0 0 10px;
     min-height: 22px;
   }
   .proveedor-fantasma {
-    font-size: 12px;
-    color: var(--cad-texto-suave);
+    font-size: var(--fs-xs);
+    color: var(--text-3);
   }
   .carrusel-fantasma {
     display: flex;
-    gap: 12px;
+    gap: var(--sp-3);
     overflow: hidden;
   }
   .esqueleto {
     flex: 0 0 140px;
     width: 140px;
     height: 264px;
-    border-radius: 10px;
+    border-radius: var(--r-md);
     background: linear-gradient(
       100deg,
-      var(--cad-borde) 45%,
-      rgba(255, 255, 255, 0.08) 50%,
-      var(--cad-borde) 55%
+      var(--border-strong) 45%,
+      var(--border) 50%,
+      var(--border-strong) 55%
     );
     background-size: 200% 100%;
   }
@@ -322,12 +338,31 @@
       animation: brillar 1.4s linear infinite;
     }
   }
+  /* T87: rama local explícita (la global de style.css ya lo cubre). */
+  @media (prefers-reduced-motion: reduce) {
+    .esqueleto {
+      animation: none;
+    }
+  }
   @keyframes brillar {
     from {
       background-position: 130% 0;
     }
     to {
       background-position: -30% 0;
+    }
+  }
+  /* T75: en modo estrecho los botones del Home alcanzan el objetivo táctil. */
+  @media (max-width: 899px) {
+    .actualizar {
+      min-height: var(--tap);
+    }
+    /* T76: el carrusel fantasma sangra igual que el real (mismos márgenes y
+       padding con el gutter) para que, al llegar los datos, la fila no salte.
+       Las tarjetas fantasma siguen en 140×264. */
+    .carrusel-fantasma {
+      margin: -6px calc(-1 * var(--gutter)) -14px;
+      padding: 6px var(--gutter) 14px;
     }
   }
 </style>

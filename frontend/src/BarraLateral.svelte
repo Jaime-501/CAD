@@ -41,10 +41,20 @@
   import type { RetomarResultado } from './retomar';
   import { drawerOpen, isNarrow, sidebarCollapsed } from './ui';
   import TarjetaHistorial from './TarjetaHistorial.svelte';
+  import Btn from './Btn.svelte';
+  import Esqueleto from './Esqueleto.svelte';
+  import EstadoVista from './EstadoVista.svelte';
   import type { models } from './api';
 
   /** Resolución del clic: la cablea `App.svelte` con `retomar` (T50). */
   export let onOpen: (item: models.WatchProgress) => Promise<RetomarResultado>;
+
+  /**
+   * T73: se llama al cerrar el cajón con Escape, velo o botón (no al cerrarlo
+   * al retomar) para que `App.svelte` devuelva el foco al destino Historial de
+   * la barra inferior.
+   */
+  export let onCerrarCajon: () => void = () => {};
 
   /** Duración del mensaje de tarjeta ("Completado"…) antes de borrarlo (T50). */
   const MENSAJE_MS = 4000;
@@ -155,6 +165,7 @@
   function alternar() {
     if (get(isNarrow)) {
       drawerOpen.set(false);
+      onCerrarCajon();
       return;
     }
     sidebarCollapsed.update((v) => !v);
@@ -162,6 +173,7 @@
 
   function cerrarCajon() {
     drawerOpen.set(false);
+    onCerrarCajon();
   }
 
   function alTeclar(e: KeyboardEvent) {
@@ -173,6 +185,7 @@
     }
     if (get(isNarrow) && get(drawerOpen)) {
       drawerOpen.set(false);
+      onCerrarCajon();
     }
   }
 </script>
@@ -180,7 +193,7 @@
 <svelte:window on:keydown={alTeclar} />
 
 {#if $isNarrow && $drawerOpen}
-  <button type="button" class="fondo-cajon" aria-label="Cerrar historial" on:click={cerrarCajon}></button>
+  <button type="button" class="fondo-cajon" aria-label="Cerrar historial" tabindex="-1" on:click={cerrarCajon}></button>
 {/if}
 
 {#if !$isNarrow || $drawerOpen}
@@ -220,26 +233,25 @@
         {/if}
       </button>
     </div>
-    <div class="cuerpo">
+    <div class="cuerpo" aria-busy={$historialEstado === 'loading'}>
       {#if $isNarrow || !$sidebarCollapsed}
         {#if $historialEstado === 'error'}
-          <p class="vacio">No se pudo cargar el historial.</p>
-          <button type="button" class="reintentar" on:click={() => void cargarHistorial()}>
-            Reintentar
-          </button>
+          <EstadoVista variante="error" titulo="No se pudo cargar el historial">
+            <Btn variante="secundario" onClick={() => void cargarHistorial()}>Reintentar</Btn>
+          </EstadoVista>
         {:else if ($historialEstado === 'idle' || $historialEstado === 'loading') && $historial.length === 0}
           {#each [0, 1, 2] as indice (indice)}
             <div class="esqueleto" aria-hidden="true">
-              <span class="esqueleto-portada"></span>
-              <span class="esqueleto-datos">
-                <span class="esqueleto-linea ancha"></span>
-                <span class="esqueleto-linea estrecha"></span>
-                <span class="esqueleto-barra"></span>
-              </span>
+              <Esqueleto alto="68px" ancho="48px" radio="var(--r-md)" />
+              <div class="esqueleto-datos">
+                <Esqueleto alto="12px" ancho="80%" radio="var(--r-sm)" />
+                <Esqueleto alto="10px" ancho="50%" radio="var(--r-sm)" />
+                <Esqueleto alto="4px" ancho="100%" radio="var(--r-sm)" />
+              </div>
             </div>
           {/each}
         {:else if $historial.length === 0}
-          <p class="vacio">Aún no hay nada que retomar.</p>
+          <EstadoVista variante="vacio" titulo="Aún no hay nada que retomar." />
         {:else}
           {#each agruparPorProveedor($historial) as grupo (grupo.provider)}
             <section class="grupo" aria-label="Historial de {grupo.nombre}">
@@ -308,9 +320,11 @@
     display: flex;
     flex-direction: column;
     width: 300px;
-    background: var(--cad-superficie);
-    color: var(--cad-texto);
-    border-right: 1px solid var(--cad-borde);
+    /* T73b: fondo OPACO del cajón (evita que el contenido y el pie se
+       transparenten). Opaque también en escritorio. */
+    background: var(--bg-1);
+    color: var(--text-1);
+    border-right: 1px solid var(--border);
     text-align: left;
     transition: width 180ms ease;
   }
@@ -321,9 +335,9 @@
     box-sizing: border-box;
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 12px;
-    border-bottom: 1px solid var(--cad-borde);
+    gap: var(--sp-2);
+    padding: var(--sp-3);
+    border-bottom: 1px solid var(--border);
   }
   .titulo {
     flex: 1;
@@ -342,39 +356,20 @@
     flex-shrink: 0;
     padding: 6px;
     background: transparent;
-    border: 1px solid var(--cad-borde);
-    border-radius: var(--cad-radio);
-    color: var(--cad-texto);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    color: var(--text-1);
     cursor: pointer;
   }
   .alternar:focus-visible {
-    outline: 2px solid var(--cad-acento);
+    outline: 2px solid var(--brand-400);
     outline-offset: 2px;
   }
   .cuerpo {
     flex: 1;
     box-sizing: border-box;
     overflow-y: auto;
-    padding: 12px;
-  }
-  .vacio {
-    margin: 0;
-    color: var(--cad-texto-suave);
-  }
-  .reintentar {
-    box-sizing: border-box;
-    padding: 6px 12px;
-    background: transparent;
-    border: 1px solid var(--cad-borde);
-    border-radius: var(--cad-radio);
-    color: var(--cad-acento);
-    font-family: inherit;
-    font-weight: bold;
-    cursor: pointer;
-  }
-  .reintentar:focus-visible {
-    outline: 2px solid var(--cad-acento);
-    outline-offset: 2px;
+    padding: var(--sp-3);
   }
   .grupo {
     margin: 0 0 14px;
@@ -382,16 +377,16 @@
   .grupo-titulo {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin: 0 0 8px;
-    font-size: 12px;
+    gap: var(--sp-2);
+    margin: 0 0 var(--sp-2);
+    font-size: var(--fs-xs);
     font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: var(--cad-texto-suave);
+    color: var(--text-3);
   }
   .grupo-contador {
-    color: var(--cad-texto-suave);
+    color: var(--text-3);
   }
   /* Papelera del grupo (T52): siempre visible (regla P6), al final de la fila. */
   .papelera {
@@ -401,65 +396,67 @@
     justify-content: center;
     flex-shrink: 0;
     margin-left: auto;
-    padding: 4px;
+    padding: var(--sp-1);
     background: transparent;
-    border: 1px solid var(--cad-borde);
-    border-radius: var(--cad-radio);
-    color: var(--cad-texto-suave);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    color: var(--text-3);
     cursor: pointer;
   }
   .papelera:hover {
-    color: var(--cad-peligro);
-    border-color: var(--cad-peligro);
+    color: var(--danger);
+    border-color: var(--danger);
   }
   .papelera:focus-visible {
-    outline: 2px solid var(--cad-acento);
+    outline: 2px solid var(--brand-400);
     outline-offset: 2px;
   }
   /* Pie fijo con el "borrar todo" (T52): solo con historial y barra expandida. */
   .pie {
     box-sizing: border-box;
-    padding: 12px;
-    border-top: 1px solid var(--cad-borde);
+    padding: var(--sp-3);
+    /* T73: hueco para el área segura inferior del dispositivo. */
+    padding-bottom: calc(var(--sp-3) + var(--sab));
+    border-top: 1px solid var(--border);
   }
   .borrar-todo {
     box-sizing: border-box;
     width: 100%;
-    padding: 6px 12px;
+    padding: 6px var(--sp-3);
     background: transparent;
-    border: 1px solid var(--cad-borde);
-    border-radius: var(--cad-radio);
-    color: var(--cad-texto-suave);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    color: var(--text-3);
     font-family: inherit;
     text-align: left;
     cursor: pointer;
   }
   .borrar-todo:hover {
-    border-color: var(--cad-peligro);
-    color: var(--cad-peligro);
+    border-color: var(--danger);
+    color: var(--danger);
   }
   .borrar-todo:focus-visible {
-    outline: 2px solid var(--cad-acento);
+    outline: 2px solid var(--brand-400);
     outline-offset: 2px;
   }
   .confirmar-texto {
-    margin: 0 0 8px;
+    margin: 0 0 var(--sp-2);
     font-size: 13px;
-    color: var(--cad-texto);
+    color: var(--text-1);
   }
   .confirmar-acciones {
     display: flex;
-    gap: 8px;
+    gap: var(--sp-2);
   }
   .si-borrar {
     box-sizing: border-box;
     flex: 1;
     min-width: 0;
-    padding: 6px 8px;
+    padding: 6px var(--sp-2);
     background: transparent;
-    border: 1px solid var(--cad-peligro);
-    border-radius: var(--cad-radio);
-    color: var(--cad-peligro);
+    border: 1px solid var(--danger);
+    border-radius: var(--r-md);
+    color: var(--danger);
     font-family: inherit;
     font-weight: bold;
     cursor: pointer;
@@ -468,17 +465,17 @@
     box-sizing: border-box;
     flex: 1;
     min-width: 0;
-    padding: 6px 8px;
+    padding: 6px var(--sp-2);
     background: transparent;
-    border: 1px solid var(--cad-borde);
-    border-radius: var(--cad-radio);
-    color: var(--cad-texto);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    color: var(--text-1);
     font-family: inherit;
     cursor: pointer;
   }
   .si-borrar:focus-visible,
   .cancelar:focus-visible {
-    outline: 2px solid var(--cad-acento);
+    outline: 2px solid var(--brand-400);
     outline-offset: 2px;
   }
   /* Fantasmas de carga (T49): mismas medidas que la tarjeta real. */
@@ -488,15 +485,8 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 8px;
+    padding: var(--sp-2);
     margin: 0 0 6px;
-  }
-  .esqueleto-portada {
-    flex-shrink: 0;
-    width: 48px;
-    height: 68px;
-    border-radius: var(--cad-radio);
-    background: var(--cad-borde);
   }
   .esqueleto-datos {
     flex: 1;
@@ -505,40 +495,6 @@
     flex-direction: column;
     gap: 6px;
   }
-  .esqueleto-linea,
-  .esqueleto-barra {
-    display: block;
-    border-radius: 4px;
-    background: var(--cad-borde);
-  }
-  .esqueleto-linea.ancha {
-    width: 80%;
-    height: 12px;
-  }
-  .esqueleto-linea.estrecha {
-    width: 50%;
-    height: 10px;
-  }
-  .esqueleto-barra {
-    width: 100%;
-    height: 4px;
-  }
-  @media (prefers-reduced-motion: no-preference) {
-    .esqueleto-linea,
-    .esqueleto-barra,
-    .esqueleto-portada {
-      animation: pulsar 1.4s ease-in-out infinite;
-    }
-  }
-  @keyframes pulsar {
-    0%,
-    100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.45;
-    }
-  }
   /* Modo estrecho: cajón fijo sobre el contenido (el ancho colapsado se ignora). */
   .barra.cajon {
     position: fixed;
@@ -546,10 +502,22 @@
     top: 0;
     bottom: 0;
     width: min(320px, 85vw);
-    height: 100vh;
+    height: 100dvh;
     z-index: 50;
     border-right: none;
+    /* T73b: solo en el cajón, se separa del velo con la sombra de panel. */
+    box-shadow: var(--sh-panel);
     transition: none;
+  }
+  /* T73: en el cajón, los controles del historial alcanzan el objetivo táctil
+     mínimo (44 px) en ancho y alto. */
+  .barra.cajon .alternar,
+  .barra.cajon .papelera,
+  .barra.cajon .borrar-todo,
+  .barra.cajon .si-borrar,
+  .barra.cajon .cancelar {
+    min-width: var(--tap);
+    min-height: var(--tap);
   }
   .fondo-cajon {
     position: fixed;
@@ -558,12 +526,11 @@
     padding: 0;
     border: none;
     cursor: pointer;
-    /* Mismo fondo oscuro semitransparente que las superposiciones existentes
-       (TarjetaEpisodio.svelte: rgba(0,0,0,0.75)). */
-    background: rgba(0, 0, 0, 0.75);
+    /* Mismo velo oscuro semitransparente que las superposiciones existentes. */
+    background: var(--scrim-strong);
   }
   .fondo-cajon:focus-visible {
-    outline: 2px solid var(--cad-acento);
+    outline: 2px solid var(--brand-400);
     outline-offset: -2px;
   }
   @media (prefers-reduced-motion: reduce) {

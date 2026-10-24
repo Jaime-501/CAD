@@ -9,6 +9,10 @@
  *   Por defecto `false`.
  * - `isNarrow`: modo estrecho (< 900 px) vía `matchMedia`, con listener de
  *   cambios y limpieza al soltar el último suscriptor (readable).
+ * - `pestanaHome`: pestaña activa del Home (`'descubrir' | 'favoritos'`), que
+ *   comparten `VistaInicio` y la barra inferior (T73); no se persiste.
+ * - `limpiarBusqueda`: contador que, al subir, pide a `VistaBusqueda` vaciar su
+ *   `texto` local (T73); no se persiste.
  */
 import { get, readable, writable } from 'svelte/store';
 
@@ -33,6 +37,12 @@ sidebarCollapsed.subscribe((valor) => {
 });
 
 export const drawerOpen = writable<boolean>(false);
+
+/** T73: pestaña activa del Home, compartida con la barra inferior. */
+export const pestanaHome = writable<'descubrir' | 'favoritos'>('descubrir');
+
+/** T73: al subir, `VistaBusqueda` vacía su `texto` local (contador). */
+export const limpiarBusqueda = writable(0);
 
 export const isNarrow = readable<boolean>(false, (set) => {
   if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {

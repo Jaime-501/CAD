@@ -16,9 +16,15 @@
     progressToMap,
   } from './stores';
   import { atras, claveScroll, navegarA, recuperarScroll, seleccion } from './views';
+  import { isNarrow } from './ui';
   import { COLUMNAS_POR_DEFECTO } from './ventana';
   import { medirColumnas, revelar } from './revelar';
+  import BarraAccion from './BarraAccion.svelte';
   import BotonFavorito from './BotonFavorito.svelte';
+  import CabeceraVista from './CabeceraVista.svelte';
+  import EstadoVista from './EstadoVista.svelte';
+  import Insignia from './Insignia.svelte';
+  import Icono from './Icono.svelte';
   import TarjetaEpisodio from './TarjetaEpisodio.svelte';
 
   let cargando = true;
@@ -164,6 +170,15 @@
   // desordenados o antes de resolver la llamada): aquí solo se ordenan.
   $: episodios = [...$episodes].sort((a, b) => a.number - b.number || a.id.localeCompare(b.id));
 
+  // T82: orden de presentación de la rejilla; la lista ascendente sigue siendo
+  // la fuente de la CTA, de `episodioContinuar` y de la restauración de scroll.
+  let ordenDesc = false;
+  $: episodiosVista = ordenDesc ? [...episodios].reverse() : episodios;
+  $: if ($currentAnimeID) ordenDesc = false;
+  function alternarOrden(): void {
+    ordenDesc = !ordenDesc;
+  }
+
   // T67: reintenta la restauración pendiente con cada cambio de la lista.
   $: intentarRestaurarScroll(episodios.length, $episodesComplete);
 
@@ -206,39 +221,111 @@
   function continuar(): void {
     if (episodioContinuar) abrirEpisodio(episodioContinuar);
   }
+
+  // T80: CTA fija del modo estrecho. `episodioInicio` es el primero de la lista
+  // ordenada (destino de "Reiniciar" y del respaldo "Empezar"); `accionPrincipal`
+  // decide la etiqueta y la acción de la CTA según haya continuidad o no.
+  $: episodioInicio = episodios[0] ?? null;
+
+  function reiniciar(): void {
+    if (episodioInicio) abrirEpisodio(episodioInicio);
+  }
+
+  function accionPrincipal(
+    continuarCon: models.Episode | null,
+    inicio: models.Episode | null
+  ): { etiqueta: string; accion: () => void } {
+    if (continuarCon)
+      return { etiqueta: `Continuar · Ep. ${continuarCon.number}`, accion: continuar };
+    if (inicio)
+      return { etiqueta: `Empezar · Ep. ${inicio.number}`, accion: () => abrirEpisodio(inicio) };
+    return { etiqueta: 'Empezar', accion: () => {} };
+  }
+
+  // T80: la llamada a una función en el template se compila `untrack` en Svelte 5
+  // legacy (no crea dependencias); con los argumentos explícitos, `$:` sí las ve.
+  $: accion = accionPrincipal(episodioContinuar, episodioInicio);
+
+  // T79: sinopsis con "Ver más" sólo en estrecho; se mide tras pintar y en resize.
+  let sinopsisAbierta = false;
+  let sinopsisDesborda = false;
+  let sinopsisEl: HTMLParagraphElement | undefined = undefined;
+  let frameSinopsis: number | null = null;
+
+  function programarMedirSinopsis(): void {
+    if (frameSinopsis !== null) return;
+    frameSinopsis = requestAnimationFrame(() => {
+      frameSinopsis = null;
+      if (sinopsisAbierta || !sinopsisEl) return;
+      sinopsisDesborda = $isNarrow && sinopsisEl.scrollHeight > sinopsisEl.clientHeight + 1;
+    });
+  }
+
+  $: if ($currentDetail?.synopsis && $isNarrow) programarMedirSinopsis();
+
+  onMount(() => {
+    window.addEventListener('resize', programarMedirSinopsis);
+    return () => {
+      window.removeEventListener('resize', programarMedirSinopsis);
+      if (frameSinopsis !== null) cancelAnimationFrame(frameSinopsis);
+    };
+  });
 </script>
 
-<main class="contenedor">
-  <div class="cabecera">
-    <button type="button" class="atras" on:click={atras}>← Atrás</button>
-    <h2>{$currentDetail?.title ?? $seleccion?.title ?? 'Detalle'}</h2>
-    {#if $currentDetail}
-      <BotonFavorito
-        provider={$currentDetail.provider}
-        animeId={$currentDetail.id}
-        titulo={$currentDetail.title}
-        cover={$currentDetail.cover}
-      />
-    {/if}
-  </div>
+<main class="contenedor" class:con-cta={$isNarrow && $currentDetail && episodios.length > 0}>
+  <CabeceraVista
+    fija
+    nivel={1}
+    titulo={$currentDetail?.title ?? $seleccion?.title ?? 'Detalle'}
+    onAtras={atras}
+  >
+    <svelte:fragment slot="acciones">
+      {#if $currentDetail}
+        <BotonFavorito
+          provider={$currentDetail.provider}
+          animeId={$currentDetail.id}
+          titulo={$currentDetail.title}
+          cover={$currentDetail.cover}
+        />
+      {/if}
+    </svelte:fragment>
+  </CabeceraVista>
 
   {#if error}
-    <p class="error">{error}</p>
+    <EstadoVista variante="error" titulo="No se pudo cargar el detalle" texto={error} />
   {:else if cargando && !$currentDetail}
-    <p class="estado">Cargando detalle…</p>
+    <EstadoVista variante="cargando" titulo="Cargando detalle…" />
   {:else if $currentDetail}
     <section class="ficha">
       {#if $currentDetail.cover !== ''}
-        <img class="portada" src={$currentDetail.cover} alt={$currentDetail.title} />
+        <div class="portada-marco">
+          <img class="portada" src={$currentDetail.cover} alt={$currentDetail.title} />
+        </div>
       {/if}
       <div class="datos">
-        <p class="linea">
-          {$currentDetail.provider}
-          {#if tipoEtiqueta !== ''}· {tipoEtiqueta}{/if}
-          {#if $currentDetail.status !== ''}· {$currentDetail.status}{/if}
-          · {$currentDetail.total_episodes}
-          {$currentDetail.total_episodes === 1 ? 'episodio' : 'episodios'}
-        </p>
+        <div class="metadatos">
+          <Insignia tono="marca">{$currentDetail.provider}</Insignia>
+          {#if tipoEtiqueta !== ''}
+            <Insignia tono="neutro">{tipoEtiqueta}</Insignia>
+          {/if}
+          {#if $currentDetail.status !== ''}
+            <Insignia tono="neutro">
+              <span
+                class="punto"
+                class:emision={$currentDetail.status
+                  .normalize('NFD')
+                  .replace(/[\u0300-\u036f]/g, '')
+                  .toLowerCase() === 'en emision'}
+                aria-hidden="true"
+              ></span>
+              {$currentDetail.status}
+            </Insignia>
+          {/if}
+          <Insignia tono="neutro">
+            {$currentDetail.total_episodes}
+            {$currentDetail.total_episodes === 1 ? 'episodio' : 'episodios'}
+          </Insignia>
+        </div>
         {#if $currentDetail.genres?.length}
           <ul class="generos">
             {#each $currentDetail.genres as genero (genero)}
@@ -247,7 +334,20 @@
           </ul>
         {/if}
         {#if $currentDetail.synopsis !== ''}
-          <p class="sinopsis">{$currentDetail.synopsis}</p>
+          <p class="sinopsis" class:recortada={!sinopsisAbierta} bind:this={sinopsisEl}>
+            {$currentDetail.synopsis}
+          </p>
+          {#if $isNarrow && sinopsisDesborda}
+            <button
+              type="button"
+              class="ver-mas"
+              aria-expanded={sinopsisAbierta}
+              on:click={() => (sinopsisAbierta = !sinopsisAbierta)}
+            >
+              {sinopsisAbierta ? 'Ver menos' : 'Ver más'}
+              <Icono nombre="chevron-abajo" tam={16} />
+            </button>
+          {/if}
         {/if}
         <button
           type="button"
@@ -264,7 +364,23 @@
       </div>
     </section>
 
-    <h3 class="titular">Episodios {#if episodios.length > 0}({episodios.length}){/if}</h3>
+    <div class="fila-titular">
+      <h2 class="titular">Episodios {#if episodios.length > 0}({episodios.length}){/if}</h2>
+      {#if episodios.length > 1}
+        <button
+          type="button"
+          class="orden"
+          aria-label={ordenDesc
+            ? 'Ordenar del más antiguo al más reciente'
+            : 'Ordenar del más reciente al más antiguo'}
+          aria-pressed={ordenDesc}
+          on:click={alternarOrden}
+        >
+          <Icono nombre={ordenDesc ? 'orden-asc' : 'orden-desc'} tam={20} />
+          <span class="orden-texto">{ordenDesc ? 'Más antiguos' : 'Más recientes'}</span>
+        </button>
+      {/if}
+    </div>
 
     {#if $episodesError !== ''}
       <p class="aviso">No se pudieron cargar todos los episodios: {$episodesError}</p>
@@ -272,7 +388,7 @@
 
     {#if episodios.length > 0}
       <div class="rejilla" bind:this={rejillaEl}>
-        {#each episodios as ep, i (ep.id)}
+        {#each episodiosVista as ep, i (ep.id)}
           <div class="celda" use:revelar={{ id: ep.id, indice: i, columnas }}>
             <TarjetaEpisodio episodio={ep} progreso={$progressMap[ep.id]} abrir={abrirEpisodio} />
           </div>
@@ -281,106 +397,202 @@
     {/if}
 
     {#if !$episodesComplete}
-      <p class="cargando">Cargando más episodios…</p>
+      <p class="cargando" aria-live="polite">Cargando más episodios…</p>
     {:else if episodios.length === 0}
-      <p class="estado">No hay episodios disponibles.</p>
+      <EstadoVista variante="vacio" titulo="No hay episodios disponibles." />
     {/if}
   {:else}
-    <p class="estado">Sin detalle disponible.</p>
+    <EstadoVista variante="vacio" titulo="Sin detalle disponible." />
   {/if}
 </main>
 
+{#if $isNarrow && $currentDetail && episodios.length > 0}
+  <BarraAccion
+    etiquetaPrincipal={accion.etiqueta}
+    onPrincipal={accion.accion}
+    etiquetaSecundaria={episodioContinuar ? 'Reiniciar' : ''}
+    onSecundaria={reiniciar}
+  />
+{/if}
+
 <style>
   .contenedor {
+    /* T80: alto de la CTA fija (tópico local, no global). */
+    --cta-h: 60px;
     padding: 2rem;
     text-align: left;
     max-width: 1100px;
     margin: 0 auto;
   }
-  .cabecera {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin-bottom: 1.5rem;
-  }
-  .cabecera h2 {
-    margin: 0;
-    text-align: left;
-  }
-  .atras {
-    padding: 8px 16px;
-    border-radius: 8px;
-    border: none;
-    background: #4ade80;
-    color: #111;
-    font-weight: bold;
-    cursor: pointer;
-    white-space: nowrap;
-  }
   .ficha {
     display: flex;
-    gap: 24px;
+    gap: var(--sp-5);
     margin-bottom: 2rem;
-    background: #1e1e24;
-    border-radius: 12px;
-    padding: 20px;
+    background: var(--surface-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-xl);
+    box-shadow: var(--sh-card);
+    padding: var(--sp-4);
   }
-  .portada {
+  .portada-marco {
+    box-sizing: border-box;
+    flex-shrink: 0;
     width: 220px;
     max-width: 35%;
     height: fit-content;
+    padding: 3px;
+    background: var(--frame-poster);
+    border-radius: var(--r-lg);
+    box-shadow: var(--sh-panel);
+  }
+  .portada {
+    display: block;
+    width: 100%;
     aspect-ratio: 2 / 3;
     object-fit: cover;
-    border-radius: 8px;
-    background: #2a2a35;
-    flex-shrink: 0;
+    border-radius: var(--r-md);
+    background: var(--bg-2);
   }
   .datos {
     flex: 1;
     min-width: 0;
   }
-  .linea {
-    margin: 0 0 10px;
-    color: #a1a1aa;
-    font-size: 14px;
+  .metadatos {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-2);
+    margin: 0 0 var(--sp-3);
+  }
+  .punto {
+    flex-shrink: 0;
+    width: var(--sp-2);
+    height: var(--sp-2);
+    border-radius: var(--r-full);
+    background: var(--text-3);
+  }
+  .punto.emision {
+    background: var(--brand-400);
   }
   .generos {
     list-style: none;
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    margin: 0 0 12px;
+    gap: var(--sp-2);
+    margin: 0 0 var(--sp-3);
     padding: 0;
   }
   .generos li {
-    background: #2a2a35;
-    color: #4ade80;
-    font-size: 12px;
-    padding: 4px 10px;
-    border-radius: 999px;
+    background: var(--surface-chip);
+    color: var(--brand-400);
+    font-size: var(--fs-xs);
+    padding: var(--sp-1) var(--sp-3);
+    border-radius: var(--r-full);
   }
   .sinopsis {
-    margin: 0 0 16px;
-    line-height: 1.5;
-    color: #d4d4d8;
+    margin: 0 0 var(--sp-4);
+    line-height: var(--lh);
+    color: var(--text-2);
     white-space: pre-line;
   }
-  .continuar {
-    padding: 10px 20px;
-    border-radius: 8px;
+  .ver-mas {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
+    min-height: var(--tap);
+    margin: 0 0 var(--sp-2);
+    padding: 0;
     border: none;
-    background: #4ade80;
-    color: #111;
+    background: none;
+    color: var(--brand-400);
+    font: inherit;
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+    cursor: pointer;
+  }
+  .continuar {
+    padding: 10px var(--sp-4);
+    border-radius: var(--r-md);
+    border: none;
+    background: var(--brand-500);
+    color: var(--on-brand);
     font-weight: bold;
     cursor: pointer;
   }
   .continuar:disabled {
-    background: #555;
-    color: #999;
+    background: var(--bg-2);
+    color: var(--text-3);
     cursor: not-allowed;
   }
-  .titular {
+  .fila-titular {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-3);
     margin: 0 0 1rem;
+  }
+  .titular {
+    margin: 0;
+    /* Conserva el tamaño del h3 anterior (T88). */
+    font-size: 1.17em;
+  }
+  .orden {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-1);
+    min-width: var(--tap);
+    min-height: var(--tap);
+    padding: 0 var(--sp-3);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--surface-chip);
+    color: var(--text-2);
+    font: inherit;
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+    cursor: pointer;
+    transition:
+      background var(--dur-fast) var(--ease-std),
+      border-color var(--dur-fast) var(--ease-std),
+      transform var(--dur-fast) var(--ease-std);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .orden-texto {
+    display: none;
+  }
+  @media (min-width: 480px) {
+    .orden-texto {
+      display: inline;
+    }
+  }
+  @media (min-width: 900px) {
+    .orden {
+      height: 36px;
+      min-height: 36px;
+    }
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .orden:hover {
+      background: var(--surface-chip-hover);
+      color: var(--text-1);
+    }
+  }
+  .orden:active {
+    transform: scale(0.98);
+  }
+  .orden:focus-visible {
+    outline: none;
+    box-shadow: var(--ring);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .orden {
+      transition: none;
+    }
+    .orden:active {
+      transform: none;
+    }
   }
   .rejilla {
     display: grid;
@@ -421,31 +633,79 @@
       animation: none;
     }
   }
-  .estado {
-    color: #a1a1aa;
-  }
-  .error {
-    color: #f87171;
-  }
   .aviso {
-    color: #fbbf24;
-    background: #2a2a35;
-    border-radius: 8px;
+    color: var(--fav);
+    background: var(--bg-2);
+    border-radius: var(--r-md);
     padding: 10px 14px;
     margin-bottom: 1rem;
   }
   .cargando {
-    color: #a1a1aa;
+    color: var(--text-3);
+    font-size: var(--fs-sm);
     text-align: center;
     padding: 1rem 0;
   }
-  @media (max-width: 640px) {
+  @media (max-width: 899px) {
+    /* T74: el padding superior lo da la cabecera fija. */
+    .contenedor {
+      padding: 0 var(--gutter) var(--sp-4);
+    }
+    /* T80: el botón "Continuar" en línea se sustituye por la CTA fija. */
+    .continuar {
+      display: none;
+    }
+    /* T80: deja hueco para la CTA fija (solo cuando está visible). */
+    .contenedor.con-cta {
+      padding-bottom: calc(var(--sp-4) + var(--cta-h));
+    }
+    /* T79: 641–899 px también pasa a columna (antes sólo < 641 px): portada
+       centrada arriba y datos debajo. */
     .ficha {
       flex-direction: column;
+      padding: var(--sp-4);
     }
-    .portada {
-      width: 160px;
-      max-width: 160px;
+    .portada-marco {
+      width: min(45%, 200px);
+      max-width: 200px;
+      align-self: center;
+    }
+    /* T79: géneros en una línea con scroll horizontal, sangrados al borde de la
+       ficha (márgenes negativos = padding de `.ficha`), sin barra nativa. */
+    .generos {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      margin-left: calc(-1 * var(--sp-4));
+      margin-right: calc(-1 * var(--sp-4));
+      padding: 0 var(--sp-4);
+      scroll-snap-type: x proximity;
+      scrollbar-width: none;
+    }
+    .generos::-webkit-scrollbar {
+      display: none;
+    }
+    .generos li {
+      flex-shrink: 0;
+      scroll-snap-align: start;
+    }
+    /* T79: sinopsis recortada a 4 líneas mientras no está abierta. */
+    .sinopsis.recortada {
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      line-clamp: 4;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    /* T81: la rejilla de episodios pasa a 2 columnas en estrecho. */
+    .rejilla {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--sp-3);
+    }
+  }
+  /* T81: 600–899 px usa 3 columnas. */
+  @media (min-width: 600px) and (max-width: 899px) {
+    .rejilla {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
   }
 </style>
