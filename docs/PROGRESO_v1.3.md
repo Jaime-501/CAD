@@ -49,7 +49,7 @@ Hecha el **2026-10-16**. Primera tarea de la serie **T64–T69** (v1.3.0, rama `
 | `npm run build` (frontend) | **OK** (aviso de chunk >500 kB preexistente) |
 | `grep -rn wailsjs frontend/src` | **solo `api.ts`** |
 | `gofmt -l .` · `go vet ./...` · `go build ./...` · `go test -race -count=1 ./...` | **no ejecutados**: el daemon de Docker no era accesible en el host (`npipe:////./pipe/dockerDesktopLinuxEngine`) y Go no está en el PATH del host. **Go no se tocó**, así que el recuento (`--- PASS` 435) queda igual que al cerrar T63 a falta de repetir la compuerta. |
-| `git status --porcelain` | solo `frontend/src/ventana.ts`, `frontend/src/ventana.test.ts` (nuevos) y `tareas/T64.md` (sin trackear, previo) |
+| `git status --porcelain` | solo `frontend/src/ventana.ts`, `frontend/src/ventana.test.ts` (nuevos) y `tareas/archivo/T64.md` (sin trackear, previo) |
 
 **Desviaciones:**
 
@@ -135,7 +135,7 @@ Acción Svelte `use:revelar={{ id, indice, columnas }}` para el envoltorio de ca
 | `go build ./...` | OK |
 | `go test -race -count=1 ./...` | **11 paquetes `ok`** (Go intacto) |
 | recuento `^--- PASS` (`-count=1 -v`) | **435** — idéntico al de T63 (T65 no toca Go) |
-| `git status --porcelain` | solo `frontend/src/revelar.ts` (nuevo), `frontend/src/VistaDetalle.svelte`, `frontend/src/TarjetaEpisodio.svelte`, `PROGRESO.md` y `tareas/T65.md` (sin trackear, previo) |
+| `git status --porcelain` | solo `frontend/src/revelar.ts` (nuevo), `frontend/src/VistaDetalle.svelte`, `frontend/src/TarjetaEpisodio.svelte`, `PROGRESO.md` y `tareas/archivo/T65.md` (sin trackear, previo) |
 
 ### Recomendación sobre T66–T67 (¿paginar?)
 
@@ -190,7 +190,7 @@ Contexto: T65 decidió **no paginar** y descartó los **T66–T67 originales** (
 | `go build ./...` | OK |
 | `go test -race -count=1 ./...` | **11 paquetes `ok`** (Go intacto) |
 | recuento `^--- PASS` (`-count=1 -v`) | **435** — idéntico a T63/T65 (T66 no toca Go) |
-| `git status --porcelain` | `frontend/src/views.ts` (M), `frontend/src/views.test.ts` (nuevo), `tareas/T66.md` (sin trackear, previo) |
+| `git status --porcelain` | `frontend/src/views.ts` (M), `frontend/src/views.test.ts` (nuevo), `tareas/archivo/T66.md` (sin trackear, previo) |
 
 ### Desviaciones
 
@@ -240,7 +240,7 @@ Contexto: cierra la observación que dejó T66. Al volver a un detalle cuyos sto
 | `go build ./...` | OK |
 | `go test -race -count=1 ./...` | **11 paquetes `ok`** (Go intacto) |
 | recuento `^--- PASS` (`-count=1 -v`) | **435** — idéntico a T63/T65/T66 (T67 no toca Go) |
-| `git status --porcelain` | `frontend/src/VistaDetalle.svelte` (M) y `tareas/T67.md` (sin trackear, previo) |
+| `git status --porcelain` | `frontend/src/VistaDetalle.svelte` (M) y `tareas/archivo/T67.md` (sin trackear, previo) |
 
 ### Desviaciones
 
@@ -255,3 +255,56 @@ Contexto: cierra la observación que dejó T66. Al volver a un detalle cuyos sto
 - **Ninguno propio.** Resuelve la observación de T66 ("el restaurado se recorta a 0 si la lista no está pintada").
 - **T68 opcional, a reevaluar**; **T69** de la serie v1.3.0 pendiente.
 - Sin tag ni release.
+
+## Resúmenes largos y bloques de ejecución T64–T68
+> Movidos texto literal desde PROGRESO.md en T90.
+
+## Resumen de la v1.3.0 (T64–T67) — detalle largo en `docs/PROGRESO_v1.3.md`
+
+> En T68 se movieron a `docs/PROGRESO_v1.3.md` (texto literal) las notas largas de T64–T67. Aquí queda lo esencial.
+
+### T64 — Lógica pura de ventana de episodios (`ventana.ts` + tests) — resumen
+
+Solo frontend: `frontend/src/ventana.ts` (nuevo, TS puro) exporta las constantes (`FILAS_INICIAL = 5`, `FILAS_TRAMO = 4`, `COLUMNAS_POR_DEFECTO = 4`, `RETARDO_POR_COLUMNA_MS = 50`, `RETARDO_MAXIMO_MS = 300`), las funciones puras `normalizarColumnas`/`tamanoInicial`/`siguienteTamano`/`cubrirIndice`/`retardoEntrada`/`claveVentana` y la memoria por sesión `recordarVisibles`/`recuperarVisibles`/`olvidarVisibles`; ninguna entrada inválida (NaN, Infinity, negativos) lanza. `ventana.test.ts`: **48 comprobaciones** (esbuild + node). Compuerta de Go **no ejecutada** en esa sesión (daemon de Docker parado; Go no se tocó) → repetida en verde en T65.
+
+### T65 — Revelado animado de tarjetas por visibilidad (sin paginar) — resumen
+
+Solo frontend: `frontend/src/revelar.ts` (nuevo), `VistaDetalle.svelte` (envoltorio `.celda`, acción `use:revelar`, keyframes `entra-celda`, medición de columnas) y `TarjetaEpisodio.svelte` (`contain-intrinsic-size: auto 210px → auto 170px`, único cambio exigido por la medición). Un `IntersectionObserver` compartido (threshold 0.15) revela cada tarjeta al entrar, con retardo por columna (`retardoEntrada`); no re-anima ids ya revelados, ni con `prefers-reduced-motion: reduce`, ni sin `IntersectionObserver`. **Mediciones Playwright**: tarjeta 170,39 px reales frente a 210 px reservados (desajuste ~39,6 px/tarjeta, > 20 px → ajuste); 366 tarjetas / 1830 nodos y hasta 1180 (One Piece) **sin jank y 0 saltos de scroll**; JKAnime tarda ~16 s (red, no render). **Decisión: NO paginar** (los T66–T67 originales, paginado / ventana client-side, quedan descartados). Go intacto: **435 `--- PASS`**.
+
+### T66 — Clave de scroll del detalle por proveedor + slug — resumen
+
+Solo frontend: `frontend/src/views.ts` (`claveScroll` del detalle y del reproductor incluyen el proveedor: `detalle:<provider>:<animeID>`) y `views.test.ts` (nuevo, **13 comprobaciones**). Corrige que «bleach» en JKAnime y AnimeAV1 compartieran posición de scroll. Go intacto: **435 `--- PASS`**.
+
+### T67 — Restaurar el scroll del detalle tras la recarga por lotes — resumen
+
+Solo frontend: `frontend/src/VistaDetalle.svelte` (`scrollPendiente` + `intentarRestaurarScroll` reactivo por lote dentro de `requestAnimationFrame`, con cancelación del usuario por gesto). Cierra la observación de T66 (el restaurado se recortaba a 0 si la lista no estaba pintada). Verificación Playwright **6/6**. Go intacto: **435 `--- PASS`**.
+
+### T68 — Cierre documental de la v1.3.0 — bloque de esta sesión
+
+Cierre documental de la **v1.3.0**, solo documentación y versión, sin cambios de comportamiento (fecha **2026-10-16**):
+
+- **`wails.json` (paso 1)**: `info.productVersion` → **`"1.3.0"`** (único cambio del archivo).
+- **`CHANGELOG.md` (paso 2)**: entrada **1.3.0** (Añadido: revelado animado de las tarjetas de episodio, respeta `reduced-motion`; Corregido: scroll del detalle separado por proveedor+slug, restauración del scroll al recargar la lista y altura reservada a 170 px). La **v1.2.1 está taggeada** (`v1.2.1`), así que la nota «sin tag» ya no aplica.
+- **Archivo histórico (paso 3)**: notas largas de **T64–T67** movidas **texto literal** a `docs/PROGRESO_v1.3.md`; aquí solo resúmenes. Incluye la decisión de no paginar con las mediciones de T65.
+- **`ventana.ts` (paso 4)**: se documenta (en `docs/PROGRESO_v1.3.md` y en este bloque) que del módulo **solo se usa `retardoEntrada`** y que el resto queda disponible para una posible **paginación futura**; **NO se borró código ni se tocó `frontend/**`** (regla "NO debes tocar" de T68, coherente con «no se toca frontend»).
+- **`AGENTS.md` y `docs/DESARROLLO.md` (paso 5)**: estado **T1–T68 / v1.3.0 preparada**, rango de "Trabajo con agentes" hasta T68 y mención de `revelar.ts`, `ventana.ts` y sus tests.
+- **`README.md` (paso 6)**: línea en funciones (animación de episodios al aparecer).
+- **`docs/BITACORA.md` (paso 7)**: filas T64–T68 y desviaciones vigentes.
+- **Pendientes activos (paso 8)**: verificación con el `.exe` de T65/T67, release de la v1.2.1/v1.3.0 por el humano e idea futura (chips de rango).
+- **Archivos tocados**: `PROGRESO.md`, `CHANGELOG.md`, `AGENTS.md`, `README.md`, `docs/DESARROLLO.md`, `docs/BITACORA.md`, `docs/PROGRESO_v1.3.md` (nuevo) y `wails.json` (solo `info.productVersion`). **Nada tocado fuera de "Puedes tocar"**: `*.go`, `frontend/**`, `tareas/00_REGLAS.md` y `docs/firmas/**` intactos.
+
+### Comprobación — 2026-10-16, todo en verde
+
+| Comando | Resultado |
+|---|---|
+| `gofmt -l .` | **sin salida** |
+| `go vet ./...` · `go vet -tags integration ./...` | limpios |
+| `go build ./...` | OK |
+| `go test -race -count=1 ./...` | **11 paquetes `ok`** (`miapp` sin tests de paquete) |
+| recuento `^--- PASS` (`-count=1 -v`) | **435** — idéntico al de T63/T65/T66/T67 (Go intacto) |
+| `npm run check` (frontend) | **svelte-check found 0 errors and 0 warnings** |
+| `wails build -platform windows/amd64` | **OK** → `build/bin/miapp.exe` (compila con `productVersion` 1.3.0) |
+| `git status --porcelain` | solo los archivos de "Puedes tocar" |
+| `git diff --stat -- '*.go'` | **vacío** (ningún `.go` con cambios reales) |
+
+**No se creó tag ni release** (lo hace el humano). Detalle largo de T64–T67 en `docs/PROGRESO_v1.3.md`; sesión en `docs/BITACORA.md`.

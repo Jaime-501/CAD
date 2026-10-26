@@ -12,7 +12,7 @@
 > preparada** (`productVersion` 1.2.1; sin tag ni release — los hace el humano) y los pendientes
 > activos. Historial de sesiones y decisiones cerradas: [`BITACORA.md`](BITACORA.md) ·
 > firmas reales: `firmas/<paquete>.md` · plan del ciclo: `tareas/v1.2_PLAN.md` ·
-> fichas de cierre: `tareas/T56.md` y `tareas/T59.md`.
+> fichas de cierre: `tareas/archivo/T56.md` y `tareas/archivo/T59.md`.
 
 ---
 
@@ -108,7 +108,7 @@
   - Dos fallos **propios** detectados y corregidos durante la verificación: (a) lógica invertida de `class:sin-barra` (`!$isNarrow` quitaba la columna de la barra en pantallas anchas y la barra se solapaba con el contenido); (b) el foco al abrir el cajón no llegaba con `onMount` (en estrecho el componente ya estaba montado sin cajón) → reactiva `$:` + `await tick()`. Además, el baile `git stash`/`pop` duplicó `ui.ts` en el grafo HMR del servidor de desarrollo (dos instancias con `?t=` distintos: la hamburguesa no abría el cajón); se resolvió reiniciando `docker compose restart app` — artefacto del entorno, no del código.
 - **Archivos tocados**: `frontend/src/style.css` (solo el bloque `:root` de T48) · `frontend/src/ui.ts` (**nuevo**) · `frontend/src/BarraLateral.svelte` (**nuevo**) · `frontend/src/App.svelte` (shell: imports de `./ui` y `./BarraLateral`, rejilla, hamburguesa, `.aviso-puente` dentro del área; `sincronizarVista` y el conmutador **intactos**) · `PROGRESO.md` (esta nota). `frontend/wailsjs/**`, `frontend/src/api.ts`, `stores.ts`, `views.ts`, las vistas existentes (`VistaBusqueda`/`VistaDetalle`/`VistaReproductor`/`TarjetaEpisodio`/`SelectorFuente`) y `*.go` **sin tocar**.
 - **Desviaciones**: ningún archivo tocado fuera de "Puedes tocar". (1) La ficha original (Paso 0 con "variables existentes", `height:100vh` + `overflow:auto`, foco con `onMount`) fue **sustituida por las 3 decisiones del humano** de esta sesión; la ficha actualizada la escribe el humano en el repo. (2) Decisiones propias no fijadas: **clase `sin-barra`** en `App.svelte` (rejilla a `1fr` cuando no hay columna de barra — reproductor y modo estrecho—, para que el área mantenga el ancho completo de antes); el botón del cajón usa `aria-label="Cerrar barra"` (los labels "Contraer/Expandir barra" son del modo ancho; la ficha habla de "botón de cerrar/contraer"); el fondo del cajón es un `<button aria-label="Cerrar historial">` full-screen (patrón accesible para poder hacer clic; su `rgba(0,0,0,0.75)` es el mismo de las superposiciones existentes); la hamburguesa va en una tira **en flujo** (~44px) arriba a la izquierda del área principal (evita solaparse con el botón "← Atrás" de `VistaDetalle` a 700px); el `.aviso-puente` de `App.svelte` ahora usa `var(--cad-peligro)` (mismo valor `#f87171`). (3) Sin HTML ni datos artificiales. (4) Las capturas de la verificación viven en `.playwright-mcp/` (gitignored, no ensucian `git status`).
-- **Pendientes**: T49 (barra lateral con historial por proveedor) y T53 (Home "Descubrir") consumen `ui.ts`, `BarraLateral.svelte` y este mapa; T49 debe mantener la tira de hamburguesa y el comportamiento del cajón (o actualizar esta nota). La ficha `tareas/T48.md` la sobrescribe el humano con las decisiones 1–3. El `Type` de `models.Anime` sigue sin existir (pendiente de producto).
+- **Pendientes**: T49 (barra lateral con historial por proveedor) y T53 (Home "Descubrir") consumen `ui.ts`, `BarraLateral.svelte` y este mapa; T49 debe mantener la tira de hamburguesa y el comportamiento del cajón (o actualizar esta nota). La ficha `tareas/archivo/T48.md` la sobrescribe el humano con las decisiones 1–3. El `Type` de `models.Anime` sigue sin existir (pendiente de producto).
 
 ### T49 — UI: barra lateral con historial agrupado por proveedor
 
@@ -307,7 +307,7 @@ Diferencia buscador ↔ filas: **exactamente 32 px por lado** (111→143 y 1211�
 
 ## Cierre de la v1.2.0 (T56)
 
-Hecha el **2026-10-12** en `feature/home-historial-favoritos`, **sin crear tag ni publicar** (lo hace el humano; ver "Release" abajo). Solo se tocaron archivos de la lista "Puedes tocar" de `tareas/T56.md`:
+Hecha el **2026-10-12** en `feature/home-historial-favoritos`, **sin crear tag ni publicar** (lo hace el humano; ver "Release" abajo). Solo se tocaron archivos de la lista "Puedes tocar" de `tareas/archivo/T56.md`:
 
 - **`main.go`**: únicamente el `Title` → `"CAD · Comfort Anime Desktop"` (`git diff main.go` = 1 línea). El ejecutable (`miapp.exe`), el módulo y `%AppData%\miapp` **no cambian**.
 - **`wails.json`**: únicamente `info.productVersion` → `"1.2.0"`.
@@ -370,7 +370,7 @@ Recuento real por paquete (`go test -count=1 -v`, líneas `--- PASS`): `internal
 
 ## T59 — cierre documental post-v1.2.0 (etiquetado T58 en su momento; renumerado T59)
 
-> **Renumeración (T59):** esta tarea se documentó con el número **T58** al cerrar la v1.2.0; después el humano cargó `tareas/T58.md` con los bugs visuales (que se quedan con el número **T58**) y, al preparar la v1.2.1, el cierre documental pasó a **T59**. Solo se corrigieron números; ningún contenido se borró.
+> **Renumeración (T59):** esta tarea se documentó con el número **T58** al cerrar la v1.2.0; después el humano cargó `tareas/archivo/T58.md` con los bugs visuales (que se quedan con el número **T58**) y, al preparar la v1.2.1, el cierre documental pasó a **T59**. Solo se corrigieron números; ningún contenido se borró.
 
 Solo `.md`, sin tocar código (la regla 7 no se activó: nada fuera de la lista hizo falta). Nombres de métodos verificados con `go doc -all ./internal/app` y leyendo `app.go` (la lista de los 16 métodos Wails y los exportados del núcleo coinciden con el código; **manda el código**):
 
@@ -388,7 +388,7 @@ Solo `.md`, sin tocar código (la regla 7 no se activó: nada fuera de la lista 
 
 ## T58 — bugs visuales: carátula perdida al retomar y contador de favoritos
 
-Dos bugs no funcionales de la v1.2.0 detectados con el `.exe` (`tareas/T58.md`). Fecha: **2026-10-14**.
+Dos bugs no funcionales de la v1.2.0 detectados con el `.exe` (`tareas/archivo/T58.md`). Fecha: **2026-10-14**.
 
 ### Paso 0 (diagnóstico) — hipótesis confirmadas contra el código real
 
@@ -427,6 +427,55 @@ Dos bugs no funcionales de la v1.2.0 detectados con el `.exe` (`tareas/T58.md`).
 
 ### Desviaciones
 
-- **Colisión de numeración T58** (regla 7, decisión documental): `PROGRESO.md` ya tenía una "T58 — cierre documental post-v1.2.0" hecha; el archivo `tareas/T58.md` (cargado por el humano en el commit previo) define esta otra tarea. Resolución: la **fila T58 de la tabla** es esta de bugs; el cierre documental conserva su bloque con el título aclarado "(etiquetado T58 en su momento)" y una nota de colisión. Ningún contenido se borró. *(Ampliada en T59: el cierre documental pasó a **T59**.)*
+- **Colisión de numeración T58** (regla 7, decisión documental): `PROGRESO.md` ya tenía una "T58 — cierre documental post-v1.2.0" hecha; el archivo `tareas/archivo/T58.md` (cargado por el humano en el commit previo) define esta otra tarea. Resolución: la **fila T58 de la tabla** es esta de bugs; el cierre documental conserva su bloque con el título aclarado "(etiquetado T58 en su momento)" y una nota de colisión. Ningún contenido se borró. *(Ampliada en T59: el cierre documental pasó a **T59**.)*
 - **Fantasma CRLF (T36)**: la compuerta inicial marcó 25 `.go` en `gofmt -l` (merge de la v1.2 hecho desde Windows); normalizados a LF sin registrar diff (mismo procedimiento decidido por el humano en T36). `frontend/wailsjs/**` muestra "M" con diff vacío por el mismo motivo (el `wails dev` los reescribe con LF); **sin cambios de contenido**.
 - **Verificación del Bug A por lógica + log** (la ficha lo autoriza): en el navegador el proxy local no reproduce vídeo (AGENTS.md) → `modo !== 'video'` y el guardado real con posición **no se ejercitó**; el log de `portadaDe`/`tituloDe` en el estado exacto del montaje (detalle null/en vuelo) más el registro en disco intacto cubren la causa; la prueba final del guardado con vídeo real es con el `.exe`.
+
+## Cierres de la v1.2.x (T56, T57, T58, T59)
+> Resúmenes de cierre movidos texto literal desde PROGRESO.md en T90.
+
+## Resumen de los cierres de la v1.2.x (detalle largo en `docs/PROGRESO_v1.2.md`)
+
+> En T59 se movieron a `docs/PROGRESO_v1.2.md` (texto literal) las notas largas de T56, T57, T58 y del cierre documental. Aquí queda lo esencial.
+
+### Cierre de la v1.2.0 (T56) — resumen
+
+Hecha el **2026-10-12** en `feature/home-historial-favoritos`: `main.go` solo el `Title` (`CAD · Comfort Anime Desktop`), `wails.json` → `1.2.0`, `00_REGLAS.md`, `README.md`, `DESARROLLO.md`, `AGENTS.md`, firmas contrastadas y notas T39–T55 archivadas. Compuerta en verde (407 tests, `npm run check` 0/0, `wails build` OK). La **prueba manual con el `.exe`** y la **release** las hizo el humano: **v1.2.0 publicada**.
+
+### T57 — botón "Siguiente ▸" discreto durante la reproducción — resumen
+
+`BotonSiguiente.svelte` con prop `discreto` (guardia `discreto && estado === 'listo'`; `opacity 0.4` + `blur(2px)` + transición 200 ms; se aclara con hover/foco; `prefers-reduced-motion` sin transición) y `VistaReproductor.svelte` con estado `reproduciendo` seteado **dentro de los handlers existentes del `<video>`** (`alAvanzar` con `!v.paused`, `alPausar`, `alTerminar`; cero listeners nuevos). **Probada con el `.exe` sin incidencias** (se aclara al pausar, al 90 % y con HLS/MP4 real): anotado en T59.
+
+### T58 — bugs visuales: carátula perdida al retomar y contador de favoritos — resumen
+
+Detectados con el `.exe`. **Bug A**: `portadaDe`/`tituloDe` reescritos en cascada (detalle del mismo proveedor+slug → registro en memoria → vacío) en `VistaReproductor.svelte`; ya no se pisa con `''` la carátula del historial al retomar con el detalle en vuelo o con otro anime abierto. **Bug B**: `App.svelte` carga los favoritos al arrancar (`cargarFavoritosAlArranque` con un reintento a los 500 ms) → el contador "★ Favoritos (N)" es correcto sin abrir la pestaña. **Pendiente**: verificar los dos fixes con el `.exe` (arriba).
+
+### T59 — cierre documental (post-v1.2.0 renumerado + v1.2.1) — bloque de esta sesión
+
+Cierre documental de la **v1.2.1**, solo documentación y versión, sin cambios de comportamiento (fecha **2026-10-14**):
+
+- **Renumeración (paso 1)**: los bugs visuales se quedan como **T58**; el cierre documental post-v1.2.0 pasó de T58 a **T59** (fila de la tabla + títulos de bloque, con línea aclaratoria; ningún contenido borrado). La nota de la colisión del encabezado y la fila/bitácora quedan actualizadas.
+- **T57 (paso 2)**: el apartado de pendientes del `.exe` se sustituyó por la anotación de que **T57 se probó con el `.exe` sin incidencias** (pausar, 90 %, HLS/MP4 real).
+- **Archivo histórico (paso 3)**: notas largas de **T56, T57, T58** y del cierre documental movidas **texto literal** a `docs/PROGRESO_v1.2.md` (con los dos ajustes anteriores); aquí solo resúmenes.
+- **`wails.json` (paso 4)**: `info.productVersion` → **`"1.2.1"`** (único cambio del archivo).
+- **`CHANGELOG.md` (paso 5)**: entrada **1.2.1** con los dos arreglos de T58 y la mejora T57. Comprobado contra el CHANGELOG previo: **solo existía la entrada 1.1.0** (no había 1.2.0 ni la mejora T57) — anotado en la propia entrada.
+- **`AGENTS.md` y `docs/DESARROLLO.md` (paso 6)**: estado **T1–T59 / v1.2.1 PUBLICADA** y rango de "Trabajo con agentes" hasta T59; añadido el aviso breve del **fantasma CRLF** (autocrlf sin `.gitattributes`) a ambos (no estaba).
+- **`docs/BITACORA.md` (paso 7)**: fila de sesión de **T58** (bugs) y de **T59**, la desviación de la colisión de numeración y la renumeración del cierre.
+- **Pendientes activos (paso 8)**: solo (4) avisos de error, la verificación `.exe` de los fixes T58, la release de la v1.2.1 (humano) y el `Type` de `models.Anime`.
+- **Archivos tocados**: `PROGRESO.md`, `CHANGELOG.md`, `AGENTS.md`, `docs/DESARROLLO.md`, `docs/PROGRESO_v1.2.md`, `docs/BITACORA.md` y `wails.json` (solo `info.productVersion`). **Nada tocado fuera de "Puedes tocar"** (regla 7 no se activó): `*.go`, `main.go`, `frontend/**`, `tareas/00_REGLAS.md` y `tareas/archivo/T58.md` intactos; `frontend/wailsjs/**` sin regenerar ni cambios (el `wails build` no alteró los bindings).
+
+### Comprobación — 2026-10-14, todo en verde
+
+| Comando | Resultado |
+|---|---|
+| `gofmt -l .` | **sin salida** |
+| `go vet ./...` · `go vet -tags integration ./...` | limpios |
+| `go build ./...` | OK |
+| `go test -race -count=1 ./...` | **11 paquetes `ok`** (`miapp` sin tests de paquete) |
+| recuento `^--- PASS` (`-count=1 -v`) | **407** — idéntico al de T56/T58 (mismo recuento exigido) |
+| `npm run check` (frontend) | **svelte-check found 0 errors and 0 warnings** |
+| `wails build -platform windows/amd64` | **OK** → `build/bin/miapp.exe` en 18,7 s (compila con `productVersion` 1.2.1) |
+| `git status --porcelain` | solo los 6 archivos de "Puedes tocar" (más `tareas/archivo/T59.md` sin trackear, previo a la sesión) |
+| `git diff --stat --ignore-cr-at-eol -- '*.go'` | **vacío** (ningún `.go` con cambios reales) |
+
+**No se creó tag ni release** (lo hace el humano). Detalle largo de T56/T57/T58/cierre en `docs/PROGRESO_v1.2.md`; sesión en `docs/BITACORA.md`.

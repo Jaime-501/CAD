@@ -30,7 +30,7 @@
 ## Prompt base por sesión (tal como quedó en la v1.1.0)
 
 ```text
-Lee AGENTS.md, tareas/00_REGLAS.md, PROGRESO.md, tareas/T31.md y
+Lee AGENTS.md, tareas/00_REGLAS.md, PROGRESO.md, tareas/archivo/T31.md y
 docs/firmas/<paquetes de los que depende T31 — tabla de abajo>.
 Ejecuta SOLO la tarea T31. Respeta "Puedes tocar" y "NO debes tocar".
 Si necesitas tocar un archivo fuera de la lista, detente y repórtalo.
