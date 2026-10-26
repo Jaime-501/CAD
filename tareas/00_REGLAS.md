@@ -49,7 +49,9 @@ docs/
   img/                    # capturas para la documentación
   BITACORA.md             # historial; NO se lee por defecto
   DESARROLLO.md           # guía de desarrollo
-  PROGRESO_v1.0.md  PROGRESO_v1.1.md  PROGRESO_v1.2.md  # historiales por versión
+  PROGRESO_v1.0.md … PROGRESO_v1.4.md  PROGRESO_embeds_adds.md  # historiales
+tareas/
+  archivo/                # fichas cerradas (T01–T89b)
 frontend/
   index.html              # documento HTML (meta referrer no-referrer, lang="es")
   src/
@@ -132,3 +134,8 @@ P2 y P3 tienen guardia ejecutable: `internal/app/portabilidad_test.go` recorre `
 13. Los tests normales nunca usan la red: usan `httptest.Server` con fixtures. Los smoke tests con red van en un archivo aparte `*_integration_test.go` con `//go:build integration` (permitido aunque no figure en "Puedes tocar").
 14. Lee solo tu tarea, sus dependencias y las firmas de esos paquetes. Consulta tareas posteriores solo para definir una firma que ellas consumirán; no adelantes su implementación.
 15. Si sale de tu alcance un cambio mínimo y necesario (por ejemplo, registrar un extractor), repórtalo en lugar de editarlo en silencio, salvo que el prompt lo autorice.
+
+## Regla de higiene al cerrar una serie (T90)
+Al cerrar una serie se mueven las notas largas a `docs/PROGRESO_vX.Y.md`,
+se deja una línea por tarea en `PROGRESO.md`, no se conservan bloques
+de comprobación y las fichas cerradas van a `tareas/archivo/`.

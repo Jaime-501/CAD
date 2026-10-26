@@ -292,7 +292,7 @@ Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**
 | `*.test.ts` (esbuild + node) | **etiquetas 32 · ventana 48 · views 13** (todas OK) |
 | `grep -rn wailsjs frontend/src` | **solo `api.ts`** |
 | `go test -count=1 -v ./...` | **11 paquetes `ok`**; `^--- PASS` = **435**, `^--- FAIL` = **0** (Go intacto) |
-| `git status` | 15 `.svelte` modificados + `verif_antes/` + `verif_despues/` + `ui_mapeo_color.md` + `PROGRESO.md` (+ `tareas/T72b.md`, ya presente) |
+| `git status` | 15 `.svelte` modificados + `verif_antes/` + `verif_despues/` + `ui_mapeo_color.md` + `PROGRESO.md` (+ `tareas/archivo/T72b.md`, ya presente) |
 
 **Desviaciones:**
 
@@ -300,7 +300,7 @@ Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**
 - **Mapeos aproximados por luminosidad** (documentados en la tabla): `#d4d4d8`/`#f4f4f5` → `--text-2`/`--text-1`, `#555`/`#999` en `:disabled` → `--bg-2`/`--text-3`, `#000` → `--bg-0`. Ante duda se eligió el más cercano y se anotó.
 - **Órdenes del resumen de geometría con nº de tarjetas distinto** (3 de 12 métricas): el conteo de tarjetas de episodio cargadas por lotes cambió entre capturas (48/32 en «antes» vs 366 en «después») por temporización de red —**no** por T72b—; el tamaño de cada tarjeta (170/216/223 × 170) no varía.
 - **La sombra de hover de `TarjetaAnime`** pasa a `--sh-card-hover` (incluye un halo verde del rediseño): cambia el aspecto **solo en hover**, que las capturas (sin hover) no registran; el tamaño no cambia.
-- **`tareas/T72b.md`** ya existía en el árbol de trabajo (sin trackear); no se creó aquí.
+- **`tareas/archivo/T72b.md`** ya existía en el árbol de trabajo (sin trackear); no se creó aquí.
 - **Carpetas de captura nuevas** `docs/investigacion/ui/verif_antes/` y `verif_despues/`: son la salida exigida por el paso 4 (capturas + `resumen.json`), no una edición de archivos existentes.
 
 **Pendientes:**
@@ -357,7 +357,7 @@ Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**
 | `*.test.ts` (esbuild + node) | **etiquetas 32 · ventana 48 · views 13** (todas OK) |
 | `grep -rn wailsjs frontend/src` | **solo `api.ts`** |
 | `go test -count=1 -v ./...` | **11 paquetes `ok`**; `^--- PASS` = **435**, `^--- FAIL` = **0** (Go intacto) |
-| `git status --porcelain` | 8 `.svelte`/`.ts` + `style.css` modificados + `BarraInferior.svelte` (nuevo) + `docs/img/v1.4/shell/` + `verificar_ui.mjs` + `PROGRESO.md` (+ `tareas/T73.md`, ya presente) |
+| `git status --porcelain` | 8 `.svelte`/`.ts` + `style.css` modificados + `BarraInferior.svelte` (nuevo) + `docs/img/v1.4/shell/` + `verificar_ui.mjs` + `PROGRESO.md` (+ `tareas/archivo/T73.md`, ya presente) |
 
 **Desviaciones:**
 
@@ -1086,3 +1086,284 @@ diseño. Fecha **2026-10-20**.
 - **Versión**: `wails.json` → `info.productVersion` **"1.4.0"** (único cambio del archivo).
   `CHANGELOG.md` con la entrada **1.4.0** (Añadido / Cambiado / Corregido). **Sin tag ni release**
   (los hace el humano).
+
+## Resúmenes largos y bloques de ejecución T69–T89b
+> Movidos texto literal desde PROGRESO.md en T90.
+
+## Resumen de la v1.4.0 (T69–T89) — detalle largo en `docs/PROGRESO_v1.4.md`
+
+> En T89 se movieron a **`docs/PROGRESO_v1.4.md`** (texto literal) las notas largas de **T69–T88**,
+> junto con la **tabla de correspondencia** con el plan inicial (T83–T93). Aquí queda **una línea por
+> tarea** y el bloque de cierre (**T89**).
+
+| Tarea | Una línea |
+|---|---|
+| T69 | Auditoría de UI base (**solo lectura**): inventario, literales CSS, 24 capturas a 360/768/1280, métricas por vista y paleta de Stitch → `docs/investigacion/ui_base.md`; **sin cambios de código**. |
+| T70 | Tokens de diseño en `style.css`: un bloque `:root` **añadido** con 65 variables (colores, superficies, bordes, texto, marca, semánticos, radios, sombras, blur, movimiento, espacio, táctil, gutter y capas), **sin cambio visual** → `docs/investigacion/ui_tokens.md`. |
+| T71 | Base global móvil: fuentes locales **Inter/Outfit** (subconjunto latin, peso variable), escala tipográfica, safe-area, `viewport-fit=cover`, **corrección del fondo dividido**, `:focus-visible` y ajustes táctiles; herramienta `docs/investigacion/ui/verificar_ui.mjs`. |
+| T72 | Primitivas de UI e iconos: **6 componentes nuevos** (`Icono`, `Btn`, `Chip`, `Insignia`, `Esqueleto`, `EstadoVista`) con tokens, **sin migrar** ningún componente existente. |
+| T72b | Puente de color: los **15 `.svelte` existentes** dejan de escribir literales de color/radio/sombra y `--cad-*` y pasan a los tokens de T70 (**solo dentro de `<style>`**) → `docs/investigacion/ui_mapeo_color.md`. |
+| T73 | Barra de navegación inferior móvil (4 destinos, `< 900 px`) que reutiliza el **cajón de historial**; en modo ancho no cambia nada. |
+| T73b | Cajón **opaco**: `.barra` pasa a `--bg-1` y el cajón gana `--sh-panel` (deja de traslucir el contenido y el pie). |
+| T74 | `CabeceraVista.svelte` (nuevo): cabecera unificada de **detalle y reproductor** («Atrás», título con elipsis, estrella), fija en el detalle en modo estrecho. |
+| T75 | Buscador y **pestañas del Home** en modo estrecho: lupa, botón ✕, `h1` del buscador; en ≥ 900 px no cambia un píxel. |
+| T76 | **Filas (carruseles) y tarjeta del Home**: sangrado al borde en móvil, flechas de 44 px, marco/radio/sombra de tokens; geometría de escritorio intacta (263,8 px). |
+| T77 | Fila **«Continuar viendo»** en el Home móvil (3–10 entradas, 240×86 px, barra de progreso), sin lógica nueva (reutiliza `historial.ts`/`retomar.ts`). |
+| T78 | **Rejilla de resultados de búsqueda** y sus estados (cargando con 6 esqueletos, error con «Reintentar», vacío), 2/3/auto-fill columnas. |
+| T79 | **Ficha de detalle**: portada enmarcada, metadatos en insignias, géneros en una línea con scroll y **sinopsis plegable** con «Ver más» en estrecho. |
+| T80 | `BarraAccion.svelte` (nuevo): CTA fija «Continuar / Reiniciar» pegada a la barra inferior en el detalle estrecho. |
+| T81 | **Tarjeta de episodio** (miniatura 16:9, insignia, franja de progreso) y **rejilla** a 2/3 columnas en estrecho, con **alto constante** por rango (146/179/170,38 px). |
+| T82 | **Orden ascendente/descendente** de episodios (botón con `aria-pressed`); solo presentación, la carga y la CTA no cambian. |
+| T83 | **Layout del reproductor** (marco 16:9 con borde/sombra) y **selector de fuentes** con chips táctiles en una fila con scroll horizontal en estrecho. |
+| T84 | Chip **«Siguiente ▸»** del reproductor: de ~34 a **44 px**, recolocado y con el overlay por encima. |
+| T85 | **Favoritos** (rejilla 2/3/auto-fill con estados unificados), **toast** opaco y accesible, y **verificación del deslizar** en el cajón. |
+| T86 | **Estados restantes** unificados (Home, detalle, reproductor, cajón), token `--scrim`/`--scrim-strong` y **barrido de px** a tokens. |
+| T87 | **Movimiento y rendimiento**: `prefers-reduced-motion` global, respaldos de `prefers-reduced-transparency`, `decoding="async"` y medición A/B (0 frames > 50 ms) → `docs/investigacion/ui_rendimiento.md`. |
+| T88 | **Accesibilidad AA** en 11 vistas: 1 `h1` por vista, 0 saltos, 0 fallos de contraste (normal/foco/hover), 0 interactivos sin nombre, anillo de foco en todas las paradas → `docs/investigacion/ui_a11y.md`. |
+| T89 | **Cierre de la v1.4.0**: `lang="es"`, trampa de foco del cajón (`inert`), retirada de `--cad-*` y de Nunito, `productVersion` 1.4.0 y cierre documental. |
+
+---
+
+## T89 — Cierre de la v1.4.0 (T69–T89) — bloque de esta sesión
+
+Serie **v1.4.0** (rediseño y enfoque móvil), rama **`feature/rediseno-movil`**. Fecha **2026-10-20**.
+Cierre documental y de limpieza, más tres arreglos pequeños heredados de T88. **Sin cambios de
+diseño**; `*.go`, `frontend/wailsjs/**`, `api.ts`, `stores.ts`, `views.ts` y `ui.ts` **intactos**.
+
+### Qué se hizo
+
+- **`lang` (paso 1)**: `frontend/index.html` → `<html lang="es">` (única línea tocada del archivo).
+  El `<meta name="referrer" content="no-referrer">` y el viewport (`width=device-width,
+  initial-scale=1, viewport-fit=cover`) se conservan; comprobado con `grep` sobre el `<head>`.
+- **Trampa de foco del cajón (paso 2)**: con el cajón abierto en modo estrecho, `main.area-principal`
+  y la barra inferior llevan el atributo **`inert`**. El cajón y su velo **NO** se inertizan: los
+  renderiza `BarraLateral` dentro de `.app-shell` y son **hermanos** de `main.area-principal`
+  (el caso que la ficha advertía: si el cajón fuera hermano del contenido inertizado, se
+  inertizaría a sí mismo → **no se aplica**, se documenta como deuda). Verificado en el navegador:
+  - con el cajón abierto, `main` y la zona de la barra tienen `inert`, y el cajón y el velo **no**;
+  - **14 `Tab` seguidos**: las 14 paradas caen **dentro** del cajón; el botón de la barra **deja de
+    ser enfocable** (`focus()` no cuela) y el buscador tampoco es alcanzable;
+  - `Escape` **cierra** el cajón y **devuelve el foco** al destino «Historial»;
+  - al cerrar, el `inert` **desaparece** y la barra vuelve a ser enfocable.
+  - **Implemación**: Svelte 5 **no reenvía atributos a un componente** (`<BarraInferior inert={…}>`
+    falla el `svelte-check` con *"'"inert"' does not exist in type …"*) y **no admite `use:` sobre
+    componentes** (*"This type of directive is not valid on components"*). Por eso el `inert` de la
+    barra va en un **envoltorio sin caja** (`<div class="zona-barra-inferior">` con
+    `display: contents`, el mismo patrón que ya usa `.raiz`) dentro de `App.svelte`. Comprobado que
+    `display: contents` **no** anula el `inert`.
+- **Limpieza del legado (paso 3)**: `grep` de `--cad-`, `Nunito` y `nunito` en `frontend/src`,
+  `frontend/index.html` y docs vivas → **0 usos** fuera de las propias definiciones. Se retiraron:
+  las **8 variables `--cad-*`** y el `@font-face "Nunito"` de `frontend/src/style.css`, y los
+  archivos `frontend/src/assets/fonts/nunito-v16-latin-regular.woff2` y `OFL.txt` (la carpeta
+  `assets/fonts/` desaparece; `assets/images/` se queda). **Constancia de licencias**: Inter y Outfit
+  siguen viniendo de los paquetes npm `@fontsource-variable/inter` y `@fontsource-variable/outfit`
+  (ambos **SIL OFL 1.1**; el `LICENSE` completo va en cada paquete) y se anota en el comentario de
+  `style.css`. **Peso de `frontend/dist`: 864 433 B → 845 393 B (−19 040 B)**: no aumenta.
+- **Deriva de scroll (paso 4)**: medida con el código actual y con **T87+T88 revertidos**
+  (`git checkout` del commit de T86 en el worktree; el árbol quedó como estaba). **Ambos valores:
+  +52 px** (2743 → 2795), idénticos en 3 pasadas: la deriva **no la introducen T87 ni T88**, es
+  previa. **No se corrige** (queda en «Pendientes activos»).
+- **Versión y changelog (paso 5)**: `wails.json` → `info.productVersion` **"1.4.0"** (único cambio
+  del archivo) y entrada **1.4.0** en `CHANGELOG.md` (Añadido / Cambiado / Corregido, mencionando
+  que el escritorio conserva su geometría).
+- **Archivo histórico (paso 6)**: notas largas de **T69–T88** movidas **texto literal** a
+  **`docs/PROGRESO_v1.4.md`** (con la tabla de correspondencia del plan inicial); aquí queda el
+  resumen de una línea por tarea.
+- **Documentos vivos (paso 7)**: `AGENTS.md`, `docs/DESARROLLO.md`, `README.md`, `docs/BITACORA.md`,
+  `tareas/00_REGLAS.md` (árbol del frontend) y `docs/investigacion/ui_tokens.md` (`--cad-*` marcado
+  como **retirado**).
+- **Pendientes activos (paso 8)**: prueba manual con el `.exe`, release de la v1.4.0 (humano), deriva
+  de scroll, «Episodios siguientes», pantalla completa, extractores T94–T99 y `Type` de
+  `models.Anime`.
+
+### Verificación — modos de `verificar_ui.mjs` y `a11y_auditoria.mjs` re-ejecutados
+
+Todos los modos se re-ejecutaron contra `http://localhost:34115` (dev server de Wails en Docker, con
+red real). **Tabla modo → comprobaciones OK/total:**
+
+| Modo | OK/total | Fallos |
+|---|---:|---|
+| `shell` | **21 / 23** | `detalle → Favoritos deja el Home`; `reduced-motion: sin transición en la barra` |
+| `cabecera` | **36 / 39** | `360: título largo en una línea`; `360: título largo recortado`; `reduced-motion: sin transición en la cabecera` |
+| `buscador` | **60 / 61** | `reduced-motion: sin transición en el limpiar` |
+| `filas` | **62 / 63** | `reduced-motion: tarjeta sin transición` |
+| `continuar` | **45 / 46** | `F: reduced-motion sin transición en la tarjeta` |
+| `busqueda` | **59 / 60** | `G: reduced-motion sin transición en la tarjeta` |
+| `ficha` | **105 / 106** | `K: reduced-motion sin transición en "Ver más"` |
+| `cta` | **58 / 59** | `G: reduced-motion sin transición en la CTA` |
+| `episodios` | **46 / 46** | — |
+| `orden` | **88 / 89** | `F: reduced-motion sin transición en el botón` |
+| `reproductor` | **52 / 54** | `reduced-motion: chips sin transición`; `reduced-motion: plegable sin transición` |
+| `siguiente` | **58 / 59** | `reduced-motion: sin transición` |
+| `favoritos` | **61 / 62** | `reduced-motion: botones sin transición` |
+| `estados` | **102 / 102** | — |
+| `rendimiento` | OK | 0 frames > 50 ms; geometría 263,8 / 146 / 179 / 170,38; `overflowH = 0`; reduced-motion 366/366 celdas; **T66/T67 con reduce: OK (28984 → 28984)**; 3 reglas `@supports not (backdrop-filter)` |
+| `a11y_auditoria.mjs` | OK | **0** fallos de contraste (normal, foco y hover), **0** interactivos sin nombre, **0** saltos de jerarquía, **1 `h1`** en las 11 vistas, **0** paradas sin anillo, `idiomas: ["es"]`, 0 errores |
+
+**Los 15 fallos son PREEISTENTES (no los introduce T89).** Se comprobó re-ejecutando `shell` y
+`cabecera` con los cambios de T89 guardados en un `git stash` (es decir, en el estado T88): los
+**mismos 5 fallos** salen idénticos, y los 10 restantes son el mismo patrón
+`reduced-motion → "1e-05s"` (la regla global de T87 deja `transition-duration: 0.01ms`, y solo el
+modo `estados` se actualizó en T87 para aceptar `transition-property: none`; los demás modos siguen
+exigiendo `0s` literal).
+
+**Foco del cajón (medido por `a11y_auditoria.mjs`):** `focoInicial` = «Cerrar barra», `dentro` =
+**true**, `escapeCierra` = **true**, `focoDevuelto` = **true**. Las **2 fugas** que quedan ya **no
+son el contenido de fondo** (en T88 eran el buscador y la barra inferior): son el `<body>`
+(respaldo del documento al final de la lista de tabulables) y el **velo** («Cerrar historial»), que
+es un `<button>` y por la ficha **no debe inertizarse**. Para llegar a 0 fugas habría que quitar el
+velo del orden de tabulación (`tabindex="-1"` en `BarraLateral.svelte`) — **fuera de "Puedes
+tocar"** de T89 → queda como deuda (ver «Pendientes activos»).
+
+### Capturas finales
+
+`docs/img/v1.4/cierre/`: `descubrir_{360,768,1280}.png`, `busqueda_{360,768,1280}.png`,
+`detalle_animeav1_{360,768,1280}.png`, `detalle_jkanime_{360,768,1280}.png`,
+`reproductor_{360,1280}.png`, `cajon_360.png`, `cajon_360_inert.png` (cajón abierto con el `inert`
+visible), `cajon_1280.png` (a 1280 el historial es la barra lateral fija, no un cajón) y
+`resumen.json` (`overflowH = 0` en las 12 vistas×anchos). `docs/img` está ignorado por
+`.gitignore`, como en las tareas anteriores.
+
+### Compuerta completa (2026-10-20, todo en verde)
+
+| Comando | Resultado |
+|---|---|
+| `gofmt -l .` | **sin salida** |
+| `go vet ./...` · `go vet -tags integration ./...` | limpios |
+| `go build ./...` | **OK** |
+| `go test -race -count=1 -v ./...` | **12 paquetes `ok`**; **435 `--- PASS`** de nivel superior, **0 FAIL** (Go intacto) |
+| `npm run check` (frontend) | **svelte-check found 0 errors and 0 warnings** |
+| `npm run build` | **OK** (176 módulos; aviso preexistente de chunk > 500 kB) |
+| peso de `frontend/dist` | **864 433 B → 845 393 B (−19 040 B)** (Nunito fuera) |
+| tests `.ts` (esbuild + node) | **32 / 48 / 13** OK (`etiquetas`, `ventana`, `views`) |
+| `wails build -platform windows/amd64` | **OK** → `build/bin/miapp.exe` (13,7 MB) en 18,7 s |
+| `git diff --stat -- frontend/wailsjs` | **vacío** (bindings idénticos) |
+| `grep -rn wailsjs frontend/src` | **solo `api.ts`** |
+| `git diff --stat -- '*.go'` | **vacío** (ningún `.go` con cambios reales) |
+| `git status --porcelain` | solo archivos de «Puedes tocar» (+ `tareas/archivo/T89.md`, que ya estaba sin trackear antes de la sesión) |
+
+**No se creó tag ni release** (los hace el humano). Detalle largo de T69–T88 en
+`docs/PROGRESO_v1.4.md`; sesión en `docs/BITACORA.md`.
+
+### Desviaciones y notas
+
+- **Svelte 5 no reenvía atributos a los componentes**: `inert` no se puede pasar como atributo a
+  `<BarraInferior>` (el `svelte-check` lo rechaza) ni con `use:` sobre un componente. Solución
+  adoptada: envoltorio **sin caja** (`display: contents`) en `App.svelte`. `BarraLateral.svelte` y
+  `BarraInferior.svelte` **no se tocaron**.
+- **Las «fugas» del cajón no son 0** (son 2: `<body>` y el velo) y **no se pueden bajar a 0** sin
+  tocar `BarraLateral.svelte` (`tabindex="-1"` en el velo), que está fuera de «Puedes tocar». Lo que
+  sí se cumple es el objetivo: **el contenido de fondo (buscador, barra inferior, detalle) ya no es
+  alcanzable con `Tab`** (en T88 lo era).
+- **`docs/investigacion/ui_a11y.md` y `a11y_auditoria.mjs` no se tocaron** (no figuran en «Puedes
+  tocar»): el informe de T88 sigue diciendo `lang="en"` y «el cajón no atrapa el foco», que es la
+  foto de antes del cierre; el estado actual está en este bloque y en `docs/PROGRESO_v1.4.md`.
+- **Los 15 fallos de los modos son preexistentes** (ver arriba): se compararon contra el estado T88
+  con `git stash` y son idénticos.
+- **`docs/investigacion/ui_base.md` y `ui_mapeo_color.md`** (informes de auditoría de T69 y T72b)
+  siguen describiendo el estado **anterior** (mencionan las `--cad-*` y Nunito): son documentos
+  históricos de investigación, no documentos vivos; no se editan.
+- **Los informes de `docs/investigacion/`** que sí son vivos (`ui_tokens.md`) se actualizan.
+- **`tareas/archivo/T89.md`** ya estaba en el árbol de trabajo sin trackear; no se creó aquí.
+- **`docs/img`** está ignorado por `.gitignore`, como en las tareas anteriores.
+
+---
+
+## T89b — Corrección de fallos conocidos antes del tag v1.4.0 — bloque de esta sesión
+
+Fecha **2026-10-21**. Micro-tarea sin cambios de diseño: tolerancias del verificador, dos
+expectativas obsoletas y el velo del cajón fuera del orden de tabulación. **Intactos** `*.go`,
+`frontend/wailsjs/**`, `api.ts`, `stores.ts`, `views.ts`, `ui.ts` y todos los `<script>` de producto.
+**Sin tag ni release.**
+
+### Clasificación de la tabla de T89
+
+La tabla de T89 tiene **16 filas con fallo** (la nota decía «15», pero la suma de la propia lista
+—shell 2, cabecera 3 y una en cada uno de los 10 modos restantes, con reproductor 2— da 16). Las 16
+se clasificaron una a una:
+
+| Modo | Comprobación exacta | Clase | Causa |
+|---|---|---|---|
+| `shell` | `detalle → Favoritos deja el Home` | **dato obsoleto** | La comprobación exigía `.pestanas` visible, pero en modo estrecho T73/T75 **no renderizan** las pestañas (las sustituye la barra inferior). Se pasó a exigir `#panel-favoritos` visible. |
+| `shell` | `reduced-motion: sin transición en la barra` | **falso negativo** | El verificador pedía `'0s'` literal; la regla global de T87 deja `0.01ms`, serializado como `1e-05s` (≤ 0,001 s). |
+| `cabecera` | `360: título largo en una línea` | **falso negativo** | `MEDIR_CABECERA` buscaba `h2`, pero desde T88 `CabeceraVista` usa `nivel=1` (`h1`); devolvía `null`. Selector corregido a `h1, h2`. |
+| `cabecera` | `360: título largo recortado` | **falso negativo** | Misma causa que la anterior (`null` por el `h2`). |
+| `cabecera` | `reduced-motion: sin transición en la cabecera` | **falso negativo** | `1e-05s` frente a `'0s'`. |
+| `buscador` | `reduced-motion: sin transición en el limpiar` | **falso negativo** | `1e-05s` frente a `'0s'`. |
+| `filas` | `reduced-motion: tarjeta sin transición` | **falso negativo** | `1e-05s` frente a `'0s'`. |
+| `continuar` | `F: reduced-motion sin transición en la tarjeta` | **falso negativo** | `1e-05s` frente a `'0s'`. |
+| `busqueda` | `G: reduced-motion sin transición en la tarjeta` | **falso negativo** | `1e-05s` frente a `'0s'`. |
+| `ficha` | `K: reduced-motion sin transición en "Ver más"` | **falso negativo** | `1e-05s` frente a `'0s'` (la alternativa `n/a` se conserva). |
+| `cta` | `G: reduced-motion sin transición en la CTA` | **falso negativo** | `1e-05s` frente a `'0s'` / `'0s, 0s'`. |
+| `orden` | `F: reduced-motion sin transición en el botón` | **falso negativo** | `1e-05s` frente a `'0s'`. |
+| `reproductor` | `reduced-motion: chips sin transición` | **falso negativo** | `1e-05s` frente a `'0s'`. |
+| `reproductor` | `reduced-motion: plegable sin transición` | **falso negativo** | `1e-05s` frente a `'0s'`. |
+| `siguiente` | `reduced-motion: sin transición` | **falso negativo** | `1e-05s` frente a `'0s'`. |
+| `favoritos` | `reduced-motion: botones sin transición` | **falso negativo** | Los dos botones del toast dan `1e-05s`; la comprobación exigía `'0s'` en todos. |
+
+**Ningún fallo real de la app.** No hubo que tocar `<style>` ni markup de producto (el único cambio
+de producto es el `tabindex` del velo, que pide la ficha).
+
+### Correcciones aplicadas
+
+- **Reduced-motion (13 falsos negativos)**: nuevo helper `duracionCorta()` en
+  `docs/investigacion/ui/verificar_ui.mjs` que parsea `0s`, `1e-05s`, `0.01ms` y listas `a, b`, y
+  acepta **cualquier duración ≤ 0,001 s** (no una comparación literal). Sustituye los `=== '0s'`
+  de los 13 modos; no se relajó ninguna otra comprobación (`n/a`, `transition-property: none` y el
+  resto de umbrales se conservan).
+- **Cabecera (2 falsos negativos)**: `MEDIR_CABECERA` mide `main .cabecera h1, main .cabecera h2`.
+- **Shell (1 dato obsoleto)**: la comprobación de «deja el Home» usa `#panel-favoritos` en lugar de
+  `.pestanas` (que no existe en estrecho por diseño).
+- **Velo del cajón**: `tabindex="-1"` en `.fondo-cajon` de `frontend/src/BarraLateral.svelte`. Con el
+  cajón abierto, `Tab` ya no llega al velo; **clic en el velo sigue cerrando** el cajón (probado) y
+  **Escape** también (shell y `a11y_auditoria.mjs`). `a11y_auditoria.mjs`: **2 fugas → 1**
+  (solo el `<body>`).
+- **`docs/investigacion/ui_a11y.md`**: nota de estado tras T89/T89b (cajón con `inert`; única fuga
+  el `<body>`).
+
+### Verificación — antes / después de todos los modos
+
+| Modo | Antes | Después |
+|---|---:|---:|
+| `shell` | 21 / 23 | **23 / 23** |
+| `cabecera` | 36 / 39 | **39 / 39** |
+| `buscador` | 60 / 61 | **61 / 61** |
+| `filas` | 62 / 63 | **63 / 63** |
+| `continuar` | 45 / 46 | **46 / 46** |
+| `busqueda` | 59 / 60 | **60 / 60** |
+| `ficha` | 105 / 106 | **106 / 106** |
+| `cta` | 58 / 59 | **59 / 59** |
+| `episodios` | 46 / 46 | **46 / 46** |
+| `orden` | 88 / 89 | **89 / 89** |
+| `reproductor` | 52 / 54 | **54 / 54** |
+| `siguiente` | 58 / 59 | **59 / 59** |
+| `favoritos` | 61 / 62 | **62 / 62** |
+| `estados` | 102 / 102 | **102 / 102** |
+| **Total** | **853 / 869** (16 fallos) | **869 / 869** (0 fallos) |
+
+`rendimiento` sigue **OK** después: **0 frames > 50 ms** en las 5 mediciones, geometría 263,8 /
+146 / 179 / 170,38 y `overflowH = 0`, reduced-motion **366/366** celdas y **T66/T67 con reduce
+28984 → 28984**. El modo utilitario `tactiles` (T72) no forma parte de la tabla de T89: depende de
+la **galería temporal** que se retiró al cerrar T72, así que sin `.btn` en el Home agota su espera
+de 20 s; no se tocó (misma precondición obsoleta antes y después, no es un fallo de la app).
+
+`a11y_auditoria.mjs` sigue **OK**: 0 fallos de contraste (normal/foco/hover), 0 interactivos sin
+nombre, 0 saltos, 1 `h1` por vista, 0 paradas sin anillo, `idiomas: ["es"]`; fugas del cajón
+**2 → 1** (solo `<body>`).
+
+### Compuerta completa (2026-10-21, todo en verde)
+
+| Comando | Resultado |
+|---|---|
+| `gofmt -l .` | **sin salida** |
+| `go vet ./...` · `go vet -tags integration ./...` | limpios |
+| `go build ./...` | **OK** |
+| `go test -race -count=1 -v ./...` | **12 paquetes `ok`**; **435 `--- PASS`** de nivel superior, **0 FAIL** |
+| `npm run check` | **0 errores / 0 avisos** |
+| `npm run build` | **OK** (176 módulos; aviso preexistente de chunk > 500 kB) |
+| tests `.ts` (esbuild + node) | **32 / 48 / 13** OK (`etiquetas`, `ventana`, `views`) |
+| `grep -rn wailsjs frontend/src` | **solo `api.ts`** |
+| `git diff --stat -- '*.go'` | **vacío** |
+| `git status --short` | solo `frontend/src/BarraLateral.svelte`, `docs/investigacion/ui/verificar_ui.mjs`, `docs/investigacion/ui_a11y.md`, `PROGRESO.md` (+ `tareas/archivo/T89b.md`, ya sin trackear antes de la sesión) |
+
+**No se creó tag ni release** (los hace el humano).

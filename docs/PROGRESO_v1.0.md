@@ -29,7 +29,7 @@
 ## Prompt base por sesión
 
 ```text
-Lee AGENTS.md, tareas/00_REGLAS.md, PROGRESO.md, tareas/T07.md y
+Lee AGENTS.md, tareas/00_REGLAS.md, PROGRESO.md, tareas/archivo/T07.md y
 docs/firmas/<paquetes de los que depende T07 — mapa abajo>.
 Ejecuta SOLO la tarea T07. Respeta "Puedes tocar" y "NO debes tocar".
 Si necesitas tocar un archivo fuera de la lista, detente y repórtalo.
