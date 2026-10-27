@@ -3,9 +3,17 @@
   import { onDestroy, onMount } from 'svelte';
   import { get } from 'svelte/store';
   import type { models } from './api';
-  import { getNextEpisode, getProgress, getVideoSources, saveProgress } from './api';
+  import {
+    esVentanaPantallaCompleta,
+    getNextEpisode,
+    getProgress,
+    getVideoSources,
+    saveProgress,
+    ventanaPantallaCompleta,
+  } from './api';
   import type { VideoSourceView } from './api';
   import { ordenReproduccion, type FiltroIdioma } from './etiquetas';
+  import { crearSincronizador, elementoEnPantallaCompleta } from './pantallacompleta';
   import { currentDetail, currentProvider, episodes, progressMap, startAt } from './stores';
   import { atras, navegarA, seleccion, type SeleccionAnime } from './views';
   import BotonFavorito from './BotonFavorito.svelte';
@@ -17,6 +25,16 @@
 
   /** Throttle del guardado en `timeupdate` (T27: ~5 s). */
   const INTERVALO_GUARDADO = 5000;
+
+  /**
+   * T92: mantiene la ventana nativa sincronizada con la Fullscreen API del
+   * documento (control nativo del `<video>` o botón interno de un iframe).
+   */
+  const sincronizador = crearSincronizador({
+    esPantallaCompleta: esVentanaPantallaCompleta,
+    entrar: () => ventanaPantallaCompleta(true),
+    salir: () => ventanaPantallaCompleta(false),
+  });
 
   let cargando = true;
   let cargandoTexto = 'Cargando fuentes de vídeo…';
@@ -112,6 +130,7 @@
     }
     window.addEventListener('beforeunload', alSalir);
     window.addEventListener('keydown', alTecla);
+    document.addEventListener('fullscreenchange', alCambiarPantallaCompleta);
 
     if (!sel?.episodeID) {
       cargando = false;
@@ -135,7 +154,12 @@
     }
     window.removeEventListener('beforeunload', alSalir);
     window.removeEventListener('keydown', alTecla);
+    document.removeEventListener('fullscreenchange', alCambiarPantallaCompleta);
     limpiarReproduccion();
+    if (document.fullscreenElement) {
+      void document.exitFullscreen().catch(() => {});
+    }
+    sincronizador.liberar();
   });
 
   async function arrancar(sel: SeleccionAnime): Promise<void> {
@@ -518,6 +542,14 @@
   }
   function alSalir(): void {
     guardarProgreso(true);
+  }
+
+  /**
+   * T92: `fullscreenchange` del documento (solo el evento sin prefijo: WebView2
+   * es Chromium) → la ventana nativa sigue al elemento en pantalla completa.
+   */
+  function alCambiarPantallaCompleta(): void {
+    void sincronizador.alCambiarDocumento(elementoEnPantallaCompleta(document) !== null);
   }
 
   /**
