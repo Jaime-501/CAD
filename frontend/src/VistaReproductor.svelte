@@ -836,6 +836,13 @@
   .video.visible {
     display: block;
   }
+  /* T93b: el botón nativo de pantalla completa del `<video>` (hoy visible pero
+     deshabilitado) se oculta del todo: el único botón es el propio de T93.
+     `controlsList="nofullscreen"` se mantiene como respaldo; este pseudo-elemento
+     de los controles nativos vive en el shadow DOM del UA, por eso `:global`. */
+  :global(.marco .video::-webkit-media-controls-fullscreen-button) {
+    display: none;
+  }
   .embebido {
     position: absolute;
     inset: 0;

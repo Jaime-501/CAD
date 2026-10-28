@@ -5359,6 +5359,48 @@ async function pantallacompleta() {
     await esperarFuera(page);
   });
 
+  // --- L. Botón nativo de pantalla completa del <video> oculto (T93b) ---
+  await paso('L', async () => {
+    const abierto = await abrirEn(page);
+    check('L: reproductor abierto', abierto, abierto ? 'ok' : 'sin episodios');
+    if (!abierto) return;
+    const med = await page.evaluate(() => {
+      const v = document.querySelector('.marco .video');
+      const controles = v && v.controlsList ? [...v.controlsList] : null;
+      // El botón nativo vive en el shadow DOM del UA: en este Chromium
+      // `getComputedStyle(video, '::-webkit-media-controls-fullscreen-button')`
+      // devuelve "inline" incluso para un pseudo inexistente (no medible), y
+      // `CSS.getComputedStyleForNode` no expone pseudoElements. Se comprueba que
+      // la regla llega al navegador con `display: none`; el efecto real queda en
+      // la prueba manual del `.exe`.
+      const reglas = [];
+      for (const hoja of document.styleSheets) {
+        let lista = null;
+        try {
+          lista = hoja.cssRules;
+        } catch {
+          lista = null; // hoja inaccesible (CORS): no aplica al dev server
+        }
+        if (!lista) continue;
+        for (const r of lista) {
+          const texto = r.cssText || '';
+          if (texto.includes('::-webkit-media-controls-fullscreen-button')) reglas.push(texto);
+        }
+      }
+      return { controles, reglas };
+    });
+    check(
+      'L: <video> con controlsList="nofullscreen" (respaldo)',
+      med.controles !== null && med.controles.includes('nofullscreen'),
+      med.controles
+    );
+    check(
+      'L: regla ::-webkit-media-controls-fullscreen-button → display: none en el navegador',
+      med.reglas.some((t) => /fullscreen-button\s*{[^}]*display:\s*none/.test(t)),
+      med.reglas
+    );
+  });
+
   writeFileSync(join(dirOut, 'pantallacompleta.json'), JSON.stringify(rep, null, 2));
   await browser.close();
   return rep;
