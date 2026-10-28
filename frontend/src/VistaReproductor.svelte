@@ -21,6 +21,7 @@
   import Btn from './Btn.svelte';
   import CabeceraVista from './CabeceraVista.svelte';
   import EstadoVista from './EstadoVista.svelte';
+  import Icono from './Icono.svelte';
   import SelectorFuente from './SelectorFuente.svelte';
 
   /** Throttle del guardado en `timeupdate` (T27: ~5 s). */
@@ -60,6 +61,10 @@
   /** Evita recuperaciones concurrentes (varios errores seguidos). */
   let ocupado = false;
   let videoEl: HTMLVideoElement | null = null;
+  /** `.marco`: el elemento que entra en pantalla completa HTML (T93). */
+  let marcoEl: HTMLElement | null = null;
+  /** `.marco` en pantalla completa HTML (actualizado en alCambiarPantallaCompleta). */
+  let enPantallaCompleta = false;
   let hls: Hls | null = null;
   /** Posición a restaurar en el próximo `<video>` (progreso guardado o en curso). */
   let progresoPrevio: models.WatchProgress | null = null;
@@ -117,6 +122,10 @@
       : null;
 
   onMount(() => {
+    // T93: asignación robusta de `.marco` (el bind:this puede no dispararse en
+    // todos los ciclos de HMR del dev server; en el build de producción el
+    // bind:this cubre el mismo caso).
+    marcoEl = document.querySelector('.marco');
     // T50: la posición de "retomar" se toma UNA vez aquí y el store queda a 0.
     inicioPendiente = get(startAt);
     startAt.set(0);
@@ -547,9 +556,28 @@
   /**
    * T92: `fullscreenchange` del documento (solo el evento sin prefijo: WebView2
    * es Chromium) → la ventana nativa sigue al elemento en pantalla completa.
+   * T93: `enPantallaCompleta` refleja si el elemento en fullscreen es `.marco`
+   * (y no el `<video>` suelto) y se actualiza ANTES de llamar al sincronizador.
    */
   function alCambiarPantallaCompleta(): void {
+    enPantallaCompleta = document.fullscreenElement === marcoEl;
     void sincronizador.alCambiarDocumento(elementoEnPantallaCompleta(document) !== null);
+  }
+
+  /**
+   * T93: alterna la pantalla completa de `.marco` (vídeo/iframe + chip +
+   * overlay) con el botón propio. Ninguna de las dos operaciones lanza.
+   */
+  function alternarPantallaCompleta(): void {
+    if (document.fullscreenElement) {
+      void document.exitFullscreen().catch(() =>
+        console.warn('[VistaReproductor] salir de pantalla completa falló')
+      );
+    } else {
+      void marcoEl?.requestFullscreen().catch(() =>
+        console.warn('[VistaReproductor] entrar en pantalla completa falló')
+      );
+    }
   }
 
   /**
@@ -708,6 +736,7 @@
       class="video"
       class:visible={modo === 'video'}
       controls
+      controlsList="nofullscreen"
       crossorigin="anonymous"
     >
       {#each pistas as pista}
@@ -739,6 +768,18 @@
       discreto={discretoSiguiente}
       onClick={alPulsarSiguiente}
     />
+
+    {#if modo !== 'nada'}
+      <button
+        type="button"
+        class="pantalla-completa"
+        aria-pressed={enPantallaCompleta}
+        aria-label={enPantallaCompleta ? 'Salir de pantalla completa' : 'Pantalla completa'}
+        onclick={alternarPantallaCompleta}
+      >
+        <Icono nombre={enPantallaCompleta ? 'salir-pantalla-completa' : 'pantalla-completa'} tam={24} />
+      </button>
+    {/if}
   </div>
 
   {#if modo === 'iframe'}
@@ -790,6 +831,7 @@
     height: 100%;
     display: none;
     background: var(--bg-0);
+    object-fit: contain;
   }
   .video.visible {
     display: block;
@@ -823,6 +865,61 @@
     font-size: 15px;
     /* T84: por encima del chip "Siguiente" (z-index 3) durante la carga. */
     z-index: 4;
+  }
+  /* T93: botón propio de pantalla completa sobre `.marco` (44×44, arriba a la derecha). */
+  .pantalla-completa {
+    position: absolute;
+    top: var(--sp-4);
+    right: var(--sp-4);
+    width: var(--tap);
+    height: var(--tap);
+    z-index: 3;
+    border-radius: var(--r-full);
+    background: var(--surface-panel);
+    border: 1px solid var(--border);
+    color: var(--text-1);
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    opacity: 1;
+    transition:
+      border-color var(--dur-fast) var(--ease-out),
+      opacity var(--dur-fast) var(--ease-out),
+      transform var(--dur-fast) var(--ease-out);
+  }
+  .pantalla-completa:focus-visible {
+    outline: none;
+    box-shadow: var(--ring);
+  }
+  .pantalla-completa:active {
+    transform: scale(0.97);
+  }
+  /* Puntero fino: discreto durante la reproducción; se aclara en hover y foco.
+     En táctil siempre opaco. */
+  @media (pointer: fine) {
+    .pantalla-completa {
+      opacity: 0.6;
+    }
+    .pantalla-completa:hover,
+    .pantalla-completa:focus-visible {
+      opacity: 1;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pantalla-completa {
+      transition-duration: 0.01ms;
+    }
+  }
+  /* T93: `.marco` a pantalla completa ocupa el monitor sin radio, borde ni sombra. */
+  .marco:fullscreen {
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+    aspect-ratio: auto;
+    width: 100%;
+    height: 100%;
+    background: var(--bg-0);
   }
   @media (max-width: 899px) {
     /* T74: cabecera compacta; el padding superior lo da la cabecera.
