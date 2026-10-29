@@ -2,7 +2,7 @@
 
 Aplicación de escritorio Wails v2 (módulo Go y nombre de la app: `miapp`): Backend en Go + Frontend en Svelte 5 / TypeScript / Vite en `frontend/`. Hace scraping de **JKAnime** y **AnimeAV1** (ambos proveedores completos: búsqueda, detalle, episodios y fuentes) y reproduce HLS/MP4. Los comentarios y los textos de la interfaz están en español — mantén esa coherencia.
 
-**Estado**: v1.4.0 PUBLICADA (tag `v1.4.0`), rama `main`. Estado de tareas y pendientes de producto: `PROGRESO.md`; historiales: `docs/PROGRESO_v1.0.md`, `docs/PROGRESO_v1.1.md`, `docs/PROGRESO_v1.2.md`, `docs/PROGRESO_v1.3.md` y `docs/PROGRESO_v1.4.md`.
+**Estado**: v1.5.0 **preparada** (T1–T94) en la rama `feature/pantalla-completa`, **sin tag ni release**; la última publicada es la **v1.4.0** (tag `v1.4.0`, en `main`). Estado de tareas y pendientes de producto: `PROGRESO.md`; historiales: `docs/PROGRESO_v1.0.md`, `docs/PROGRESO_v1.1.md`, `docs/PROGRESO_v1.2.md`, `docs/PROGRESO_v1.3.md`, `docs/PROGRESO_v1.4.md` y `docs/PROGRESO_v1.5.md`.
 
 ## Comandos
 
@@ -12,7 +12,7 @@ Aplicación de escritorio Wails v2 (módulo Go y nombre de la app: `miapp`): Bac
 - Solo frontend, desde `frontend/`: `npm install` (requerido primero), `npm run dev`, `npm run build`, `npm run check` (svelte-check; la única comprobación de tipos).
 - Build de Windows: `docker compose run --rm app wails build -platform windows/amd64` → `build/bin/miapp.exe` (release, sin consola). Con `-debug` sale una consola con los logs. Ver README.
 - Sin linters, sin CI. Verificación = `gofmt -l .` (sin salida) + `go vet ./...` (también con `-tags integration`) + `go test -race -count=1 ./...` + `go build ./...` + `npm run check`. `-race` funciona en el contenedor (CGO=1, gcc).
-- **Verificación de la UI (v1.4.0)**: `docs/investigacion/ui/verificar_ui.mjs` (solo lectura; usa el Chromium del MCP global) y `docs/investigacion/ui/a11y_auditoria.mjs`. Modos: `capturar`, `comparar`, `pixel`, `tactiles`, `shell`, `cabecera`, `buscador`, `filas`, `continuar`, `busqueda`, `ficha`, `cta`, `episodios`, `orden`, `reproductor`, `siguiente`, `favoritos`, `estados` y `rendimiento`. Se ejecutan **contra el dev server** (`:34115`) y necesitan la app levantada (`docker compose up`). Cada modo imprime una tabla `| comprobación | ok | detalle |` y su recuento; `a11y_auditoria.mjs` imprime el resumen de contraste/nombres/encabezados/foco.
+- **Verificación de la UI (v1.5.0)**: `docs/investigacion/ui/verificar_ui.mjs` (solo lectura; usa el Chromium del MCP global) y `docs/investigacion/ui/a11y_auditoria.mjs`. Modos: `capturar`, `comparar`, `pixel`, `tactiles`, `shell`, `cabecera`, `buscador`, `filas`, `continuar`, `busqueda`, `ficha`, `cta`, `episodios`, `orden`, `reproductor`, `siguiente`, `pantallacompleta`, `favoritos`, `estados` y `rendimiento` (20 en total: 19 ramas explícitas + `capturar` por defecto). Se ejecutan **contra el dev server** (`:34115`) y necesitan la app levantada (`docker compose up`). Cada modo imprime una tabla `| comprobación | ok | detalle |` y su recuento; `a11y_auditoria.mjs` imprime el resumen de contraste/nombres/encabezados/foco. Ojo: `estados`, `shell` y `buscador` dependen de los datos guardados (progreso/favoritos) y `tactiles` aborta por un selector `.btn` que el Home ya no usa (expectativa obsoleta del script); todo ello está en `docs/investigacion/ui_regresiones_v1.5.md`.
 
 ## Consideraciones importantes (Gotchas)
 
@@ -48,13 +48,14 @@ Aplicación de escritorio Wails v2 (módulo Go y nombre de la app: `miapp`): Bac
   - Lot(es) de **50** episodios (`tamLote`); la primera tanda vuelve por valor y el resto por `StreamAnimeDetails`. Sin `Set-Cookie` ni challenge → `httpx.Get` con la UA por defecto basta.
 - Smoke test: `internal/scraper/animeav1/animeav1_integration_test.go` (build tag `integration`) con `TestSearchRedReal`, `TestDetalleRedReal` y `TestFuentesRedReal` (pide solo el `.m3u8`, sin segmentos); E2E en `internal/app/`: `TestE2EAnimeAV1FlujoCompletoOffline` (sin tag) y `TestE2EAnimeAV1RedReal` (tag `integration`).
 
-## Frontend (v1.4.0)
+## Frontend (v1.5.0)
 
 - **Tokens**: `frontend/src/style.css` es la **única fuente de verdad** de color, tipografía, espacio, radios, sombras y movimiento (bloques `:root` de T70/T71/T86). Las variables legadas `--cad-*` y la fuente **Nunito** se retiraron en T89 (0 usos). Breakpoints oficiales: **480 / 768 / 1024**; el modo estrecho de la app es **`< 900 px`** (`isNarrow` en `ui.ts`).
 - **Tipografías**: **Inter** (texto, `--font-sans`) y **Outfit** (títulos, `--font-display`), locales desde los paquetes npm `@fontsource-variable/*` (subconjunto latin, SIL OFL 1.1) declarados con `@font-face` a mano.
 - **Primitivas** (`frontend/src/`): `Icono` (24 SVG inline), `Btn`, `Chip`, `Insignia`, `Esqueleto` y `EstadoVista` (`vacio|error|cargando`). **Componentes nuevos de la serie**: `BarraInferior` (navegación móvil), `CabeceraVista` (cabecera de detalle y reproductor, prop `nivel` 1|2), `BarraAccion` (CTA fija del detalle) y `FilaContinuar`/`TarjetaContinuar` (fila «Continuar viendo»).
 - **Modo estrecho (`< 900 px`)**: la barra inferior sustituye a la hamburguesa y el historial se abre como **cajón**. Con el cajón abierto, `App.svelte` marca `inert` en `.area-principal` y en la barra inferior (el cajón y su velo son **hermanos** del contenido inertizado y **no** se inertizan) → el teclado no sale del cajón. Ojo: Svelte 5 **no** reenvía atributos a un componente, así que el `inert` de la barra va en un envoltorio `display: contents`.
 - **Accesibilidad (T88)**: una `h1` por vista sin saltos, nombres accesibles en todo interactivo, `aria-busy` en los estados de carga y anillo de foco con `--ring`.
+- **Pantalla completa (T91–T93b)**: `frontend/src/pantallacompleta.ts` es un módulo **puro y sin dependencias** (`elementoEnPantallaCompleta` + `crearSincronizador`, este último con cola de promesas y estado `propia`/`liberado`) y su test es `pantallacompleta.test.ts`. `api.ts` añade las **dos únicas** funciones nuevas: `ventanaPantallaCompleta(activar)` (nunca lanza) y `esVentanaPantallaCompleta()` (nunca rechaza; `false` ante fallo), que usan `WindowFullscreen`/`WindowUnfullscreen`/`WindowIsFullscreen` del **runtime de Wails** — **sin métodos nuevos en Go** (siguen siendo 16). `VistaReproductor.svelte` pone en fullscreen el `.marco`, escucha `fullscreenchange` y ofrece el botón propio (el control nativo del `<video>` queda oculto con `controlsList="nofullscreen"` + pseudoelemento). La pantalla completa real (ventana del dispositivo) **solo se puede probar con el `.exe`**: en el navegador del contenedor el proxy de vídeo no es alcanzable.
 - Las **herramientas de verificación visual** son de **solo lectura** (`docs/investigacion/ui/`); no tocan código de producto.
 
 ## Configuración

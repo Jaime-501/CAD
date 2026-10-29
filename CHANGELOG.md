@@ -1,5 +1,33 @@
 # Changelog
 
+## 1.5.0
+
+Pantalla completa real del dispositivo desde el reproductor.
+
+### Añadido
+
+- **Botón «Pantalla completa» sobre el marco del reproductor** (T91–T93): lleva todo el
+  marco (vídeo o iframe, el chip «Siguiente ▸» y los avisos) a pantalla completa y, a la
+  vez, pone la **ventana** de la app en pantalla completa real del dispositivo. Es un botón
+  propio, de 44×44, con `aria-pressed` y etiqueta que alterna entre «Pantalla completa» y
+  «Salir de pantalla completa»; se oculta bajo el aviso de carga y respeta
+  `prefers-reduced-motion`.
+- **El chip «Siguiente ▸» sigue visible y operativo en pantalla completa**, tanto con HLS/MP4
+  como con un iframe (clic y tecla **N** sin salir).
+- **Salida por el mismo botón o con Esc**; «Atrás», cambiar de episodio o cerrar el
+  reproductor restauran la ventana (el sincronizador es idempotente y tiene en cuenta los
+  eventos que llegan tarde).
+
+### Cambiado
+
+- **El control nativo de pantalla completa del vídeo se oculta**
+  (`controlsList="nofullscreen"` + pseudoelemento `::-webkit-media-controls-fullscreen-button`)
+  y lo sustituye el botón propio, que abarca todo el marco.
+
+> **Límite conocido:** en las fuentes **iframe**, el botón interno del reproductor embebido
+> sigue pidiendo pantalla completa **solo de su iframe** (sin el chip «Siguiente ▸»). El
+> botón propio y la ventana nativa funcionan igual.
+
 ## 1.4.0
 
 Rediseño y enfoque móvil de la interfaz. La app ahora se adapta a ventanas
@@ -22,7 +50,7 @@ y la cabecera se mantienen igual por encima de 900 px de ancho.
 
 ### Cambiado
 
-- **Paleta esmeralda** en toda la app: se retira la paleta gris anterior y los colores, radios y sombras pasan aTokens del nuevo sistema.
+- **Paleta esmeralda** en toda la app: se retira la paleta gris anterior y los colores, radios y sombras pasan a los tokens del nuevo sistema.
 - **Tipografías locales Inter y Outfit** (subconjunto latino, sin peticiones a Google Fonts) en lugar de Nunito.
 - **Rejilla de resultados de búsqueda** (T78): dos columnas en móvil, tres en tableta y rejilla automática en escritorio, con contador de resultados y esqueletos sin salto de layout.
 - **Tarjeta de episodio** (T81): miniatura 16:9, insignia de estado, franja de progreso y altura constante por rango de columnas.
@@ -72,7 +100,7 @@ y la cabecera se mantienen igual por encima de 900 px de ancho.
 ### Cambiado
 
 - El historial guarda ahora proveedor, título, portada, número de episodio y fecha (`updated_at`). Los `historial.json` anteriores siguen cargando.
-- 
+
 ## 1.1.0
 
 ### Añadido

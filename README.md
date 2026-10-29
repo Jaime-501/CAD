@@ -23,6 +23,7 @@ Aplicación de escritorio para Windows (la ventana se titula **CAD · Comfort An
 - **Borrar lo que quieras del historial:** deslizar la tarjeta hacia los lados o pulsar la ✕, con el aviso **Deshacer** durante 5 segundos; también puedes borrar el historial de un proveedor entero o todo el historial, con confirmación.
 - **Marcar favoritos:** pulsa la estrella en la vista de detalle y encuéntralos en la pestaña **★ Favoritos** del inicio (se guardan en tu equipo y sobreviven a cerrar y abrir la app).
 - **Saltar al siguiente episodio** con el botón **Siguiente ▸** del reproductor (o la tecla **N**): se ve atenuado mientras reproduces, se aclara al pasar el ratón o al pausar y se resalta cuando el episodio llega al 90 %. No aparece en películas ni en el último episodio.
+- **Ver en pantalla completa** con el botón del reproductor: el marco del vídeo (con el chip **Siguiente ▸**) y la ventana pasan a ocupar todo el monitor. Pulsa el mismo botón o **Esc** para salir.
 - **Usarla en una ventana estrecha** (móvil o tableta): por debajo de 900 px la **hamburguesa se sustituye por una barra de navegación inferior** (Descubrir, Buscar, Favoritos, Historial) y el historial se abre como un **cajón** que no deja escapar el teclado. La cabecera del detalle es compacta y fija, la sinopsis se pliega tras 4 líneas con **Ver más**, los accesos al episodio quedan **pegados al pulgar** («Continuar · Ep. N» y «Reiniciar»), las tarjetas de episodio y los resultados se reparten en 2–3 columnas y los botones miden al menos 44 px. **En ventanas anchas (≥ 900 px) todo se ve igual que antes**: la barra lateral sigue a la izquierda y la geometría no cambia.
 - **Ordenar los episodios** a tu gusto: el botón junto a «Episodios (N)» invierte la lista entre ascendente y descendente.
 ## Instalación
@@ -67,6 +68,7 @@ No hay cuentas ni registro, y la app no envía tus datos a ningún servidor prop
 - Solo para **Windows**.
 - Hay dos fuentes de contenido: **JKAnime** y **AnimeAV1**, que se buscan a la vez (los resultados de JKAnime van primero). Si uno de los sitios cae, sigue funcionando el otro.
 - Algunos servidores de vídeo son **iframes sin resolver**: se ven, pero no guardan tu progreso.
+- En las fuentes **iframe**, el botón de pantalla completa del reproductor embebido solo amplía ese iframe (sin el chip **Siguiente ▸**). Para la pantalla completa de la app, usa el **botón propio** del reproductor.
 - Si un sitio cambia su estructura, la búsqueda o la reproducción pueden dejar de funcionar hasta que se actualice la app.
 ## Aviso legal
  
