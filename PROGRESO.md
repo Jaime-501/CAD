@@ -80,6 +80,7 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha y verificada
 | [x] | T93 | Botón de pantalla completa sobre `.marco` | T92 |
 | [x] | T93b | Ocultar el botón nativo de pantalla completa del `<video>` | T93 |
 | [x] | T94 | Cierre de la v1.5.0 (diagnóstico de `estados`/`reproductor` + versión y docs) | T91–T93b |
+| [x] | T95 | Arreglar el modo `tactiles` de `verificar_ui.mjs` | T94 |
 
 
 ## Desviaciones que afectan a tareas futuras (resumen)
@@ -120,7 +121,20 @@ Leyenda: `[ ]` pendiente · `[~]` en curso · `[x]` hecha y verificada
 - **Limitación del iframe (producto)**: con una fuente **iframe**, el botón interno del reproductor embebido sigue pidiendo pantalla completa **solo de su iframe** (sin el chip «Siguiente ▸»); el botón propio de la app y la ventana nativa funcionan igual. Heredado de T93, documentado en CHANGELOG y README.
 - **`pageerror` del dev server (preexistente)**: `Cannot read properties of null (reading 'nodes')` aparece ya en el Home con el dev server y lo filtra el modo `pantallacompleta`; no viene de T91–T94. Queda por diagnosticar si afecta al `.exe`.
 - **Sensibilidad a los datos guardados de `estados`, `shell` y `buscador`**: las 4 comprobaciones de `contain-intrinsic-size` necesitan un episodio con progreso parcial en el historial, el toast de `shell` necesita una entrada que borrar y el encabezado de `buscador` necesita algún favorito (con 0 el panel queda oculto en la medición). Sin datos dan **98/102**, un fallo y un fallo; con datos sembrados dan **102/102**, `shell` completo y **61/61**, con el mismo código. No hay regresión: informe en `docs/investigacion/ui_regresiones_v1.5.md`.
-- **`tactiles` aborta por un selector obsoleto**: el modo espera `page.waitForSelector('.btn')` en el Home, pero el Home no usa esa primitiva (la actualización es `button.actualizar`; `.btn` solo aparece en los estados de error con `Reintentar`). Falla **idéntico** con el código de T89b, así que es preexistente y no de T91–T94; corregir el verificador queda para una tarea propia (aquí es de solo lectura).
+- **`tactiles` aborta por un selector obsoleto**: CERRADO en T95. El modo esperaba
+  `page.waitForSelector('.btn')` en el Home, pero el Home sano no renderiza `.btn`
+  (la actualización es `button.actualizar`; `.btn` solo aparece en estados de error
+  con `Reintentar`). Se reescribió la rama `tactiles` de `verificar_ui.mjs` para:
+  esperar `.fila .carrusel .tarjeta` (carga del Home), medir `MEDIR_TACTILES` en el
+  Home sano, forzar el error rechazando `window.go.main.App.GetHomeSection` (restaurando
+  siempre en `try/finally`), pulsar `button.actualizar`, esperar el `.btn` «Reintentar»
+  y medir de nuevo. Anti falso verde: imprime conteos de `.btn` y `.chip` por ancho,
+  falla si el total medido de un ancho es 0 y falla si el forzado funcionó pero no se
+  midió ningún `.btn`. Resultado: 3 anchos (360/768/1280), btn=2 (Reintentar 103.72×44,
+  OK), chip=0 (el Home no renderiza `.chip`; las pestañas usan `pestana`), salida 0,
+  sin errores de navegador. Prueba negativa (nada que medir) → salida 1. Comparación
+  con T89b → mismo resultado. Fuera de `Puedes tocar`: la mención obsoleta en
+  `AGENTS.md` no se editó (pendiente de autorización humana).
 - **`reproductor` depende de si el proxy de loopback es alcanzable**: da **54/54** en el navegador del contenedor (HLS/MP4 con `ERR_CONNECTION_REFUSED` → caso D por iframe) y **50/52** si el HLS se sirviera; en T93/T93b fue 50/52. No es una regresión de código.
 - **Totales de modos con errata en la v1.4**: `cta` son **56** comprobaciones (no 59) y `continuar` **43** (no 46); las cifras altas salen de la tabla «todos los modos» de T89 en `docs/PROGRESO_v1.4.md` y no se corresponden con el script (mismos sitios `check(` desde T77/T80). Reproducido con el código de T89b: 56/56 y 43/43. No se toca el archivo histórico; queda anotado en `docs/investigacion/ui_regresiones_v1.5.md`.
 - **`frontend/package.json.md5` versionado y obsoleto**: `wails dev`/`wails build` lo regeneran en cada arranque/build. **Decisión del humano**: commitear una vez el valor regenerado o ignorarlo; por ahora se restaura con `git checkout` en cada tarea. **No se toca** en T94.

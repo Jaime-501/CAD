@@ -7106,29 +7106,100 @@ if (modo === 'comparar') {
   const browser = await chromium.launch();
   const page = await browser.newPage();
   let fallos = 0;
+  let errorForzadoFunciono = false;
+  let cualquierBtnMedido = false;
+  const conteos = {}; // a.nombre -> { btn, chip }
   try {
     console.log('| ancho | primitiva | texto | w | h | ok |');
     console.log('|---|---|---|---:|---:|:--:|');
     for (const a of ANCHOS) {
       await page.setViewportSize({ width: a.w, height: a.h });
       await page.goto(BASE, { waitUntil: 'domcontentloaded' });
-      await page.waitForSelector('.btn', { timeout: 20000 });
-      const res = await page.evaluate(MEDIR_TACTILES);
-      for (const [primitiva, items] of Object.entries(res)) {
-        for (const it of items) {
-          const ok = primitiva === 'btn' ? it.w >= 44 && it.h >= 44 : it.h >= 40;
-          if (!ok) fallos++;
-          console.log(
-            `| ${a.nombre} | ${primitiva} | ${it.texto || '—'} | ${it.w} | ${it.h} | ${ok ? 'sí' : 'NO'} |`
-          );
+      // Esperar la carga del Home: nunca se espera `.btn` (el Home sano no lo usa).
+      await page.waitForSelector('.fila .carrusel .tarjeta', { timeout: 60000 }).catch(() => {});
+
+      // 1. Medición del Home sano (cubre .chip y los .btn que existan).
+      const sano = await page.evaluate(MEDIR_TACTILES);
+
+      // 2. Forzar el estado de error de una fila: rechazar GetHomeSection y pulsar
+      //    "Actualizar" para que aparezca el botón "Reintentar" (.btn).
+      const forzado = await page.evaluate(() => {
+        const app = window.go?.main?.App;
+        if (!app || typeof app.GetHomeSection !== 'function') return false;
+        window.__origGetHomeSection = app.GetHomeSection;
+        app.GetHomeSection = () => Promise.reject(new Error('forzado'));
+        return true;
+      });
+
+      let errorBtn = [],
+        errorChip = [];
+      if (forzado) {
+        try {
+          await page.locator('button.actualizar').click();
+          await page.waitForSelector('.btn', { timeout: 10000 });
+          errorForzadoFunciono = true;
+        } catch {
+          // Si no aparece el "Reintentar", se mide lo que haya.
         }
+        const err = await page.evaluate(MEDIR_TACTILES);
+        errorBtn = err.btn;
+        errorChip = err.chip;
       }
+
+      // Restaurar siempre la función original, también si falló el forzado.
+      await page.evaluate(() => {
+        const app = window.go?.main?.App;
+        if (app && window.__origGetHomeSection)
+          app.GetHomeSection = window.__origGetHomeSection;
+      });
+
+      const btnItems = [...sano.btn, ...errorBtn];
+      const chipItems = [...sano.chip, ...errorChip];
+      conteos[a.nombre] = { btn: btnItems.length, chip: chipItems.length };
+
+      for (const it of btnItems) {
+        const ok = it.w >= 44 && it.h >= 44;
+        if (!ok) fallos++;
+        cualquierBtnMedido = true;
+        console.log(
+          `| ${a.nombre} | btn | ${it.texto || '—'} | ${it.w} | ${it.h} | ${ok ? 'sí' : 'NO'} |`
+        );
+      }
+      for (const it of chipItems) {
+        const ok = it.h >= 40;
+        if (!ok) fallos++;
+        console.log(
+          `| ${a.nombre} | chip | ${it.texto || '—'} | ${it.w} | ${it.h} | ${ok ? 'sí' : 'NO'} |`
+        );
+      }
+      console.log(
+        `| ${a.nombre} | conteo | btn=${btnItems.length} chip=${chipItems.length} | | | |`
+      );
     }
   } catch (e) {
     log('error:', e.message);
     fallos++;
+  } finally {
+    await browser.close();
   }
-  await browser.close();
+  // Anti falso verde: por ancho, el total medido (btn + chip) no puede ser 0.
+  for (const a of ANCHOS) {
+    const c = conteos[a.nombre] || { btn: 0, chip: 0 };
+    if (c.btn + c.chip === 0) {
+      fallos++;
+      log(`FALLO: ancho ${a.nombre} sin objetivos medidos (btn=${c.btn} chip=${c.chip})`);
+    }
+  }
+  // Si el forzado de error funcionó, debe haberse medido al menos un .btn.
+  if (errorForzadoFunciono && !cualquierBtnMedido) {
+    fallos++;
+    log('FALLO: el forzado de error funcionó pero no se midió ningún .btn');
+  }
+  console.log('\nConteos por ancho:');
+  for (const a of ANCHOS) {
+    const c = conteos[a.nombre] || { btn: 0, chip: 0 };
+    console.log(`  ${a.nombre}: btn=${c.btn} chip=${c.chip}`);
+  }
   console.log(fallos === 0 ? '\nTodos los objetivos táctiles cumplen.' : `\n${fallos} objetivos NO cumplen.`);
   process.exit(fallos === 0 ? 0 : 1);
 } else if (modo === 'shell') {
