@@ -28,7 +28,13 @@ import {
   SaveProgress,
   SearchAnime,
 } from '../wailsjs/go/main/App.js';
-import { EventsOff, EventsOn } from '../wailsjs/runtime/runtime.js';
+import {
+  EventsOff,
+  EventsOn,
+  WindowFullscreen,
+  WindowIsFullscreen,
+  WindowUnfullscreen,
+} from '../wailsjs/runtime/runtime.js';
 import type { main, models } from '../wailsjs/go/models';
 
 // Tipos generados, reexportados para que los consumidores no importen wailsjs.
@@ -180,6 +186,32 @@ export function getNextEpisode(
   episodeID: string
 ): Promise<models.NextEpisode> {
   return GetNextEpisode(provider, animeID, episodeID);
+}
+
+/**
+ * Pide a la ventana nativa entrar o salir de pantalla completa (T91).
+ * Fuera de Wails (navegador, futuro Android) no hay ventana nativa: solo avisa
+ * por consola y **nunca lanza** (P5/P7).
+ */
+export function ventanaPantallaCompleta(activar: boolean): void {
+  try {
+    if (activar) WindowFullscreen();
+    else WindowUnfullscreen();
+  } catch (e) {
+    console.warn('[api] pantalla completa no disponible:', String(e));
+  }
+}
+
+/**
+ * ¿Está la ventana nativa en pantalla completa? Un fallo (sin puente Wails,
+ * ventana cerrada...) se trata como `false`: **nunca rechaza**.
+ */
+export async function esVentanaPantallaCompleta(): Promise<boolean> {
+  try {
+    return await WindowIsFullscreen();
+  } catch {
+    return false;
+  }
 }
 
 /** Wails serializa a JSON: el payload puede llegar como objeto o como string. */

@@ -49,9 +49,9 @@ docs/
   img/                    # capturas para la documentación
   BITACORA.md             # historial; NO se lee por defecto
   DESARROLLO.md           # guía de desarrollo
-  PROGRESO_v1.0.md … PROGRESO_v1.4.md  PROGRESO_embeds_adds.md  # historiales
+  PROGRESO_v1.0.md … PROGRESO_v1.5.md  PROGRESO_embeds_adds.md  # historiales
 tareas/
-  archivo/                # fichas cerradas (T01–T89b)
+  archivo/                # fichas cerradas (T01–T94)
 frontend/
   index.html              # documento HTML (meta referrer no-referrer, lang="es")
   src/
@@ -59,6 +59,7 @@ frontend/
     stores.ts  main.ts  views.ts  ui.ts  style.css
     favoritos.ts  historial.ts  home.ts  retomar.ts  toasts.ts
     etiquetas.ts  deslizar.ts  ventana.ts  revelar.ts  vite-env.d.ts (+ *.test.ts)
+    pantallacompleta.ts  pantallacompleta.test.ts   # T91: ventana ↔ Fullscreen API
     App.svelte  Vista*.svelte  Tarjeta*.svelte  Boton*.svelte
     BarraLateral.svelte  FilaAnimes.svelte  GridFavoritos.svelte
     SelectorFuente.svelte  Toast.svelte

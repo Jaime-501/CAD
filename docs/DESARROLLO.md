@@ -65,6 +65,7 @@ frontend/                Svelte 5 + TS + Vite; wailsjs/ es código GENERADO (no 
     stores.ts  main.ts  views.ts  ui.ts  style.css
     favoritos.ts  historial.ts  home.ts  retomar.ts  toasts.ts
     etiquetas.ts  deslizar.ts  ventana.ts  revelar.ts  vite-env.d.ts (+ *.test.ts)
+    pantallacompleta.ts   # T91: sincronización ventana nativa ↔ Fullscreen API (+ pantallacompleta.test.ts)
     App.svelte  Vista*.svelte  Tarjeta*.svelte  Boton*.svelte
     BarraLateral.svelte  FilaAnimes.svelte  GridFavoritos.svelte
     SelectorFuente.svelte  Toast.svelte
@@ -151,7 +152,7 @@ Dos limitaciones de la v1.1 quedaron **resueltas en la v1.2** y ya no figuran aq
 - Los logs pasan por `internal/logx`: cookies, CSRF, `Authorization`/`Set-Cookie` y **URLs firmadas** (`?e=`, `?st=`, …) salen redactados.
 - `frontend/index.html` declara `<meta name="referrer" content="no-referrer">`: algunos orígenes devuelven 403 en las portadas si se envía `Referer` (se mantuvo al retirar AnimeFLV; el CDN de AnimeAV1 no lo exige). No la quites.
 
-## Verificación visual de la UI (v1.4.0)
+## Verificación visual de la UI (v1.5.0)
 
 Desde la serie **T69–T89** hay dos herramientas **de solo lectura** (no tocan código de producto) que
 miden la interfaz en el navegador real. Necesitan la app levantada (`docker compose up`) y se ejecutan
@@ -182,6 +183,7 @@ NODE_PATH="$(npm root -g)/@playwright/mcp/node_modules" \
 | `orden` | Orden ascendente/descendente de episodios |
 | `reproductor` | Layout del reproductor y selector de fuentes |
 | `siguiente` | Chip «Siguiente ▸» (tamaño, solape, discreto, teclado) |
+| `pantallacompleta` | Sincronización ventana ↔ `fullscreenchange` y botón propio sobre `.marco` (casos A–L) |
 | `favoritos` | Cuadrícula de favoritos, toast y deslizar en el cajón |
 | `estados` | Estados de carga/error/vacío de Home, detalle, reproductor y cajón |
 | `rendimiento` | Frames, scripting/tarea/layout, nodos, reduced-motion y reduced-transparency |
@@ -192,7 +194,13 @@ Cada modo imprime una tabla `| comprobación | ok | detalle |` y su recuento
 **ARIA**, **anillo de foco**, **foco del cajón**, **estados de carga** y **deriva de scroll**.
 
 > Los modos que siembran datos (historial, favoritos) los **restauran** al terminar. Las capturas
-> van a `docs/img/v1.4/<modo>/` (ignorado por git).
+> van a `docs/img/v1.4/<modo>/` (ignorado por git), salvo `pantallacompleta`, que usa
+> `docs/img/v1.5/pantallacompleta/`.
+>
+> **La pantalla completa real solo se prueba con el `.exe`**: en el flujo Docker el proxy de
+> vídeo escucha en loopback dentro del contenedor y el navegador del host no lo alcanza, así que
+> el reproductor cae al iframe. Además, `estados` y `reproductor` dependen del entorno/datos
+> (progreso sembrado y accesibilidad del proxy); ver `docs/investigacion/ui_regresiones_v1.5.md`.
 
 ## Publicar una versión (release)
 
@@ -212,8 +220,8 @@ Versionado semántico (`vMAYOR.MENOR.PARCHE`).
 
 ## Trabajo con agentes
 
-El proyecto se construyó con un plan de tareas (`tareas/`) ejecutadas por un agente de código: T01–T29 en la v1.0, T30–T36 (AnimeAV1, v1.1.0; T30–T35 en la rama `feature/animeav1`, ya fusionada en `main` — T36 fue el cierre documental), T37 (preparación para Android: núcleo en `internal/app`, reglas P1–P7), T38 (su cierre documental) y T39–T57 (v1.2.0 **publicada**: Home por proveedor con su pulido visual —T53b—, historial lateral con retomar, favoritos y el botón "Siguiente ▸" con su estado discreto —T55 y T57—, rama `feature/home-historial-favoritos`), cerrada con T56 (título CAD, versionado y docs) y el **cierre documental** (etiquetado T58, luego **renumerado T59**) tras la prueba manual con el `.exe` y la release, que hizo el humano; **T58** (dos bugs visuales de la v1.2.0: carátula del historial al retomar y contador de favoritos al arrancar) y **T59** (cierre documental de la **v1.2.1 publicada**, `productVersion` 1.2.1, tag `v1.2.1`); **T64–T68** (v1.3.0 **preparada**, rama `feature/episodios-incrementales`: lógica pura de la ventana de episodios —`frontend/src/ventana.ts` + `ventana.test.ts`—, revelado animado de las tarjetas de episodio al entrar en el viewport —`frontend/src/revelar.ts`; sin paginar—, clave de scroll del detalle por proveedor+slug —`frontend/src/views.ts` + `views.test.ts`—, restauración del scroll del detalle al recargar la lista y cierre documental; `productVersion` 1.3.0, sin tag ni release); y **T69–T89** (v1.4.0 **preparada**, rama `feature/rediseno-movil`: rediseño y enfoque móvil —tokens y primitivas, barra inferior y cajón, cabecera, buscador, filas, «Continuar viendo», rejilla de resultados, ficha, CTA fija, tarjeta de episodio, orden, reproductor, chip «Siguiente», favoritos y toasts, estados, movimiento y rendimiento, accesibilidad AA y el cierre de **T89**; `productVersion` 1.4.0, sin tag ni release).
-`AGENTS.md` resume las reglas para agentes, `PROGRESO.md` es la memoria entre sesiones (los estados históricos, en `docs/PROGRESO_v1.0.md`, `docs/PROGRESO_v1.1.md`, `docs/PROGRESO_v1.2.md`, `docs/PROGRESO_v1.3.md` y `docs/PROGRESO_v1.4.md`) y `docs/firmas/` contiene las firmas reales de cada paquete.
+El proyecto se construyó con un plan de tareas (`tareas/`) ejecutadas por un agente de código: T01–T29 en la v1.0, T30–T36 (AnimeAV1, v1.1.0; T30–T35 en la rama `feature/animeav1`, ya fusionada en `main` — T36 fue el cierre documental), T37 (preparación para Android: núcleo en `internal/app`, reglas P1–P7), T38 (su cierre documental) y T39–T57 (v1.2.0 **publicada**: Home por proveedor con su pulido visual —T53b—, historial lateral con retomar, favoritos y el botón "Siguiente ▸" con su estado discreto —T55 y T57—, rama `feature/home-historial-favoritos`), cerrada con T56 (título CAD, versionado y docs) y el **cierre documental** (etiquetado T58, luego **renumerado T59**) tras la prueba manual con el `.exe` y la release, que hizo el humano; **T58** (dos bugs visuales de la v1.2.0: carátula del historial al retomar y contador de favoritos al arrancar) y **T59** (cierre documental de la **v1.2.1 publicada**, `productVersion` 1.2.1, tag `v1.2.1`); **T64–T68** (v1.3.0 **preparada**, rama `feature/episodios-incrementales`: lógica pura de la ventana de episodios —`frontend/src/ventana.ts` + `ventana.test.ts`—, revelado animado de las tarjetas de episodio al entrar en el viewport —`frontend/src/revelar.ts`; sin paginar—, clave de scroll del detalle por proveedor+slug —`frontend/src/views.ts` + `views.test.ts`—, restauración del scroll del detalle al recargar la lista y cierre documental; `productVersion` 1.3.0, sin tag ni release); y **T69–T89** (v1.4.0 **preparada**, rama `feature/rediseno-movil`: rediseño y enfoque móvil —tokens y primitivas, barra inferior y cajón, cabecera, buscador, filas, «Continuar viendo», rejilla de resultados, ficha, CTA fija, tarjeta de episodio, orden, reproductor, chip «Siguiente», favoritos y toasts, estados, movimiento y rendimiento, accesibilidad AA y el cierre de **T89**; `productVersion` 1.4.0, sin tag ni release). La **v1.4.0 se publicó** (tag `v1.4.0`) tras la prueba manual y la release del humano, que también hizo el cierre **T89b** (fallos conocidos de la v1.4.0: velo del cajón, foco y detalles visuales). Con **T90** se fijó la regla de higiene al cerrar una serie. La serie **T91–T94** prepara la **v1.5.0** en la rama `feature/pantalla-completa`: **T91** módulo puro `pantallacompleta.ts` + test y las dos funciones de `api.ts` (`ventanaPantallaCompleta`, `esVentanaPantallaCompleta`), **T92** sincronización de la ventana nativa con `fullscreenchange`, **T93** botón propio de pantalla completa sobre `.marco` (con el chip «Siguiente ▸» dentro), **T93b** ocultación del control nativo del `<video>` y **T94** diagnóstico de `estados`/`reproductor` (sin regresión de código) y cierre documental (`productVersion` 1.5.0, sin tag ni release; los hace el humano tras la prueba manual con el `.exe`).
+`AGENTS.md` resume las reglas para agentes, `PROGRESO.md` es la memoria entre sesiones (los estados históricos, en `docs/PROGRESO_v1.0.md`, `docs/PROGRESO_v1.1.md`, `docs/PROGRESO_v1.2.md`, `docs/PROGRESO_v1.3.md` y `docs/PROGRESO_v1.4.md`, más `docs/PROGRESO_v1.5.md` para esta serie) y `docs/firmas/` contiene las firmas reales de cada paquete.
 
 ## Regla de higiene al cerrar una serie (T90)
 Al cerrar una serie se mueven las notas largas a `docs/PROGRESO_vX.Y.md`,

@@ -11,6 +11,7 @@
 //   NODE_PATH=... node docs/investigacion/ui/verificar_ui.mjs pixel <png> <x> <y>
 //   NODE_PATH=... node docs/investigacion/ui/verificar_ui.mjs filas [dirOut]
 //   NODE_PATH=... node docs/investigacion/ui/verificar_ui.mjs favoritos [dirOut]
+//   NODE_PATH=... node docs/investigacion/ui/verificar_ui.mjs pantallacompleta [dirOut]
 //   NODE_PATH=... node docs/investigacion/ui/verificar_ui.mjs estados [dirOut]
 //   NODE_PATH=... node docs/investigacion/ui/verificar_ui.mjs rendimiento [antes|despues]
 //
@@ -4849,6 +4850,563 @@ async function siguiente() {
 }
 
 // ---------------------------------------------------------------------------
+// Modo pantallacompleta (T92): fullscreenchange ↔ ventana nativa de Wails
+// ---------------------------------------------------------------------------
+
+/**
+ * Espía el puente de ventana. `runtime.js` resuelve `window.runtime` en cada
+ * llamada, así que sustituir los tres métodos por contadores mide exactamente
+ * lo que hace la app. `modo`:
+ *   - `normal`: `WindowIsFullscreen` → `false` (ventana normal).
+ *   - `ya`: → `true` (la ventana ya estaba en pantalla completa).
+ *   - `rechaza`: la promesa se rechaza.
+ *   - `ausente`: el método no existe (fuera de Wails).
+ */
+async function instalarEspiaVentana(contexto, modo = 'normal') {
+  await contexto.addInitScript((modoEspia) => {
+    const estado = { fullscreen: 0, unfullscreen: 0, is: 0 };
+    window.__t92 = {
+      leer: () => ({ ...estado }),
+      reiniciar: () => {
+        estado.fullscreen = 0;
+        estado.unfullscreen = 0;
+        estado.is = 0;
+      },
+    };
+    const instalar = () => {
+      const rt = window.runtime;
+      if (!rt) return false;
+      if (rt.__t92Espia) return true;
+      rt.__t92Espia = true;
+      rt.WindowFullscreen = () => {
+        estado.fullscreen += 1;
+      };
+      rt.WindowUnfullscreen = () => {
+        estado.unfullscreen += 1;
+      };
+      if (modoEspia === 'ausente') {
+        try {
+          delete rt.WindowIsFullscreen;
+        } catch {
+          rt.WindowIsFullscreen = undefined;
+        }
+        return true;
+      }
+      rt.WindowIsFullscreen = () => {
+        estado.is += 1;
+        if (modoEspia === 'rechaza') return Promise.reject(new Error('sin ventana nativa'));
+        return Promise.resolve(modoEspia === 'ya');
+      };
+      return true;
+    };
+    if (!instalar()) {
+      const id = setInterval(() => {
+        if (instalar()) clearInterval(id);
+      }, 2);
+      setTimeout(() => clearInterval(id), 10000);
+    }
+  }, modo);
+}
+
+async function pantallacompleta() {
+  const dirOut = process.argv[3] ?? 'docs/img/v1.5/pantallacompleta';
+  mkdirSync(dirOut, { recursive: true });
+  const browser = await chromium.launch();
+  const rep = { funciones: [], capturas: [], errores: [] };
+  const check = (nombre, ok, detalle) =>
+    rep.funciones.push({ nombre, ok: !!ok, detalle: detalle === undefined ? null : detalle });
+  const paso = async (nombre, fn) => {
+    try {
+      await fn();
+    } catch (e) {
+      rep.errores.push(`${nombre}: ${e.message}`);
+    }
+  };
+  const captura = async (p, nombre) => {
+    try {
+      await p.screenshot({ path: join(dirOut, `${nombre}.png`) });
+      rep.capturas.push(`${nombre}.png`);
+    } catch (e) {
+      rep.errores.push(`${nombre}: ${e.message}`);
+    }
+  };
+  const leer = (p) => p.evaluate(() => (window.__t92 ? window.__t92.leer() : null));
+  const reiniciar = (p) => p.evaluate(() => window.__t92 && window.__t92.reiniciar());
+  const elemento = (p) =>
+    p.evaluate(() => {
+      const el = document.fullscreenElement;
+      if (!el) return null;
+      return { tag: el.tagName, clase: String(el.className || '') };
+    });
+  const esperarCuenta = (p, campo, valor, timeout = 6000) =>
+    p
+      .waitForFunction(
+        ([c, v]) => {
+          const e = window.__t92 && window.__t92.leer();
+          return !!e && e[c] === v;
+        },
+        [campo, valor],
+        { timeout }
+      )
+      .then(() => true)
+      .catch(() => false);
+  // Mismo recorrido que el modo `siguiente`: "bleach" de AnimeAV1 con la fuente
+  // iframe falsa (el proxy del contenedor no sirve HLS en el navegador).
+  const abrirEn = async (p) => {
+    await p.setViewportSize({ width: 1280, height: 800 });
+    await gotoApp(p);
+    await p.waitForSelector('.fila .carrusel .tarjeta', { timeout: 60000 }).catch(() => {});
+    await buscar(p, 'bleach');
+    await abrirDetalle(p, 'animeav1');
+    const ep = p.locator('.rejilla .celda .tarjeta').first();
+    if (!(await ep.count())) return false;
+    await ep.click();
+    await p.waitForSelector('.marco', { timeout: 30000 });
+    await p
+      .waitForFunction(() => !document.querySelector('.marco .cargando-overlay'), null, { timeout: 15000 })
+      .catch(() => {});
+    await p.waitForTimeout(300);
+    return true;
+  };
+  // Chromium exige gesto del usuario para `requestFullscreen`. El `.marco` está
+  // cubierto por el `<video>`/`<iframe>`, cuyos clics no llegan al documento
+  // padre (el iframe es otro contexto): se activa el gesto en la cabecera y se
+  // pide la pantalla completa justo después, dentro de la ventana de activación.
+  const entrar = async (p) => {
+    await p.locator('.cabecera .titulo').click({ timeout: 5000 }).catch(() => {});
+    const resultado = await p
+      .evaluate(() =>
+        document.querySelector('.marco').requestFullscreen().then(
+          () => 'ok',
+          (e) => `rechazado: ${e && e.message ? e.message : String(e)}`
+        )
+      )
+      .catch((e) => `sin evaluate: ${e.message}`);
+    const ok = await p
+      .waitForFunction(() => document.fullscreenElement !== null, null, { timeout: 6000 })
+      .then(() => true)
+      .catch(() => false);
+    return { ok, resultado };
+  };
+  const salir = (p) =>
+    p.evaluate(() => document.exitFullscreen().then(() => true, () => false)).catch(() => false);
+  const esperarFuera = (p) =>
+    p
+      .waitForFunction(() => document.fullscreenElement === null, null, { timeout: 8000 })
+      .then(() => true)
+      .catch(() => false);
+
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  await inyectarFuenteFalsa(ctx, 0);
+  await instalarEspiaVentana(ctx, 'normal');
+  const page = await ctx.newPage();
+
+  // --- A. Ventana normal: entrar y salir ---
+  await paso('A', async () => {
+    const abierto = await abrirEn(page);
+    check('A: reproductor AnimeAV1 «bleach» abierto (iframe falso)', abierto, abierto ? 'ok' : 'sin episodios');
+    if (!abierto) return;
+    await reiniciar(page);
+    const entro = await entrar(page);
+    const el = await elemento(page);
+    check('A: requestFullscreen() sobre .marco', entro.ok && el !== null && /marco/.test(el.clase), {
+      entro,
+      el,
+    });
+    if (!entro.ok) return;
+    const is1 = await esperarCuenta(page, 'is', 1);
+    const fs1 = await esperarCuenta(page, 'fullscreen', 1);
+    const c1 = await leer(page);
+    check('A: WindowIsFullscreen 1 vez', is1 && c1.is === 1, c1);
+    check('A: WindowFullscreen 1 vez', fs1 && c1.fullscreen === 1, c1);
+    await captura(page, 'pantallacompleta_A_entrada');
+    await salir(page);
+    const fuera = await esperarFuera(page);
+    check('A: exitFullscreen() deja fullscreenElement en null', fuera, await elemento(page));
+    const us1 = await esperarCuenta(page, 'unfullscreen', 1);
+    const c2 = await leer(page);
+    check('A: WindowUnfullscreen 1 vez', us1 && c2.unfullscreen === 1, c2);
+    check('A: al salir no se repite WindowFullscreen', c2.fullscreen === 1, c2);
+  });
+
+  // --- B. La ventana ya estaba en pantalla completa ---
+  await paso('B', async () => {
+    const ctxB = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await inyectarFuenteFalsa(ctxB, 0);
+    await instalarEspiaVentana(ctxB, 'ya');
+    const pB = await ctxB.newPage();
+    const abierto = await abrirEn(pB);
+    check('B: reproductor abierto', abierto, abierto ? 'ok' : 'sin episodios');
+    if (abierto) {
+      await reiniciar(pB);
+      const entro = await entrar(pB);
+      check('B: fullscreen HTML activo', entro.ok, { entro, el: await elemento(pB) });
+      if (entro.ok) {
+        const is1 = await esperarCuenta(pB, 'is', 1);
+        await pB.waitForTimeout(300);
+        const c1 = await leer(pB);
+        check('B: con la ventana ya en fullscreen se consulta una vez', is1 && c1.is === 1, c1);
+        check('B: entrar no llama a WindowFullscreen', c1.fullscreen === 0, c1);
+        await salir(pB);
+        await esperarFuera(pB);
+        await pB.waitForTimeout(400);
+        const c2 = await leer(pB);
+        check('B: salir no llama a WindowUnfullscreen (la ventana no era propia)', c2.unfullscreen === 0, c2);
+      }
+    }
+    await ctxB.close();
+  });
+
+  // --- C. «← Atrás» con fullscreen activo ---
+  await paso('C', async () => {
+    const abierto = await abrirEn(page);
+    check('C: reproductor abierto', abierto, abierto ? 'ok' : 'sin episodios');
+    if (!abierto) return;
+    await reiniciar(page);
+    const entro = await entrar(page);
+    check('C: fullscreen activo antes de Atrás', entro.ok, { entro, el: await elemento(page) });
+    if (!entro.ok) return;
+    await esperarCuenta(page, 'fullscreen', 1);
+    await page.evaluate(() => document.querySelector('.cabecera .atras')?.click());
+    const fuera = await esperarFuera(page);
+    check('C: Atrás desmonta el reproductor y fullscreenElement queda en null', fuera, await elemento(page));
+    const us1 = await esperarCuenta(page, 'unfullscreen', 1);
+    const c = await leer(page);
+    check('C: WindowUnfullscreen 1 vez', us1 && c.unfullscreen === 1, c);
+    await page.waitForSelector('.ficha, .estado', { timeout: 15000 }).catch(() => {});
+    check(
+      'C: la app sigue viva en el detalle',
+      await page.evaluate(() => !!document.querySelector('.ficha, .estado')),
+      null
+    );
+  });
+
+  // --- D. Cambiar de episodio con fullscreen activo ---
+  await paso('D', async () => {
+    const abierto = await abrirEn(page);
+    check('D: reproductor abierto', abierto, abierto ? 'ok' : 'sin episodios');
+    if (!abierto) return;
+    await reiniciar(page);
+    const entro = await entrar(page);
+    check('D: fullscreen activo en .marco', entro.ok, { entro, el: await elemento(page) });
+    if (!entro.ok) {
+      return;
+    }
+    await esperarCuenta(page, 'fullscreen', 1);
+    await page.waitForFunction(
+      () => {
+        const b = document.querySelector('.marco .boton-siguiente');
+        return !!b && !b.disabled && /Ep \d+/.test((b.textContent || '').trim());
+      },
+      null,
+      { timeout: 15000 }
+    ).catch(() => {});
+    await page.evaluate(() => {
+      const b = document.querySelector('.marco .boton-siguiente');
+      if (b) {
+        b.classList.remove('discreto', 'resaltado');
+        b.disabled = false;
+      }
+      window.__t92Marco = document.querySelector('.marco');
+    });
+    const antes = await page.evaluate(() =>
+      ((document.querySelector('.cabecera .subtitulo') || {}).textContent || '').trim()
+    );
+    const cAntes = await leer(page);
+    await page.evaluate(() => document.querySelector('.marco .boton-siguiente')?.click());
+    await page.waitForTimeout(2500);
+    const despues = await page.evaluate(() =>
+      ((document.querySelector('.cabecera .subtitulo') || {}).textContent || '').trim()
+    );
+    const sigue = await page.evaluate(
+      () => document.fullscreenElement !== null && document.fullscreenElement === window.__t92Marco
+    );
+    const cDespues = await leer(page);
+    check('D: el episodio cambió', despues !== antes && despues !== '', { antes, despues });
+    check('D: el mismo .marco sigue en fullscreen', sigue, await elemento(page));
+    check(
+      'D: sin llamadas extra a la ventana',
+      cDespues.fullscreen === cAntes.fullscreen &&
+        cDespues.unfullscreen === cAntes.unfullscreen &&
+        cDespues.is === cAntes.is,
+      { antes: cAntes, despues: cDespues }
+    );
+    await captura(page, 'pantallacompleta_D_siguiente');
+    await salir(page);
+    await esperarFuera(page);
+  });
+
+  // --- E. WindowIsFullscreen rechaza o no existe ---
+  await paso('E', async () => {
+    for (const modoEspia of ['rechaza', 'ausente']) {
+      const ctxE = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+      await inyectarFuenteFalsa(ctxE, 0);
+      await instalarEspiaVentana(ctxE, modoEspia);
+      const pE = await ctxE.newPage();
+      const consola = [];
+      pE.on('console', (m) => {
+        if (m.type() === 'error') consola.push(m.text());
+      });
+      pE.on('pageerror', (e) => consola.push(`pageerror: ${e.message}`));
+      const abierto = await abrirEn(pE);
+      check(`E (${modoEspia}): reproductor abierto`, abierto, abierto ? 'ok' : 'sin episodios');
+      if (abierto) {
+        await reiniciar(pE);
+        const entro = await entrar(pE);
+        check(`E (${modoEspia}): se entra igualmente`, entro.ok, { entro, el: await elemento(pE) });
+        if (entro.ok) {
+          const fs1 = await esperarCuenta(pE, 'fullscreen', 1);
+          const c = await leer(pE);
+          check(`E (${modoEspia}): WindowFullscreen 1 vez`, fs1 && c.fullscreen === 1, c);
+          await pE.waitForTimeout(500);
+          // Ruido preexistente del dev server: este `pageerror` ya sale en el
+          // Home, sin reproductor (comprobado con un sondeo aparte).
+          const relevantes = consola.filter((t) => !/reading 'nodes'/.test(t));
+          check(`E (${modoEspia}): sin excepciones en consola`, relevantes.length === 0, {
+            relevantes,
+            consola,
+          });
+          await salir(pE);
+          await esperarFuera(pE);
+        }
+      }
+      await ctxE.close();
+    }
+  });
+
+  // --- F. Botón propio: clic entra en fullscreen y estados ARIA ---
+  await paso('F', async () => {
+    const abierto = await abrirEn(page);
+    check('F: reproductor abierto', abierto, abierto ? 'ok' : 'sin episodios');
+    if (!abierto) return;
+    await reiniciar(page);
+    await page.locator('.marco .pantalla-completa').click();
+    await page.waitForFunction(() => document.fullscreenElement !== null, null, { timeout: 6000 }).catch(() => {});
+    const el = await elemento(page);
+    const estado = await page.evaluate(() => {
+      const b = document.querySelector('.marco .pantalla-completa');
+      return b ? { pressed: b.getAttribute('aria-pressed'), label: b.getAttribute('aria-label') } : null;
+    });
+    const chip = await page.evaluate(() => {
+      const el = document.fullscreenElement;
+      if (!el) return null;
+      const b = el.querySelector('.boton-siguiente');
+      if (!b) return { enDOM: false };
+      const r = b.getBoundingClientRect();
+      const d = document.documentElement;
+      return {
+        enDOM: true,
+        dentroViewport: r.left >= 0 && r.top >= 0 && r.right <= d.clientWidth && r.bottom <= d.clientHeight,
+        texto: (b.textContent || '').trim(),
+      };
+    });
+    const fs1 = await esperarCuenta(page, 'fullscreen', 1);
+    const c1 = await leer(page);
+    check('F: clic en el botón pone .marco en fullscreen', el !== null && /marco/.test(el.clase), { el });
+    check('F: aria-pressed true', estado && estado.pressed === 'true', estado);
+    check('F: etiqueta "Salir de pantalla completa"', estado && estado.label === 'Salir de pantalla completa', estado);
+    check('F: WindowIsFullscreen 1 vez', c1 && c1.is === 1, c1);
+    check('F: WindowFullscreen 1 vez', fs1 && c1.fullscreen === 1, c1);
+    check(
+      'F: chip "Siguiente ▸" en el .marco en fullscreen y dentro del viewport',
+      chip && chip.enDOM && chip.dentroViewport && /Ep \d+/.test(chip.texto),
+      chip
+    );
+    await captura(page, 'pantallacompleta_F_entra');
+  });
+
+  // --- G. Segundo clic: sale de pantalla completa ---
+  await paso('G', async () => {
+    const abierto = await abrirEn(page);
+    check('G: reproductor abierto', abierto, abierto ? 'ok' : 'sin episodios');
+    if (!abierto) return;
+    await reiniciar(page);
+    await page.locator('.marco .pantalla-completa').click();
+    await page.waitForFunction(() => document.fullscreenElement !== null, null, { timeout: 6000 }).catch(() => {});
+    await page.locator('.marco .pantalla-completa').click();
+    const fuera = await esperarFuera(page);
+    const estado = await page.evaluate(() => {
+      const b = document.querySelector('.marco .pantalla-completa');
+      return b ? { pressed: b.getAttribute('aria-pressed'), label: b.getAttribute('aria-label') } : null;
+    });
+    const us1 = await esperarCuenta(page, 'unfullscreen', 1);
+    const c2 = await leer(page);
+    check('G: segundo clic sale de pantalla completa', fuera, await elemento(page));
+    check('G: aria-pressed false', estado && estado.pressed === 'false', estado);
+    check('G: etiqueta "Pantalla completa"', estado && estado.label === 'Pantalla completa', estado);
+    check('G: WindowUnfullscreen 1 vez', us1 && c2.unfullscreen === 1, c2);
+    check('G: WindowFullscreen no crece al salir', c2.fullscreen === 1, c2);
+  });
+
+  // --- H. «Siguiente ▸» (clic y tecla N) con el .marco en fullscreen ---
+  await paso('H', async () => {
+    const abierto = await abrirEn(page);
+    check('H: reproductor abierto', abierto, abierto ? 'ok' : 'sin episodios');
+    if (!abierto) return;
+    await reiniciar(page);
+    await page.locator('.marco .pantalla-completa').click();
+    await page.waitForFunction(() => document.fullscreenElement !== null, null, { timeout: 6000 }).catch(() => {});
+    const sigueEn = () => page.evaluate(() => document.fullscreenElement !== null && document.fullscreenElement.classList.contains('marco'));
+    await page.waitForFunction(
+      () => {
+        const b = document.querySelector('.marco .boton-siguiente');
+        return !!b && !b.disabled && /Ep \d+/.test((b.textContent || '').trim());
+      },
+      null,
+      { timeout: 15000 }
+    ).catch(() => {});
+    await page.evaluate(() => {
+      const b = document.querySelector('.marco .boton-siguiente');
+      if (b) {
+        b.classList.remove('discreto', 'resaltado');
+        b.disabled = false;
+      }
+    });
+    const antes = await leer(page);
+    await page.evaluate(() => document.querySelector('.marco .boton-siguiente')?.click());
+    await page.waitForTimeout(2500);
+    const despuesClic = await leer(page);
+    const sigueClic = await sigueEn();
+    check('H: clic en "Siguiente ▸" sin llamadas extra a la ventana', despuesClic.fullscreen === antes.fullscreen && despuesClic.unfullscreen === antes.unfullscreen && despuesClic.is === antes.is, { antes, despues: despuesClic });
+    check('H: el .marco sigue en fullscreen tras el clic', sigueClic, await elemento(page));
+    await page.keyboard.press('N');
+    await page.waitForTimeout(2500);
+    const despuesN = await leer(page);
+    const sigueN = await sigueEn();
+    check('H: tecla "N" sin llamadas extra a la ventana', despuesN.fullscreen === despuesClic.fullscreen && despuesN.unfullscreen === despuesClic.unfullscreen && despuesN.is === despuesClic.is, { despuesClic, despues: despuesN });
+    check('H: el .marco sigue en fullscreen tras "N"', sigueN, await elemento(page));
+    await salir(page);
+    await esperarFuera(page);
+  });
+
+  // --- I. Geometría del botón a 360/768/1280: 44×44, sin solape con el chip, sin overflowH ---
+  await paso('I', async () => {
+    for (const a of [
+      { w: 360, h: 740, nombre: '360' },
+      { w: 768, h: 1024, nombre: '768' },
+      { w: 1280, h: 800, nombre: '1280' },
+    ]) {
+      await page.setViewportSize({ width: a.w, height: a.h });
+      const abierto = await abrirEn(page);
+      check(`I (${a.nombre}): reproductor abierto`, abierto, abierto ? 'ok' : 'sin episodios');
+      if (!abierto) continue;
+      await page.waitForTimeout(300);
+      const med = await page.evaluate(() => {
+        const btn = document.querySelector('.marco .pantalla-completa');
+        const chip = document.querySelector('.marco .boton-siguiente');
+        const d = document.documentElement;
+        const rb = btn ? btn.getBoundingClientRect() : null;
+        const rc = chip ? chip.getBoundingClientRect() : null;
+        const disjuntos = rb && rc ? !(rb.right > rc.left && rb.left < rc.right && rb.bottom > rc.top && rb.top < rc.bottom) : null;
+        return {
+          w: rb ? Math.round(rb.width) : null,
+          h: rb ? Math.round(rb.height) : null,
+          chipW: rc ? Math.round(rc.width) : null,
+          chipH: rc ? Math.round(rc.height) : null,
+          rectsDisjuntos: disjuntos,
+          overflowH: d.scrollWidth - d.clientWidth,
+        };
+      });
+      check(`I (${a.nombre}): botón ≥ 44×44`, med.w >= 44 && med.h >= 44, med);
+      check(`I (${a.nombre}): sin solape con el chip`, med.rectsDisjuntos !== false, med);
+      check(`I (${a.nombre}): sin overflow horizontal`, med.overflowH === 0, med.overflowH);
+    }
+  });
+
+  // --- J. Sin fuentes (modo "nada"): el botón no existe ---
+  await paso('J', async () => {
+    const ctxJ = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await ctxJ.addInitScript(() => {
+      const wrap = () => {
+        const App = window.go && window.go.main && window.go.main.App;
+        if (!App || typeof App.GetVideoSources !== 'function') return false;
+        App.GetVideoSources = () => Promise.resolve([]);
+        return true;
+      };
+      if (!wrap()) {
+        const id = setInterval(() => { if (wrap()) clearInterval(id); }, 2);
+        setTimeout(() => clearInterval(id), 10000);
+      }
+    });
+    const pJ = await ctxJ.newPage();
+    const abierto = await abrirEn(pJ);
+    check('J: reproductor abierto', abierto, abierto ? 'ok' : 'sin episodios');
+    if (abierto) {
+      await pJ.waitForFunction(() => !!document.querySelector('.marco .placeholder') || !!document.querySelector('.marco .error-caja'), null, { timeout: 10000 }).catch(() => {});
+      const n = await pJ.locator('.marco .pantalla-completa').count();
+      check('J: con modo "nada" no existe el botón de pantalla completa', n === 0, n);
+    }
+    await ctxJ.close();
+  });
+
+  // --- K. Capturas: botón en reposo y en fullscreen (1280×800) ---
+  await paso('K', async () => {
+    const abierto = await abrirEn(page);
+    check('K: reproductor abierto', abierto, abierto ? 'ok' : 'sin episodios');
+    if (!abierto) return;
+    await page.waitForTimeout(400);
+    await captura(page, 'pantallacompleta_K_reposo');
+    const centro = await page.evaluate(() => {
+      const b = document.querySelector('.marco .pantalla-completa');
+      if (!b) return null;
+      const r = b.getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    });
+    if (centro) await page.mouse.click(centro.x, centro.y);
+    await page.waitForFunction(() => document.fullscreenElement !== null, null, { timeout: 6000 }).catch(() => {});
+    await captura(page, 'pantallacompleta_K_fullscreen');
+    await salir(page);
+    await esperarFuera(page);
+  });
+
+  // --- L. Botón nativo de pantalla completa del <video> oculto (T93b) ---
+  await paso('L', async () => {
+    const abierto = await abrirEn(page);
+    check('L: reproductor abierto', abierto, abierto ? 'ok' : 'sin episodios');
+    if (!abierto) return;
+    const med = await page.evaluate(() => {
+      const v = document.querySelector('.marco .video');
+      const controles = v && v.controlsList ? [...v.controlsList] : null;
+      // El botón nativo vive en el shadow DOM del UA: en este Chromium
+      // `getComputedStyle(video, '::-webkit-media-controls-fullscreen-button')`
+      // devuelve "inline" incluso para un pseudo inexistente (no medible), y
+      // `CSS.getComputedStyleForNode` no expone pseudoElements. Se comprueba que
+      // la regla llega al navegador con `display: none`; el efecto real queda en
+      // la prueba manual del `.exe`.
+      const reglas = [];
+      for (const hoja of document.styleSheets) {
+        let lista = null;
+        try {
+          lista = hoja.cssRules;
+        } catch {
+          lista = null; // hoja inaccesible (CORS): no aplica al dev server
+        }
+        if (!lista) continue;
+        for (const r of lista) {
+          const texto = r.cssText || '';
+          if (texto.includes('::-webkit-media-controls-fullscreen-button')) reglas.push(texto);
+        }
+      }
+      return { controles, reglas };
+    });
+    check(
+      'L: <video> con controlsList="nofullscreen" (respaldo)',
+      med.controles !== null && med.controles.includes('nofullscreen'),
+      med.controles
+    );
+    check(
+      'L: regla ::-webkit-media-controls-fullscreen-button → display: none en el navegador',
+      med.reglas.some((t) => /fullscreen-button\s*{[^}]*display:\s*none/.test(t)),
+      med.reglas
+    );
+  });
+
+  writeFileSync(join(dirOut, 'pantallacompleta.json'), JSON.stringify(rep, null, 2));
+  await browser.close();
+  return rep;
+}
+
+// ---------------------------------------------------------------------------
 // Modo favoritos (T85): cuadrícula, estados, toast y deslizar del cajón
 // ---------------------------------------------------------------------------
 
@@ -6900,6 +7458,19 @@ if (modo === 'comparar') {
   if (rep.errores.length) console.log('\nErrores:', rep.errores);
   console.log(`\nCapturas (${dirOut}): ${rep.capturas.join(', ') || 'ninguna'}`);
   console.log(`Resumen JSON: ${join(dirOut, 'siguiente.json')}`);
+} else if (modo === 'pantallacompleta') {
+  const rep = await pantallacompleta();
+  const dirOut = process.argv[3] ?? 'docs/img/v1.5/pantallacompleta';
+  console.log('## Modo pantallacompleta (T92+T93) — ventana nativa ↔ fullscreenchange y botón propio\n');
+  const fallos = rep.funciones.filter((f) => !f.ok);
+  console.log('| comprobación | ok | detalle |');
+  console.log('|---|:--:|---|');
+  for (const f of rep.funciones)
+    console.log(`| ${f.nombre} | ${f.ok ? 'sí' : 'NO'} | ${f.detalle === null ? '' : JSON.stringify(f.detalle)} |`);
+  console.log(`\nComprobaciones: ${rep.funciones.length - fallos.length}/${rep.funciones.length} OK`);
+  if (rep.errores.length) console.log('\nErrores:', rep.errores);
+  console.log(`\nCapturas (${dirOut}): ${rep.capturas.join(', ') || 'ninguna'}`);
+  console.log(`Resumen JSON: ${join(dirOut, 'pantallacompleta.json')}`);
 } else if (modo === 'estados') {
   const rep = await estados();
   const dirOut = process.argv[3] ?? 'docs/img/v1.4/estados';

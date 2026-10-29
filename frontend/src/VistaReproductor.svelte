@@ -3,9 +3,17 @@
   import { onDestroy, onMount } from 'svelte';
   import { get } from 'svelte/store';
   import type { models } from './api';
-  import { getNextEpisode, getProgress, getVideoSources, saveProgress } from './api';
+  import {
+    esVentanaPantallaCompleta,
+    getNextEpisode,
+    getProgress,
+    getVideoSources,
+    saveProgress,
+    ventanaPantallaCompleta,
+  } from './api';
   import type { VideoSourceView } from './api';
   import { ordenReproduccion, type FiltroIdioma } from './etiquetas';
+  import { crearSincronizador, elementoEnPantallaCompleta } from './pantallacompleta';
   import { currentDetail, currentProvider, episodes, progressMap, startAt } from './stores';
   import { atras, navegarA, seleccion, type SeleccionAnime } from './views';
   import BotonFavorito from './BotonFavorito.svelte';
@@ -13,10 +21,21 @@
   import Btn from './Btn.svelte';
   import CabeceraVista from './CabeceraVista.svelte';
   import EstadoVista from './EstadoVista.svelte';
+  import Icono from './Icono.svelte';
   import SelectorFuente from './SelectorFuente.svelte';
 
   /** Throttle del guardado en `timeupdate` (T27: ~5 s). */
   const INTERVALO_GUARDADO = 5000;
+
+  /**
+   * T92: mantiene la ventana nativa sincronizada con la Fullscreen API del
+   * documento (control nativo del `<video>` o botón interno de un iframe).
+   */
+  const sincronizador = crearSincronizador({
+    esPantallaCompleta: esVentanaPantallaCompleta,
+    entrar: () => ventanaPantallaCompleta(true),
+    salir: () => ventanaPantallaCompleta(false),
+  });
 
   let cargando = true;
   let cargandoTexto = 'Cargando fuentes de vídeo…';
@@ -42,6 +61,10 @@
   /** Evita recuperaciones concurrentes (varios errores seguidos). */
   let ocupado = false;
   let videoEl: HTMLVideoElement | null = null;
+  /** `.marco`: el elemento que entra en pantalla completa HTML (T93). */
+  let marcoEl: HTMLElement | null = null;
+  /** `.marco` en pantalla completa HTML (actualizado en alCambiarPantallaCompleta). */
+  let enPantallaCompleta = false;
   let hls: Hls | null = null;
   /** Posición a restaurar en el próximo `<video>` (progreso guardado o en curso). */
   let progresoPrevio: models.WatchProgress | null = null;
@@ -99,6 +122,10 @@
       : null;
 
   onMount(() => {
+    // T93: asignación robusta de `.marco` (el bind:this puede no dispararse en
+    // todos los ciclos de HMR del dev server; en el build de producción el
+    // bind:this cubre el mismo caso).
+    marcoEl = document.querySelector('.marco');
     // T50: la posición de "retomar" se toma UNA vez aquí y el store queda a 0.
     inicioPendiente = get(startAt);
     startAt.set(0);
@@ -112,6 +139,7 @@
     }
     window.addEventListener('beforeunload', alSalir);
     window.addEventListener('keydown', alTecla);
+    document.addEventListener('fullscreenchange', alCambiarPantallaCompleta);
 
     if (!sel?.episodeID) {
       cargando = false;
@@ -135,7 +163,12 @@
     }
     window.removeEventListener('beforeunload', alSalir);
     window.removeEventListener('keydown', alTecla);
+    document.removeEventListener('fullscreenchange', alCambiarPantallaCompleta);
     limpiarReproduccion();
+    if (document.fullscreenElement) {
+      void document.exitFullscreen().catch(() => {});
+    }
+    sincronizador.liberar();
   });
 
   async function arrancar(sel: SeleccionAnime): Promise<void> {
@@ -521,6 +554,33 @@
   }
 
   /**
+   * T92: `fullscreenchange` del documento (solo el evento sin prefijo: WebView2
+   * es Chromium) → la ventana nativa sigue al elemento en pantalla completa.
+   * T93: `enPantallaCompleta` refleja si el elemento en fullscreen es `.marco`
+   * (y no el `<video>` suelto) y se actualiza ANTES de llamar al sincronizador.
+   */
+  function alCambiarPantallaCompleta(): void {
+    enPantallaCompleta = document.fullscreenElement === marcoEl;
+    void sincronizador.alCambiarDocumento(elementoEnPantallaCompleta(document) !== null);
+  }
+
+  /**
+   * T93: alterna la pantalla completa de `.marco` (vídeo/iframe + chip +
+   * overlay) con el botón propio. Ninguna de las dos operaciones lanza.
+   */
+  function alternarPantallaCompleta(): void {
+    if (document.fullscreenElement) {
+      void document.exitFullscreen().catch(() =>
+        console.warn('[VistaReproductor] salir de pantalla completa falló')
+      );
+    } else {
+      void marcoEl?.requestFullscreen().catch(() =>
+        console.warn('[VistaReproductor] entrar en pantalla completa falló')
+      );
+    }
+  }
+
+  /**
    * Guarda el progreso con throttle (~5 s en `timeupdate`; siempre en pausa,
    * fin, cierre y desmontaje). `saveProgress` nunca lanza: si devuelve false
    * la reproducción sigue igual (sin avisos en la UI).
@@ -676,6 +736,7 @@
       class="video"
       class:visible={modo === 'video'}
       controls
+      controlsList="nofullscreen"
       crossorigin="anonymous"
     >
       {#each pistas as pista}
@@ -707,6 +768,18 @@
       discreto={discretoSiguiente}
       onClick={alPulsarSiguiente}
     />
+
+    {#if modo !== 'nada'}
+      <button
+        type="button"
+        class="pantalla-completa"
+        aria-pressed={enPantallaCompleta}
+        aria-label={enPantallaCompleta ? 'Salir de pantalla completa' : 'Pantalla completa'}
+        onclick={alternarPantallaCompleta}
+      >
+        <Icono nombre={enPantallaCompleta ? 'salir-pantalla-completa' : 'pantalla-completa'} tam={24} />
+      </button>
+    {/if}
   </div>
 
   {#if modo === 'iframe'}
@@ -758,9 +831,17 @@
     height: 100%;
     display: none;
     background: var(--bg-0);
+    object-fit: contain;
   }
   .video.visible {
     display: block;
+  }
+  /* T93b: el botón nativo de pantalla completa del `<video>` (hoy visible pero
+     deshabilitado) se oculta del todo: el único botón es el propio de T93.
+     `controlsList="nofullscreen"` se mantiene como respaldo; este pseudo-elemento
+     de los controles nativos vive en el shadow DOM del UA, por eso `:global`. */
+  :global(.marco .video::-webkit-media-controls-fullscreen-button) {
+    display: none;
   }
   .embebido {
     position: absolute;
@@ -791,6 +872,61 @@
     font-size: 15px;
     /* T84: por encima del chip "Siguiente" (z-index 3) durante la carga. */
     z-index: 4;
+  }
+  /* T93: botón propio de pantalla completa sobre `.marco` (44×44, arriba a la derecha). */
+  .pantalla-completa {
+    position: absolute;
+    top: var(--sp-4);
+    right: var(--sp-4);
+    width: var(--tap);
+    height: var(--tap);
+    z-index: 3;
+    border-radius: var(--r-full);
+    background: var(--surface-panel);
+    border: 1px solid var(--border);
+    color: var(--text-1);
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    opacity: 1;
+    transition:
+      border-color var(--dur-fast) var(--ease-out),
+      opacity var(--dur-fast) var(--ease-out),
+      transform var(--dur-fast) var(--ease-out);
+  }
+  .pantalla-completa:focus-visible {
+    outline: none;
+    box-shadow: var(--ring);
+  }
+  .pantalla-completa:active {
+    transform: scale(0.97);
+  }
+  /* Puntero fino: discreto durante la reproducción; se aclara en hover y foco.
+     En táctil siempre opaco. */
+  @media (pointer: fine) {
+    .pantalla-completa {
+      opacity: 0.6;
+    }
+    .pantalla-completa:hover,
+    .pantalla-completa:focus-visible {
+      opacity: 1;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pantalla-completa {
+      transition-duration: 0.01ms;
+    }
+  }
+  /* T93: `.marco` a pantalla completa ocupa el monitor sin radio, borde ni sombra. */
+  .marco:fullscreen {
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+    aspect-ratio: auto;
+    width: 100%;
+    height: 100%;
+    background: var(--bg-0);
   }
   @media (max-width: 899px) {
     /* T74: cabecera compacta; el padding superior lo da la cabecera.
