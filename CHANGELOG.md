@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.5.1
+
+Versión de mantenimiento: corrige la restauración del scroll del detalle en móvil y deja
+al día la verificación visual. Sin cambios en Go ni en los bindings.
+
+### Corregido
+
+- **Scroll del detalle en móvil** (T97/T97b): al volver a un detalle desde un episodio, la
+  lista quedaba **52 px más abajo** de donde estaba porque el botón «Ver más» de la sinopsis
+  aparecía un frame después de restaurar la posición. Ahora la sinopsis se mide de forma
+  síncrona al montar el detalle, así que el botón ya existe cuando se restaura el scroll
+  (desviación 0 px a 360 px; a 1280 px no hay botón y la geometría no cambia).
+
 ## 1.5.0
 
 Pantalla completa real del dispositivo desde el reproductor.

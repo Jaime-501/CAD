@@ -49,9 +49,9 @@ docs/
   img/                    # capturas para la documentación
   BITACORA.md             # historial; NO se lee por defecto
   DESARROLLO.md           # guía de desarrollo
-  PROGRESO_v1.0.md … PROGRESO_v1.5.md  PROGRESO_embeds_adds.md  # historiales
+  PROGRESO_v1.0.md … PROGRESO_v1.5.md  PROGRESO_v1.5.1.md  PROGRESO_embeds_adds.md  # historiales
 tareas/
-  archivo/                # fichas cerradas (T01–T94)
+  archivo/                # fichas cerradas (T01–T98)
 frontend/
   index.html              # documento HTML (meta referrer no-referrer, lang="es")
   src/
