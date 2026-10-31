@@ -246,22 +246,34 @@
   // legacy (no crea dependencias); con los argumentos explícitos, `$:` sí las ve.
   $: accion = accionPrincipal(episodioContinuar, episodioInicio);
 
-  // T79: sinopsis con "Ver más" sólo en estrecho; se mide tras pintar y en resize.
+  // T79: sinopsis con "Ver más" sólo en estrecho; se mide al engancharse el
+  // párrafo y en resize.
   let sinopsisAbierta = false;
   let sinopsisDesborda = false;
   let sinopsisEl: HTMLParagraphElement | undefined = undefined;
   let frameSinopsis: number | null = null;
 
+  /** Mide el desbordamiento del recorte con el layout ya calculado (síncrono). */
+  function medirSinopsis(): void {
+    if (sinopsisAbierta || !sinopsisEl) return;
+    sinopsisDesborda = $isNarrow && sinopsisEl.scrollHeight > sinopsisEl.clientHeight + 1;
+  }
+
+  // T97b: la medición es síncrona en cuanto `bind:this` sujeta el párrafo (mismo
+  // frame de montaje), así el botón «Ver más» (44 + 8 px) ya existe cuando
+  // `App.svelte` restaura el scroll (T66/T67). Antes iba en un rAF propio,
+  // posterior a ese `scrollTo`: el botón aparecía un frame después y el scroll
+  // anchoring convertía el crecimiento tardío en +52 px de deriva (T97).
+  $: if (sinopsisEl && $currentDetail?.synopsis && $isNarrow) medirSinopsis();
+
+  /** Re-medición diferida para el resize: no medir en cada píxel del arrastre. */
   function programarMedirSinopsis(): void {
     if (frameSinopsis !== null) return;
     frameSinopsis = requestAnimationFrame(() => {
       frameSinopsis = null;
-      if (sinopsisAbierta || !sinopsisEl) return;
-      sinopsisDesborda = $isNarrow && sinopsisEl.scrollHeight > sinopsisEl.clientHeight + 1;
+      medirSinopsis();
     });
   }
-
-  $: if ($currentDetail?.synopsis && $isNarrow) programarMedirSinopsis();
 
   onMount(() => {
     window.addEventListener('resize', programarMedirSinopsis);
