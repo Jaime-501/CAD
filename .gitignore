@@ -3,5 +3,7 @@ node_modules
 frontend/dist
 # Playwright MCP
 .playwright-mcp/
+# Lo regenera la CLI de Wails en cada `wails dev`/`wails build`
+frontend/package.json.md5
 *.log
 docs/img
